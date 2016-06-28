@@ -311,11 +311,8 @@ instance LayoutClass LS Window where
         let cs' = S.adjust (changeS r ra) c cs in
             return $ Just $ state { cols = (Cols rs cs') }
 
-    | (Just Hide) <- fromMessage msg =
-        destroyDraggers state >> return (Just $ state { draggers = [], lastContent = [] })
-
-    | (Just ReleaseResources) <- fromMessage msg =
-        destroyDraggers state >> return (Just $ state { draggers = [], lastContent = [] })
+    | (Just Hide) <- fromMessage msg = destroyDraggers state
+    | (Just ReleaseResources) <- fromMessage msg = destroyDraggers state
 
     | (Just e) <- fromMessage msg :: Maybe Event =
         handleResize e (draggers state) >> return Nothing
@@ -380,8 +377,10 @@ handleResize ButtonEvent { ev_window = ew, ev_event_type = et } draggers
 
 handleResize _ _ = return ()
 
-destroyDraggers :: LS (Window) -> X ()
-destroyDraggers x = mapM_ (deleteWindow . fst) $ draggers x
+destroyDraggers :: LS (Window) -> X (Maybe (LS (Window)))
+destroyDraggers x = do
+  mapM_ (deleteWindow . fst) $ draggers x
+  return (Just $ x { draggers = [], lastContent = [] })
 
 addDraggers :: Rectangle -> [(Window, Rectangle)] -> LS Window -> X (LS Window)
 addDraggers (Rectangle sx sy sw sh) ws state@(LS { cols = (Cols rs cs) }) =
