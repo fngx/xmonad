@@ -28,9 +28,8 @@ import qualified XMonad.Actions.DwmPromote as DWM
 import XMonad.Actions.FindEmptyWorkspace
 import qualified XMonad.Actions.CycleWS as C
 import XMonad.Actions.Warp (warpToWindow)
-import qualified XMonad.Actions.GridSelect as GS
+import qualified XMonad.Actions.GridSelect2 as GS
 import XMonad.Actions.WindowBringer (bringWindow)
-import XMonad.Actions.CycleRecentWS
 
 import System.Exit
 import Data.List (isInfixOf, (\\))
@@ -43,15 +42,20 @@ import XMonad.Actions.BringFrom (bringFrom)
 
 import System.Taffybar.Hooks.PagerHints (pagerHints)
 
+import XMonad.Layout.MultiToggle
+import XMonad.Layout.MultiToggle.Instances
+
+import qualified Data.Map as M
+
 as n x = Ren.renamed [Ren.Replace n] x
 
 layout = XMonad.Layout.NoBorders.smartBorders $
          addCount $
-         Boring.boringAuto $ (tiled ||| twocol ||| full)
+         mkToggle (single NBFULL) $
+         Boring.boringAuto $ (tiled ||| twocol)
   where
     tiled = as "s" $ VC.varial
     twocol = as "d" $ Limit.limitWindows 2 $ VC.varial
-    full = as "f" $ Full
 
 -- bindings which work in certain layouts
 inLayout :: [(String, X ())] -> X () -> X ()
@@ -60,8 +64,8 @@ inLayout as d =
      let lname' = head $ words lname
      fromMaybe d $ lookup lname' as
 
-focusUp = inLayout [("f", windows W.focusUp)] Boring.focusUp
-focusDown = inLayout [("f", windows W.focusDown)] Boring.focusDown
+focusUp = inLayout [("Full", windows W.focusUp)] Boring.focusUp
+focusDown = inLayout [("Full", windows W.focusDown)] Boring.focusDown
 
 manageHooks config = config {
   manageHook = (manageHook config) <+>
@@ -78,9 +82,6 @@ eventHooks config = config {
                     fullscreenEventHook
   }
 
-bscrollup = 4
-bscrolldown = 5
-
 typeKey :: String -> X ()
 typeKey k = spawn $ "xdotool key --clearmodifiers " ++ k
 
@@ -92,7 +93,6 @@ interestingWS = C.WSIs $
      return (\w -> (W.tag w /= minWs) &&
                    (isJust $ W.stack w) &&
                    (W.tag w `elem` hs))
-
 main = do
   xmonad $
     manageHooks $
@@ -109,22 +109,13 @@ main = do
     }
     `additionalMouseBindings`
     [
-      -- if the buttons are grabbed, we can't seem to replay them
-      -- and we grab these buttons ourselves. I guess
-      -- the only option is to stick with the minor grimness of binding
-      -- to some other buttons
-      -- the other option here is to use xtest to generate the new events
-      -- and use xinput to trigger only when a device other than xtest produces the events.
       ((0,4), const $ accelerateButton 4),
-      ((0,5), const $ accelerateButton 5)
+      ((0,5), const $ accelerateButton 5),
+      ((mod4Mask, 4), const $ typeKey "XF86AudioLowerVolume"),
+      ((mod4Mask, 5), const $ typeKey "XF86AudioRaiseVolume")
     ]
-    -- this is mod scrollwheel
---    [
---      ((mod4Mask, bscrollup), const $ typeKey "XF86AudioRaiseVolume"),
---      ((mod4Mask, bscrolldown), const $ typeKey "XF86AudioLowerVolume")
---    ]
     `removeKeysP`
-    [p ++ [n] | p <- ["M-", "M-S-"], n <- ['1'..'9']]
+    ([p ++ [n] | p <- ["M-", "M-S-"], n <- ['1'..'9']] ++ ["M-S-c", "M-k"])
     `additionalKeysP`
     ([("M-<Escape>", spawn "xmonad --recompile; xmonad --restart"),
       ("M-S-<Escape>", io (exitWith ExitSuccess)),
@@ -135,6 +126,8 @@ main = do
       ("M-S-y", tagToEmptyWorkspace),
       ("M-y", viewEmptyWorkspace),
 
+      ("M-S-a", XPS.shellPrompt prompt),
+
       ("M-a",
        (GS.runSelectedAction gsconfig
         {
@@ -142,23 +135,22 @@ main = do
         }
        [
          ("emacs", spawn "emacsclient -c -n"),
-         ("web qb", spawn "qb"),
-         ("run", XPS.shellPrompt prompt),
+         ("qutebrowser", spawn "qb"),
          ("hibernate", spawn "systemctl hibernate"),
          ("suspend", spawn "systemctl suspend"),
-         ("mail compose", spawn "xdg-open mailto:"),
-         ("mail check", spawn "notmuch new")
+         ("compose mail", spawn "xdg-open mailto:"),
+         ("check mail", spawn "notmuch new"),
+         ("chromium", spawn "chromium"),
+         ("volume control", spawn "pavucontrol")
          ])),
 
-      ("M-k", kill),
+      ("M-S-k", kill),
 
       ("M-g",   goToSelected gsconfig),
-      ("M-b",   bringSelected gsconfig),
+      ("M-b",   GS.bringSelected gsconfig),
       ("M-S-b", bringMinned gsconfig),
 
       ("M-v",   sendMessage ToggleStruts),
-
-      ("M-l", cycleRecentWS [xK_Super_L] xK_l xK_semicolon),
 
       ("M-m", windows $ W.shift minWs),
       ("M-S-m", bringFrom minWs),
@@ -185,10 +177,12 @@ main = do
       ("M-u",   withFocused $ \w -> sendMessage $ VC.Embiggen deltaw 0 w),
       ("M-S-u", withFocused $ \w -> sendMessage $ VC.Embiggen (-deltaw) 0 w),
       ("M-i",   withFocused $ \w -> sendMessage $ VC.Embiggen 0 deltah w),
-      ("M-S-i", withFocused $ \w -> sendMessage $ VC.Embiggen 0 (-deltah) w)
+      ("M-S-i", withFocused $ \w -> sendMessage $ VC.Embiggen 0 (-deltah) w),
+
+      ("M-f", sendMessage $ Toggle NBFULL)
      ]
      ++
-     [("M-" ++ k, ((sendMessage $ JumpToLayout k))) | k <- ["s","d","f"]]
+     [("M-" ++ k, ((sendMessage $ JumpToLayout k))) | k <- ["s","d"]]
      ++
      [(mod ++ k, (a ws)) |
        ks <- [["q", "w", "e", "r"], map show [1..9]],
@@ -215,7 +209,6 @@ prompt = XP.def
    , XP.maxComplRows = Just 10
    , XP.historySize = 100
    , XP.promptKeymap = XP.emacsLikeXPKeymap
-   , XP.alwaysHighlight = True
  }
 
 gsconfig = GS.def
@@ -224,46 +217,11 @@ gsconfig = GS.def
     GS.gs_cellwidth = 256
   }
 
-gridselectWindow :: (String -> Window -> Bool) -> GS.GSConfig Window-> X (Maybe Window)
-gridselectWindow f gsconf = windowMap f >>= GS.gridselect gsconf
-
-windowMap :: (String -> Window -> Bool) -> X [(String,Window)]
-windowMap test = do
-    ws <- gets windowset
-    let ws' = [(W.tag wspace, w) | wspace <- W.workspaces ws, w <- W.integrate' (W.stack wspace),
-               test (W.tag wspace) w]
-    mapM mkPair ws'
-      where mkPair :: (String, Window) -> X (String, Window)
-            mkPair (sname, wid) = do
-              name <- getName wid
-              return (sname ++ ": " ++ (show name), wid)
-
-decorateName' :: Window -> X String
-decorateName' w = do
-  fmap show $ getName w
-
-withSelectedWindow :: (String -> Window -> Bool) -> (Window -> X ()) -> GS.GSConfig Window -> X ()
-withSelectedWindow f callback conf = do
-    mbWindow <- gridselectWindow f conf
-    case mbWindow of
-        Just w -> callback w
-        Nothing -> return ()
-
--- | Brings selected window to the current workspace.
-bringSelected :: GS.GSConfig Window -> X ()
-bringSelected c = do
-  cur <- gets (W.tag . W.workspace . W.current . windowset)
-  withSelectedWindow (\t _ -> t /= cur) (\w -> do
-    windows (bringWindow w)
-    XMonad.focus w
-    windows W.shiftMaster) c
-
--- | Switches to selected window's workspace and focuses that window.
 goToSelected :: GS.GSConfig Window -> X ()
-goToSelected c = withSelectedWindow (\t _ -> t /= minWs) (windows . W.focusWindow) c
+goToSelected c = GS.withSelectedWindow (\t -> t /= minWs) (windows . W.focusWindow) c
 
 bringMinned :: GS.GSConfig Window -> X ()
-bringMinned = withSelectedWindow (\t _ -> t == minWs) $ \w -> do
+bringMinned = GS.withSelectedWindow (\t -> t == minWs) $ \w -> do
     windows (bringWindow w)
     XMonad.focus w
     windows W.shiftMaster
