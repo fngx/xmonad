@@ -38,7 +38,7 @@ import Data.Char (toLower)
 import Data.Maybe (isJust, fromJust, listToMaybe, fromMaybe)
 
 import XMonad.Layout.CountLabel (addCount)
-import XMonad.Util.AccelerateScroll (accelerate)
+import XMonad.Util.AccelerateScroll
 import XMonad.Actions.BringFrom (bringFrom)
 
 import System.Taffybar.Hooks.PagerHints (pagerHints)
@@ -80,8 +80,6 @@ eventHooks config = config {
 
 bscrollup = 4
 bscrolldown = 5
-bccw = 9
-bcw = 10
 
 typeKey :: String -> X ()
 typeKey k = spawn $ "xdotool key --clearmodifiers " ++ k
@@ -102,6 +100,7 @@ main = do
     pagerHints $
     desktopConfig
     { modMask     = mod4Mask
+    , clickJustFocuses = False
     , layoutHook = desktopLayoutModifiers $
                    layout
     , workspaces = wsNames
@@ -109,13 +108,21 @@ main = do
     , borderWidth = 2
     }
     `additionalMouseBindings`
-    -- this is mod scrollwheel
     [
-      ((0, bcw),  const $ accelerate bscrolldown),
-      ((0, bccw), const $ accelerate bscrollup),
-      ((mod4Mask, bcw), const $ typeKey "XF86AudioRaiseVolume"),
-      ((mod4Mask, bccw), const $ typeKey "XF86AudioLowerVolume")
+      -- if the buttons are grabbed, we can't seem to replay them
+      -- and we grab these buttons ourselves. I guess
+      -- the only option is to stick with the minor grimness of binding
+      -- to some other buttons
+      -- the other option here is to use xtest to generate the new events
+      -- and use xinput to trigger only when a device other than xtest produces the events.
+      ((0,4), const $ accelerateButton 4),
+      ((0,5), const $ accelerateButton 5)
     ]
+    -- this is mod scrollwheel
+--    [
+--      ((mod4Mask, bscrollup), const $ typeKey "XF86AudioRaiseVolume"),
+--      ((mod4Mask, bscrolldown), const $ typeKey "XF86AudioLowerVolume")
+--    ]
     `removeKeysP`
     [p ++ [n] | p <- ["M-", "M-S-"], n <- ['1'..'9']]
     `additionalKeysP`
