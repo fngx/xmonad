@@ -30,10 +30,11 @@ accelerateButton btn = do
   where
     handle btn st@(ScrollEvents { lastButton = lb,  recent = ek }) now
       | btn /= lb = (ScrollEvents {lastButton = btn, recent = [now]}, 1)
-      | otherwise = let times' = now:(filter (\x -> now - x < 1) ek)
-                        rate = (fromIntegral $ length times')
-                        n = 1 + (floor ((rate/3) ** 1.25)) in
-          (st { recent = times' }, n)
+      | otherwise =
+        let ek' = trim (now:ek)
+            trim (x:(y:xs)) = if (x - y) > 0.1 then [x] else x:(trim (y:xs))
+            trim q = q in
+          (st { recent = ek' }, floor $ sqrt $ fromIntegral $ length ek')
 
 -- the last series of scroll events
 data ScrollEvents = ScrollEvents

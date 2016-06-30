@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, NoMonomorphismRestriction #-}
-
+import qualified Debug.Trace as DT
 import XMonad hiding ( (|||) )
 import qualified XMonad.StackSet as W
 import XMonad.Config.Desktop
@@ -7,6 +7,7 @@ import XMonad.Util.EZConfig
 
 import XMonad.Util.NamedWindows
 
+import XMonad.Hooks.UrgencyHook
 import XMonad.Hooks.Place
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
@@ -16,7 +17,6 @@ import XMonad.Layout.NoBorders
 import qualified XMonad.Layout.Renamed as Ren
 import qualified XMonad.Layout.MouseResizableTile as MRT
 import qualified XMonad.Layout.BoringWindows as Boring
-import qualified XMonad.Layout.LimitWindows as Limit
 import qualified XMonad.Layout.VarialColumn as VC
 import XMonad.Layout.LayoutCombinators ( (|||), JumpToLayout (JumpToLayout) )
 
@@ -44,18 +44,17 @@ import System.Taffybar.Hooks.PagerHints (pagerHints)
 
 import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
-
+import XMonad.Layout.ToggleLimit
 import qualified Data.Map as M
 
 as n x = Ren.renamed [Ren.Replace n] x
 
 layout = XMonad.Layout.NoBorders.smartBorders $
          addCount $
-         mkToggle (single NBFULL) $
-         Boring.boringAuto $ (tiled ||| twocol)
-  where
-    tiled = as "s" $ VC.varial
-    twocol = as "d" $ Limit.limitWindows 2 $ VC.varial
+         mkToggle (single FULL) $
+         mkToggle (single (TL 2)) $
+         Boring.boringAuto $
+         as "Cols" VC.varial
 
 -- bindings which work in certain layouts
 inLayout :: [(String, X ())] -> X () -> X ()
@@ -64,8 +63,8 @@ inLayout as d =
      let lname' = head $ words lname
      fromMaybe d $ lookup lname' as
 
-focusUp = inLayout [("Full", windows W.focusUp)] Boring.focusUp
-focusDown = inLayout [("Full", windows W.focusDown)] Boring.focusDown
+focusUp = inLayout [("Full", windows W.focusUp), ("Limit", rotSlavesUp)] Boring.focusUp
+focusDown = inLayout [("Full", windows W.focusDown), ("Limit", rotSlavesDown)] Boring.focusDown
 
 manageHooks config = config {
   manageHook = (manageHook config) <+>
@@ -86,15 +85,120 @@ typeKey :: String -> X ()
 typeKey k = spawn $ "xdotool key --clearmodifiers " ++ k
 
 minWs = "*"
-wsNames = ["q","w","e","r"] ++ (map show [5..9]) ++ [minWs]
+wsNames = ["q", "w", "e", "r", "t"] ++ [minWs]
 
 interestingWS = C.WSIs $
   do hs <- gets (map W.tag . W.hidden . windowset)
      return (\w -> (W.tag w /= minWs) &&
                    (isJust $ W.stack w) &&
                    (W.tag w `elem` hs))
+
+
+commandMenu = (GS.runSelectedAction gsconfig
+                {
+                  GS.gs_cellwidth = 128
+                }
+                [
+                  ("emacs", spawn "emacsclient -c -n"),
+                  ("qutebrowser", spawn "qb"),
+                  ("hibernate", spawn "systemctl hibernate"),
+                  ("suspend", spawn "systemctl suspend"),
+                  ("compose mail", spawn "xdg-open mailto:"),
+                  ("check mail", spawn "notmuch new"),
+                  ("chromium", spawn "chromium"),
+                  ("volume control", spawn "pavucontrol"),
+                  ("tenrox", spawn "chromium --new-window http://cse.tenrox.net/"),
+                  ("lights", spawn "curl http://lights.research.cse.org.uk/toggle")
+                ])
+
+expandH :: Rational -> X ()
+expandH m = withFocused $ \w -> sendMessage $ VC.Embiggen m 0 w
+expandV :: Rational -> X ()
+expandV m = withFocused $ \w -> sendMessage $ VC.Embiggen 0 m w
+
+moose = warpToWindow 0.1 0.1
+
+resetLayout = do
+  h <- asks (layoutHook . config)
+  setLayout h
+
+windowKeys =
+  [ ("M-S-k", kill)
+  , ("M-M1-k", spawn "xkill")
+  , ("M--", windows $ W.shift minWs)
+  , ("M-=", bringFrom minWs)
+  , ("M-S-=", bringMinned gsconfig)
+  , ("M-p", focusUp)
+  , ("M-n", focusDown)
+  , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
+  , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
+  , ("M-M1-p", rotSlavesUp)
+  , ("M-M1-n", rotSlavesDown)
+  , ("M-<Return>", DWM.dwmpromote >> moose)
+  , ("M-u", bringUrgent)
+  , ("M-y", GS.bringSelected gsconfig)
+  , ("M-j", goToSelected gsconfig)
+  , ("M-S-i", expandH 0.1)
+  , ("M-S-o", expandH (-0.1))
+  , ("M-i", expandV 0.1)
+  , ("M-o", expandV (-0.1))
+  , ("M-M1-i", withFocused $ \w -> sendMessage $ VC.GrabColumn w)
+  , ("M-M1-o", withFocused $ \w -> sendMessage $ VC.EqualizeColumn 1 w)
+  , ("M-z", withFocused $ windows . W.sink)
+  , ("M-m", windows $ W.focusMaster)
+  , ("M-c",  withFocused $ \w -> sendMessage $ VC.ToNewColumn w)
+  ]
+
+workspaceKeys =
+  [(mod ++ k, (a ws)) |
+    ks <- [["q", "w", "e", "r", "t"], map show [1..9]],
+    (k, ws) <- zip ks wsNames,
+    (mod, a) <- [("M-", windows . W.greedyView), ("M-S-", windows . W.shift)] ]
+  ++
+  [ ("M-s", C.toggleWS' [minWs])
+  , ("M-g", viewEmptyWorkspace)
+  , ("M-M1-G", tagToEmptyWorkspace)
+  , ("M-d", C.moveTo C.Next interestingWS)
+  , ("M-f", C.moveTo C.Prev interestingWS)
+  ]
+
+screenKeys =
+  [ ("M-M1-d", C.nextScreen >> moose)
+  , ("M-M1-s", C.swapNextScreen)
+  , ("M-M1-f", C.shiftNextScreen)
+  ]
+
+commandKeys =
+  [ ("M-S-<Return>", spawn "xterm")
+  , ("M-a", commandMenu)
+  , ("M-S-a", XPS.shellPrompt prompt)
+  ]
+
+layoutKeys =
+  [ ("M-<Space>", sendMessage $ Toggle FULL)
+  , ("M-b", sendMessage ToggleStruts)
+  , ("M-S-<Space>", resetLayout)
+  , ("M-l", sendMessage $ Toggle $ TL 2)
+  ]
+
+myKeys =
+  [ ("M-S-<Escape>", io (exitWith ExitSuccess))
+  , ("M-<Escape>", spawn "xmonad --recompile; xmonad --restart") ]
+  ++
+  windowKeys
+  ++
+  workspaceKeys
+  ++
+  screenKeys
+  ++
+  commandKeys
+  ++
+  layoutKeys
+
 main = do
   xmonad $
+    withUrgencyHookC BorderUrgencyHook
+    { urgencyBorderColor = "cyan" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
     manageHooks $
     eventHooks $
     pagerHints $
@@ -104,8 +208,10 @@ main = do
     , layoutHook = desktopLayoutModifiers $
                    layout
     , workspaces = wsNames
-    , focusedBorderColor = "#00bfff"
+    , normalBorderColor = "dark gray"
+    , focusedBorderColor = "dark orange"
     , borderWidth = 2
+    , keys = const $ M.empty -- nuke defaults
     }
     `additionalMouseBindings`
     [
@@ -114,81 +220,8 @@ main = do
       ((mod4Mask, 4), const $ typeKey "XF86AudioLowerVolume"),
       ((mod4Mask, 5), const $ typeKey "XF86AudioRaiseVolume")
     ]
-    `removeKeysP`
-    ([p ++ [n] | p <- ["M-", "M-S-"], n <- ['1'..'9']] ++ ["M-S-c", "M-k"])
     `additionalKeysP`
-    ([("M-<Escape>", spawn "xmonad --recompile; xmonad --restart"),
-      ("M-S-<Escape>", io (exitWith ExitSuccess)),
-      ("M-<Return>", DWM.dwmpromote),
-
-      ("M-h", C.moveTo C.Prev interestingWS),
-      ("M-j", C.moveTo C.Next interestingWS),
-      ("M-S-y", tagToEmptyWorkspace),
-      ("M-y", viewEmptyWorkspace),
-
-      ("M-S-a", XPS.shellPrompt prompt),
-
-      ("M-a",
-       (GS.runSelectedAction gsconfig
-        {
-          GS.gs_cellwidth = 128
-        }
-       [
-         ("emacs", spawn "emacsclient -c -n"),
-         ("qutebrowser", spawn "qb"),
-         ("hibernate", spawn "systemctl hibernate"),
-         ("suspend", spawn "systemctl suspend"),
-         ("compose mail", spawn "xdg-open mailto:"),
-         ("check mail", spawn "notmuch new"),
-         ("chromium", spawn "chromium"),
-         ("volume control", spawn "pavucontrol")
-         ])),
-
-      ("M-S-k", kill),
-
-      ("M-g",   goToSelected gsconfig),
-      ("M-b",   GS.bringSelected gsconfig),
-      ("M-S-b", bringMinned gsconfig),
-
-      ("M-v",   sendMessage ToggleStruts),
-
-      ("M-m", windows $ W.shift minWs),
-      ("M-S-m", bringFrom minWs),
-
-      ("M-p", focusUp),
-      ("M-n", focusDown),
-
-      ("M-,", rotSlavesUp),
-      ("M-.", rotSlavesDown),
-
-      ("M--",   C.nextScreen >> warpToWindow 0.1 0.1),
-      ("M-S--", C.shiftNextScreen >> C.nextScreen >> warpToWindow 0.1 0.1),
-      ("M-=",   C.swapNextScreen),
-
-      ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w),
-      ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w),
-
-      ("M-c M-c", withFocused $ \w -> sendMessage $ VC.ToNewColumn w),
-      ("M-c c",   withFocused $ \w -> sendMessage $ VC.GrabColumn w),
-      ("M-c h",   withFocused $ \w -> sendMessage $ VC.GrabRow w),
-      ("M-c e",   withFocused $ \w -> sendMessage $ VC.EqualizeColumn 1 w),
-      ("M-c q",   withFocused $ \w -> sendMessage $ VC.EqualizeColumn 0.5 w),
-
-      ("M-u",   withFocused $ \w -> sendMessage $ VC.Embiggen deltaw 0 w),
-      ("M-S-u", withFocused $ \w -> sendMessage $ VC.Embiggen (-deltaw) 0 w),
-      ("M-i",   withFocused $ \w -> sendMessage $ VC.Embiggen 0 deltah w),
-      ("M-S-i", withFocused $ \w -> sendMessage $ VC.Embiggen 0 (-deltah) w),
-
-      ("M-f", sendMessage $ Toggle NBFULL)
-     ]
-     ++
-     [("M-" ++ k, ((sendMessage $ JumpToLayout k))) | k <- ["s","d"]]
-     ++
-     [(mod ++ k, (a ws)) |
-       ks <- [["q", "w", "e", "r"], map show [1..9]],
-       (k, ws) <- zip ks wsNames,
-       (mod, a) <- [("M-", windows . W.greedyView), ("M-S-", windows . W.shift)] ]
-    )
+    myKeys
   where
     deltaw :: Rational
     deltaw = 0.2
@@ -217,11 +250,18 @@ gsconfig = GS.def
     GS.gs_cellwidth = 256
   }
 
-goToSelected :: GS.GSConfig Window -> X ()
-goToSelected c = GS.withSelectedWindow (\t -> t /= minWs) (windows . W.focusWindow) c
+goToSelected :: GS.GSConfig (String, Window) -> X ()
+goToSelected c = GS.withSelectedWindow (\t _ -> t /= minWs) (windows . W.focusWindow) c
 
-bringMinned :: GS.GSConfig Window -> X ()
-bringMinned = GS.withSelectedWindow (\t -> t == minWs) $ \w -> do
+bringMinned :: GS.GSConfig (String, Window) -> X ()
+bringMinned = GS.withSelectedWindow (\t _ -> t == minWs) $ \w -> do
     windows (bringWindow w)
     XMonad.focus w
     windows W.shiftMaster
+
+bringUrgent = do
+  urg <- readUrgents
+  win <- case urg of
+    [x] -> return $ Just x
+    _ -> GS.gridselectWindow (const $ (flip elem urg)) gsconfig
+  whenJust win $ \w -> (windows $ bringWindow w) >> (windows $ W.focusWindow w)

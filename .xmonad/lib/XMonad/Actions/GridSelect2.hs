@@ -45,9 +45,7 @@ module XMonad.Actions.GridSelect2 (
 
     -- * Colorizers
     HasColorizer(defaultColorizer),
-    fromClassName,
     stringColorizer,
-    colorRangeFromClassName,
 
     -- * Navigation Mode assembly
     TwoD,
@@ -215,8 +213,8 @@ data GSConfig a = GSConfig {
 class HasColorizer a where
     defaultColorizer :: a -> Bool -> X (String, String)
 
-instance HasColorizer Window where
-    defaultColorizer = fromClassName
+instance HasColorizer (String, Window) where
+    defaultColorizer = fromWorkspace
 
 instance HasColorizer String where
     defaultColorizer = stringColorizer
@@ -549,6 +547,11 @@ navNSearch = makeXEventhandler $ shadowWithKeymap navNSearchKeyMap navNSearchDef
           ,((controlMask,xK_n)       , move (0,1) >> navNSearch)
           ,((controlMask,xK_p)         , move (0,-1) >> navNSearch)
 
+          ,((controlMask,xK_i)        , moveNext >> navNSearch)
+          ,((controlMask,xK_o)        , movePrev >> navNSearch)
+          ,((controlMask,xK_j)        , select)
+          ,((controlMask,xK_g)        , cancel)
+
           ,((0,xK_Tab)        , moveNext >> navNSearch)
           ,((shiftMask,xK_Tab), movePrev >> navNSearch)
           ,((0,xK_BackSpace), transformSearchString (\s -> if (s == "") then "" else init s) >> navNSearch)
@@ -594,41 +597,27 @@ hsv2rgb (h,s,v) =
          5 -> (v,p,q)
          _ -> error "The world is ending. x mod a >= a."
 
+stringToColor :: String -> String
+stringToColor s =
+  let seed x = toInteger (sum $ map ((*x).fromEnum) s) :: Integer
+      (r,g,b) = hsv2rgb ((seed 83) `mod` 360,
+                         (fromInteger ((seed 191) `mod` 1000))/2500+0.4,
+                         (fromInteger ((seed 121) `mod` 1000))/2500+0.4)
+    in ("#" ++ concat (map (twodigitHex.(round :: Double -> Word8).(*256)) [r, g, b] ))
+
 -- | Default colorizer for Strings
 stringColorizer :: String -> Bool -> X (String, String)
 stringColorizer s active =
-    let seed x = toInteger (sum $ map ((*x).fromEnum) s) :: Integer
-        (r,g,b) = hsv2rgb ((seed 83) `mod` 360,
-                           (fromInteger ((seed 191) `mod` 1000))/2500+0.4,
-                           (fromInteger ((seed 121) `mod` 1000))/2500+0.4)
-    in if active
-         then return ("#faff69", "black")
-         else return ("#" ++ concat (map (twodigitHex.(round :: Double -> Word8).(*256)) [r, g, b] ), "white")
+  if active
+  then return ("#faff69", "black")
+  else return (stringToColor s, "white")
 
--- | Colorize a window depending on it's className.
-fromClassName :: Window -> Bool -> X (String, String)
-fromClassName w active = runQuery className w >>= flip defaultColorizer active
+fromWorkspace :: (String, Window) -> Bool -> X (String, String)
+fromWorkspace _ True = return ("#faff69", "black")
+fromWorkspace (ws, _) False = return (stringToColor (ws ++ ws), "white")
 
 twodigitHex :: Word8 -> String
 twodigitHex a = printf "%02x" a
-
--- | A colorizer that picks a color inside a range,
--- and depending on the window's class.
-colorRangeFromClassName :: (Word8, Word8, Word8) -- ^ Beginning of the color range
-                        -> (Word8, Word8, Word8) -- ^ End of the color range
-                        -> (Word8, Word8, Word8) -- ^ Background of the active window
-                        -> (Word8, Word8, Word8) -- ^ Inactive text color
-                        -> (Word8, Word8, Word8) -- ^ Active text color
-                        -> Window -> Bool -> X (String, String)
-colorRangeFromClassName startC endC activeC inactiveT activeT w active =
-    do classname <- runQuery className w
-       if active
-         then return (rgbToHex activeC, rgbToHex activeT)
-         else return (rgbToHex $ mix startC endC
-                  $ stringToRatio classname, rgbToHex inactiveT)
-    where rgbToHex :: (Word8, Word8, Word8) -> String
-          rgbToHex (r, g, b) = '#':twodigitHex r
-                               ++twodigitHex g++twodigitHex b
 
 -- | Creates a mix of two colors according to a ratio
 -- (1 -> first color, 0 -> second color).
@@ -696,21 +685,22 @@ gridselect gsconfig elements =
     releaseXMF font
     return selectedElement
 
-gridselectWindow :: (String -> Bool) -> GSConfig Window-> X (Maybe Window)
-gridselectWindow f gsconf = windowMap f >>= gridselect gsconf
+gridselectWindow :: (String -> Window -> Bool) -> GSConfig (String, Window)-> X (Maybe Window)
+gridselectWindow f gsconf = do x <- windowMap f >>= gridselect gsconf
+                               return (fmap snd x)
 
-windowMap :: (String -> Bool) -> X [(String,Window)]
+windowMap :: (String -> Window -> Bool) -> X [(String,(String, Window))]
 windowMap test = do
     ws <- gets windowset
     let ws' = [(W.tag wspace, w) | wspace <- W.workspaces ws, w <- W.integrate' (W.stack wspace),
-               test (W.tag wspace)]
+               test (W.tag wspace) w]
     mapM mkPair ws'
-      where mkPair :: (String, Window) -> X (String, Window)
+      where mkPair :: (String, Window) -> X (String, (String, Window))
             mkPair (sname, wid) = do
               name <- getName wid
-              return (sname ++ ": " ++ (show name), wid)
+              return (sname ++ ": " ++ (show name), (sname, wid))
 
-withSelectedWindow :: (String -> Bool) -> (Window -> X ()) -> GSConfig Window -> X ()
+withSelectedWindow :: (String -> Window -> Bool) -> (Window -> X ()) -> GSConfig (String, Window) -> X ()
 withSelectedWindow f callback conf = do
     mbWindow <- gridselectWindow f conf
     case mbWindow of
@@ -728,17 +718,17 @@ buildDefaultGSConfig col = GSConfig 50 130 10 col "xft:Sans-8" defaultNavigation
 borderColor :: String
 borderColor = "white"
 
-bringSelected :: GSConfig Window -> X ()
+bringSelected :: GSConfig (String, Window) -> X ()
 bringSelected c = do
   cur <- gets (W.tag . W.workspace . W.current . windowset)
-  withSelectedWindow (\t -> t /= cur) (\w -> do
+  withSelectedWindow (\t _ -> t /= cur) (\w -> do
     windows (bringWindow w)
     XMonad.focus w
     windows W.shiftMaster) c
 
 -- | Switches to selected window's workspace and focuses that window.
-goToSelected :: GSConfig Window -> X ()
-goToSelected = withSelectedWindow (const True) $ windows . W.focusWindow
+goToSelected :: GSConfig (String, Window) -> X ()
+goToSelected = withSelectedWindow (const $ const True) $ windows . W.focusWindow
 
 -- | Select an application to spawn from a given list
 spawnSelected :: GSConfig String -> [String] -> X ()
