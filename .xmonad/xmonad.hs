@@ -158,14 +158,16 @@ workspaceKeys =
   [ ("M-s", C.toggleWS' [minWs])
   , ("M-g", viewEmptyWorkspace)
   , ("M-S-G", tagToEmptyWorkspace)
-  , ("M-d", C.moveTo C.Next interestingWS)
-  , ("M-f", C.moveTo C.Prev interestingWS)
+  , ("M-d", C.moveTo C.Prev interestingWS)
+  , ("M-f", C.moveTo C.Next interestingWS)
   ]
 
 screenKeys =
-  [ ("M-M1-d", C.nextScreen >> moose)
-  , ("M-M1-s", C.swapNextScreen)
-  , ("M-M1-f", C.shiftNextScreen)
+  [ ("M-v", C.nextScreen)
+  , ("M-x", C.swapNextScreen)
+  , ("M-S-x", C.shiftNextScreen)
+  , ("M-M1-d", C.nextScreen >> C.moveTo C.Prev interestingWS >> C.prevScreen)
+  , ("M-M1-f", C.nextScreen >> C.moveTo C.Next interestingWS >> C.prevScreen)
   ]
 
 commandKeys =
@@ -208,7 +210,7 @@ main = do
     , layoutHook = desktopLayoutModifiers $
                    layout
     , workspaces = wsNames
-    , normalBorderColor = "dark gray"
+    , normalBorderColor = "dark slate gray"
     , focusedBorderColor = "dark orange"
     , borderWidth = 2
     , keys = const $ M.empty -- nuke defaults
