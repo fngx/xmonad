@@ -93,6 +93,7 @@ interestingWS = C.WSIs $
                    (isJust $ W.stack w) &&
                    (W.tag w `elem` hs))
 
+onOtherScreen x = C.nextScreen >> x >> C.prevScreen
 
 commandMenu = (GS.runSelectedAction gsconfig
                 {
@@ -153,7 +154,10 @@ workspaceKeys =
   [(mod ++ k, (a ws)) |
     ks <- [["q", "w", "e", "r", "t"], map show [1..9]],
     (k, ws) <- zip ks wsNames,
-    (mod, a) <- [("M-", windows . W.greedyView), ("M-S-", windows . W.shift)] ]
+    (mod, a) <- [("M-", windows . W.greedyView),
+                 ("M-S-", windows . W.shift),
+                 ("M-M1-", \x -> (onOtherScreen$ windows $ W.greedyView x))
+                ] ]
   ++
   [ ("M-s", C.toggleWS' [minWs])
   , ("M-g", viewEmptyWorkspace)
@@ -166,8 +170,8 @@ screenKeys =
   [ ("M-v", C.nextScreen)
   , ("M-x", C.swapNextScreen)
   , ("M-S-x", C.shiftNextScreen)
-  , ("M-M1-d", C.nextScreen >> C.moveTo C.Prev interestingWS >> C.prevScreen)
-  , ("M-M1-f", C.nextScreen >> C.moveTo C.Next interestingWS >> C.prevScreen)
+  , ("M-M1-d", onOtherScreen $ C.moveTo C.Prev interestingWS)
+  , ("M-M1-f", onOtherScreen $ C.moveTo C.Next interestingWS)
   ]
 
 commandKeys =
