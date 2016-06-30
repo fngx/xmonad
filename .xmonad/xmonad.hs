@@ -157,7 +157,7 @@ workspaceKeys =
   ++
   [ ("M-s", C.toggleWS' [minWs])
   , ("M-g", viewEmptyWorkspace)
-  , ("M-M1-G", tagToEmptyWorkspace)
+  , ("M-S-G", tagToEmptyWorkspace)
   , ("M-d", C.moveTo C.Next interestingWS)
   , ("M-f", C.moveTo C.Prev interestingWS)
   ]
