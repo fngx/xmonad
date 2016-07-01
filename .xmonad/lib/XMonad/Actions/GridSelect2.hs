@@ -222,7 +222,7 @@ instance HasColorizer String where
 instance HasColorizer a where
     defaultColorizer _ isFg =
         let getColor = if isFg then focusedBorderColor else normalBorderColor
-        in asks $ flip (,) "black" . getColor . config
+        in asks $ flip (,) (if isFg then "black" else "white") . getColor . config
 
 instance HasColorizer a => Default (GSConfig a) where
     def = buildDefaultGSConfig defaultColorizer

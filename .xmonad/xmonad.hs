@@ -14,7 +14,6 @@ import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
 import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
 
 import XMonad.Layout.NoBorders
-import qualified XMonad.Layout.Renamed as Ren
 import qualified XMonad.Layout.MouseResizableTile as MRT
 import qualified XMonad.Layout.BoringWindows as Boring
 import qualified XMonad.Layout.VarialColumn as VC
@@ -47,14 +46,12 @@ import XMonad.Layout.MultiToggle.Instances
 import XMonad.Layout.ToggleLimit
 import qualified Data.Map as M
 
-as n x = Ren.renamed [Ren.Replace n] x
-
 layout = XMonad.Layout.NoBorders.smartBorders $
          addCount $
          mkToggle (single FULL) $
          mkToggle (single (TL 2)) $
          Boring.boringAuto $
-         as "Cols" VC.varial
+         VC.varial
 
 -- bindings which work in certain layouts
 inLayout :: [(String, X ())] -> X () -> X ()
@@ -88,10 +85,7 @@ minWs = "*"
 wsNames = ["q", "w", "e", "r", "t"] ++ [minWs]
 
 interestingWS = C.WSIs $
-  do hs <- gets (map W.tag . W.hidden . windowset)
-     return (\w -> (W.tag w /= minWs) &&
-                   (isJust $ W.stack w) &&
-                   (W.tag w `elem` hs))
+  return (\w -> (W.tag w /= minWs) && (isJust $ W.stack w))
 
 onOtherScreen x = C.nextScreen >> x >> C.prevScreen
 
@@ -147,7 +141,7 @@ windowKeys =
   , ("M-M1-o", withFocused $ \w -> sendMessage $ VC.EqualizeColumn 1 w)
   , ("M-z", withFocused $ windows . W.sink)
   , ("M-m", windows $ W.focusMaster)
-  , ("M-c",  withFocused $ \w -> sendMessage $ VC.ToNewColumn w)
+  , ("M-/",  withFocused $ \w -> sendMessage $ VC.ToNewColumn w)
   ]
 
 workspaceKeys =
@@ -167,9 +161,9 @@ workspaceKeys =
   ]
 
 screenKeys =
-  [ ("M-v", C.nextScreen)
+  [ ("M-c", C.nextScreen)
+  , ("M-S-c", C.shiftNextScreen)
   , ("M-x", C.swapNextScreen)
-  , ("M-S-x", C.shiftNextScreen)
   , ("M-M1-d", onOtherScreen $ C.moveTo C.Prev interestingWS)
   , ("M-M1-f", onOtherScreen $ C.moveTo C.Next interestingWS)
   ]
@@ -185,6 +179,8 @@ layoutKeys =
   , ("M-b", sendMessage ToggleStruts)
   , ("M-S-<Space>", resetLayout)
   , ("M-l", sendMessage $ Toggle $ TL 2)
+  , ("M-,", sendMessage VC.FewerColumns)
+  , ("M-.", sendMessage VC.MoreColumns)
   ]
 
 myKeys =

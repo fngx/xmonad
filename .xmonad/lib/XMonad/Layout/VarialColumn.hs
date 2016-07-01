@@ -241,7 +241,9 @@ data Msg =
   GrabRow Window |
   GrabColumn Window |
   EqualizeColumn Rational Window |
-  Embiggen Rational Rational Window
+  Embiggen Rational Rational Window |
+  MoreColumns |
+  FewerColumns
 
   deriving (Read, Show, Typeable)
 
@@ -249,7 +251,7 @@ data Msg =
 instance Message Msg
 
 instance LayoutClass LS Window where
-  description (LS {cols = (Cols rs cs)}) = (show $ S.length cs) ++ "col"
+  description state = (show $ insertColumns state) ++ "C"
 
   doLayout state screen stack = do
     let (ws, statem) = layout state screen stack
@@ -310,6 +312,12 @@ instance LayoutClass LS Window where
     | (Just (SetRow c r ra)) <- fromMessage msg =
         let cs' = S.adjust (changeS r ra) c cs in
             return $ Just $ state { cols = (Cols rs cs') }
+
+    | (Just MoreColumns) <- fromMessage msg =
+        return $ Just $ balance $ state { insertColumns = (insertColumns state) + 1 }
+
+    | (Just FewerColumns) <- fromMessage msg =
+        return $ Just $ balance $ state { insertColumns = max 1 $ (insertColumns state) - 1 }
 
     | (Just Hide) <- fromMessage msg = destroyDraggers state
     | (Just ReleaseResources) <- fromMessage msg = destroyDraggers state
