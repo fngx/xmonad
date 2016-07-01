@@ -22,7 +22,7 @@ import XMonad.Layout.LayoutCombinators ( (|||), JumpToLayout (JumpToLayout) )
 import qualified XMonad.Prompt as XP
 import qualified XMonad.Prompt.Shell as XPS
 
-import XMonad.Actions.RotSlaves
+import qualified XMonad.Actions.CycleWindows as CW
 import qualified XMonad.Actions.DwmPromote as DWM
 import XMonad.Actions.FindEmptyWorkspace
 import qualified XMonad.Actions.CycleWS as C
@@ -60,8 +60,10 @@ inLayout as d =
      let lname' = head $ words lname
      fromMaybe d $ lookup lname' as
 
-focusUp = inLayout [("Full", windows W.focusUp), ("Limit", rotSlavesUp)] Boring.focusUp
-focusDown = inLayout [("Full", windows W.focusDown), ("Limit", rotSlavesDown)] Boring.focusDown
+focusUp = inLayout [ ("Full", windows W.focusUp) ]
+          Boring.focusUp
+focusDown = inLayout [ ("Full", windows W.focusDown) ]
+            Boring.focusDown
 
 manageHooks config = config {
   manageHook = (manageHook config) <+>
@@ -126,10 +128,10 @@ windowKeys =
   , ("M-S-=", bringMinned gsconfig)
   , ("M-p", focusUp)
   , ("M-n", focusDown)
+  , ("M-M1-p", CW.rotFocusedUp)
+  , ("M-M1-n", CW.rotFocusedDown)
   , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
   , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
-  , ("M-M1-p", rotSlavesUp)
-  , ("M-M1-n", rotSlavesDown)
   , ("M-<Return>", DWM.dwmpromote >> moose)
   , ("M-u", bringUrgent)
   , ("M-y", GS.bringSelected gsconfig)
