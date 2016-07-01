@@ -84,8 +84,9 @@ typeKey k = spawn $ "xdotool key --clearmodifiers " ++ k
 minWs = "*"
 wsNames = ["q", "w", "e", "r", "t"] ++ [minWs]
 
-interestingWS = C.WSIs $
-  return (\w -> (W.tag w /= minWs) && (isJust $ W.stack w))
+interestingWS = C.WSIs $ do
+  hs <- gets (map W.tag . W.hidden . windowset)
+  return (\w ->  (W.tag w /= minWs) && (W.tag w `elem` hs) && (isJust $ W.stack w))
 
 onOtherScreen x = C.nextScreen >> x >> C.prevScreen
 
