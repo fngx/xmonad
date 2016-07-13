@@ -47,10 +47,10 @@ import XMonad.Layout.ToggleLimit
 import qualified Data.Map as M
 
 layout = XMonad.Layout.NoBorders.smartBorders $
+         Boring.boringAuto $
          addCount $
          mkToggle (single FULL) $
          mkToggle (single (TL 2)) $
-         Boring.boringAuto $
          VC.varial
 
 -- bindings which work in certain layouts
@@ -106,7 +106,8 @@ commandMenu = (GS.runSelectedAction gsconfig
                   ("chromium", spawn "chromium"),
                   ("volume control", spawn "pavucontrol"),
                   ("tenrox", spawn "chromium --new-window http://cse.tenrox.net/"),
-                  ("lights", spawn "curl http://lights.research.cse.org.uk/toggle")
+                  ("lights", spawn "curl http://lights.research.cse.org.uk/toggle"),
+                  ("HALT", spawn "systemctl poweroff")
                 ])
 
 expandH :: Rational -> X ()
@@ -123,17 +124,20 @@ resetLayout = do
 windowKeys =
   [ ("M-S-k", kill)
   , ("M-M1-k", spawn "xkill")
-  , ("M--", windows $ W.shift minWs)
-  , ("M-=", bringFrom minWs)
-  , ("M-S-=", bringMinned gsconfig)
+  , ("M-m", windows $ W.shift minWs)
+  , ("M-,", bringFrom minWs)
+  , ("M-.", bringMinned gsconfig)
   , ("M-p", focusUp)
   , ("M-n", focusDown)
-  , ("M-M1-p", CW.rotFocusedUp)
-  , ("M-M1-n", CW.rotFocusedDown)
+  , ("M-M1-p", CW.rotUnfocusedUp)
+  , ("M-M1-n", CW.rotUnfocusedDown)
+  , ("M-;", CW.rotUnfocusedDown)
+  , ("M-S-;", CW.rotFocusedDown)
   , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
   , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
   , ("M-<Return>", DWM.dwmpromote >> moose)
-  , ("M-u", bringUrgent)
+  , ("M-u", focusUrgent)
+  , ("M-S-u", clearUrgents)
   , ("M-y", GS.bringSelected gsconfig)
   , ("M-j", goToSelected gsconfig)
   , ("M-S-i", expandH 0.1)
@@ -143,7 +147,6 @@ windowKeys =
   , ("M-M1-i", withFocused $ \w -> sendMessage $ VC.GrabColumn w)
   , ("M-M1-o", withFocused $ \w -> sendMessage $ VC.EqualizeColumn 1 w)
   , ("M-z", withFocused $ windows . W.sink)
-  , ("M-m", windows $ W.focusMaster)
   , ("M-/",  withFocused $ \w -> sendMessage $ VC.ToNewColumn w)
   ]
 
@@ -158,7 +161,7 @@ workspaceKeys =
   ++
   [ ("M-s", C.toggleWS' [minWs])
   , ("M-g", viewEmptyWorkspace)
-  , ("M-S-G", tagToEmptyWorkspace)
+  , ("M-S-g", tagToEmptyWorkspace)
   , ("M-d", C.moveTo C.Prev interestingWS)
   , ("M-f", C.moveTo C.Next interestingWS)
   ]
@@ -182,8 +185,8 @@ layoutKeys =
   , ("M-b", sendMessage ToggleStruts)
   , ("M-S-<Space>", resetLayout)
   , ("M-l", sendMessage $ Toggle $ TL 2)
-  , ("M-,", sendMessage VC.FewerColumns)
-  , ("M-.", sendMessage VC.MoreColumns)
+  , ("M--", sendMessage VC.FewerColumns)
+  , ("M-=", sendMessage VC.MoreColumns)
   ]
 
 myKeys =
@@ -263,10 +266,3 @@ bringMinned = GS.withSelectedWindow (\t _ -> t == minWs) $ \w -> do
     windows (bringWindow w)
     XMonad.focus w
     windows W.shiftMaster
-
-bringUrgent = do
-  urg <- readUrgents
-  win <- case urg of
-    [x] -> return $ Just x
-    _ -> GS.gridselectWindow (const $ (flip elem urg)) gsconfig
-  whenJust win $ \w -> (windows $ bringWindow w) >> (windows $ W.focusWindow w)
