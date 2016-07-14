@@ -21,13 +21,16 @@ import XMonad.Layout.LayoutCombinators ( (|||), JumpToLayout (JumpToLayout) )
 
 import qualified XMonad.Prompt as XP
 import qualified XMonad.Prompt.Shell as XPS
+import qualified XMonad.Prompt.XMonad as XPX
+import qualified XMonad.Prompt.Window as XPW
+import qualified XMonad.Prompt.Pass as XPP
 
 import qualified XMonad.Actions.CycleWindows as CW
 import qualified XMonad.Actions.DwmPromote as DWM
 import XMonad.Actions.FindEmptyWorkspace
 import qualified XMonad.Actions.CycleWS as C
 import XMonad.Actions.Warp (warpToWindow)
-import qualified XMonad.Actions.GridSelect2 as GS
+
 import XMonad.Actions.WindowBringer (bringWindow)
 
 import System.Exit
@@ -92,23 +95,27 @@ interestingWS = C.WSIs $ do
 
 onOtherScreen x = C.nextScreen >> x >> C.prevScreen
 
-commandMenu = (GS.runSelectedAction gsconfig
-                {
-                  GS.gs_cellwidth = 128
-                }
-                [
-                  ("emacs", spawn "emacsclient -c -n"),
-                  ("qutebrowser", spawn "qb"),
-                  ("hibernate", spawn "systemctl hibernate"),
-                  ("suspend", spawn "systemctl suspend"),
-                  ("compose mail", spawn "xdg-open mailto:"),
-                  ("check mail", spawn "notmuch new"),
-                  ("chromium", spawn "chromium"),
-                  ("volume control", spawn "pavucontrol"),
-                  ("tenrox", spawn "chromium --new-window http://cse.tenrox.net/"),
-                  ("lights", spawn "curl http://lights.research.cse.org.uk/toggle"),
-                  ("HALT", spawn "systemctl poweroff")
-                ])
+commands = [ ("emacs", spawn "emacsclient -c -n"),
+             ("qutebrowser", spawn "qb"),
+             ("hibernate", spawn "systemctl hibernate"),
+             ("suspend", spawn "systemctl suspend"),
+             ("compose mail", spawn "xdg-open mailto:"),
+             ("check mail", spawn "notmuch new"),
+             ("chromium", spawn "chromium"),
+             ("volume control", spawn "pavucontrol"),
+             ("tenrox", spawn "chromium --new-window http://cse.tenrox.net/"),
+             ("lights", spawn "curl http://lights.research.cse.org.uk/toggle"),
+             ("HALT", spawn "systemctl poweroff"),
+             ("pass", XPP.passwordPrompt prompt)
+             ]
+
+autoPrompt = prompt
+             {
+               XP.alwaysHighlight = True,
+               XP.autoComplete = Just 500
+             }
+
+commandMenu = XPX.xmonadPromptC commands autoPrompt
 
 expandH :: Rational -> X ()
 expandH m = withFocused $ \w -> sendMessage $ VC.Embiggen m 0 w
@@ -126,7 +133,7 @@ windowKeys =
   , ("M-M1-k", spawn "xkill")
   , ("M-m", windows $ W.shift minWs)
   , ("M-,", bringFrom minWs)
-  , ("M-.", bringMinned gsconfig)
+--  , ("M-.", bringMinned gsconfig)
   , ("M-p", focusUp)
   , ("M-n", focusDown)
   , ("M-M1-p", CW.rotUnfocusedUp)
@@ -138,8 +145,8 @@ windowKeys =
   , ("M-<Return>", DWM.dwmpromote >> moose)
   , ("M-u", focusUrgent)
   , ("M-S-u", clearUrgents)
-  , ("M-y", GS.bringSelected gsconfig)
-  , ("M-j", goToSelected gsconfig)
+  , ("M-y", XPW.windowPromptBring prompt)
+  , ("M-j", XPW.windowPromptGoto prompt)
   , ("M-S-i", expandH 0.1)
   , ("M-S-o", expandH (-0.1))
   , ("M-i", expandV 0.1)
@@ -246,23 +253,8 @@ prompt = XP.def
    , XP.fgHLight = "#000000"
    , XP.bgHLight = "#ffffff"
    , XP.promptBorderWidth = 2
-   , XP.searchPredicate = isInfixOf . (map toLower)
+   , XP.searchPredicate = \x y -> x == "" || (x `isInfixOf` (map toLower y))
    , XP.maxComplRows = Just 10
    , XP.historySize = 100
    , XP.promptKeymap = XP.emacsLikeXPKeymap
  }
-
-gsconfig = GS.def
-  {
-    GS.gs_navigate = GS.navNSearch,
-    GS.gs_cellwidth = 256
-  }
-
-goToSelected :: GS.GSConfig (String, Window) -> X ()
-goToSelected c = GS.withSelectedWindow (\t _ -> t /= minWs) (windows . W.focusWindow) c
-
-bringMinned :: GS.GSConfig (String, Window) -> X ()
-bringMinned = GS.withSelectedWindow (\t _ -> t == minWs) $ \w -> do
-    windows (bringWindow w)
-    XMonad.focus w
-    windows W.shiftMaster
