@@ -213,7 +213,7 @@ myKeys =
 main = do
   xmonad $
     withUrgencyHookC BorderUrgencyHook
-    { urgencyBorderColor = "cyan" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
+    { urgencyBorderColor = "lime green" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
     manageHooks $
     eventHooks $
     pagerHints $
