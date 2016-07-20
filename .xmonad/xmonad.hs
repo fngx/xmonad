@@ -218,7 +218,7 @@ myKeys =
 main = do
   xmonad $
     withUrgencyHookC BorderUrgencyHook
-    { urgencyBorderColor = "lime green" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
+    { urgencyBorderColor = "cyan" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
     manageHooks $
     eventHooks $
     pagerHints $
@@ -228,8 +228,8 @@ main = do
     , layoutHook = desktopLayoutModifiers $
                    layout
     , workspaces = wsNames
-    , normalBorderColor = "dark slate gray"
-    , focusedBorderColor = "dark orange"
+    , normalBorderColor = "gray50"
+    , focusedBorderColor = "orange"
     , borderWidth = 2
     , keys = const $ M.empty -- nuke defaults
     }
