@@ -128,6 +128,11 @@ resetLayout = do
   h <- asks (layoutHook . config)
   setLayout h
 
+toggle' = C.toggleWS' [minWs]
+toggleUrgent = withUrgents f where
+  f [] = toggle'
+  f (h:_) = windows $ W.focusWindow h
+
 windowKeys =
   [ ("M-S-k", kill)
   , ("M-M1-k", spawn "xkill")
@@ -143,7 +148,7 @@ windowKeys =
   , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
   , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
   , ("M-<Return>", DWM.dwmpromote >> moose)
-  , ("M-u", focusUrgent)
+  , ("M-u", toggleUrgent)
   , ("M-S-u", clearUrgents)
   , ("M-y", XPW.windowPromptBring prompt)
   , ("M-j", XPW.windowPromptGoto prompt)
@@ -166,7 +171,7 @@ workspaceKeys =
                  ("M-M1-", \x -> (onOtherScreen$ windows $ W.greedyView x))
                 ] ]
   ++
-  [ ("M-s", C.toggleWS' [minWs])
+  [ ("M-s", toggle')
   , ("M-g", viewEmptyWorkspace)
   , ("M-S-g", tagToEmptyWorkspace)
   , ("M-d", C.moveTo C.Prev interestingWS)
