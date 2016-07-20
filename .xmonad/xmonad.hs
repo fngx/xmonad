@@ -27,6 +27,7 @@ import qualified XMonad.Prompt.Pass as XPP
 
 import qualified XMonad.Actions.CycleWindows as CW
 import qualified XMonad.Actions.DwmPromote as DWM
+
 import XMonad.Actions.FindEmptyWorkspace
 import qualified XMonad.Actions.CycleWS as C
 import XMonad.Actions.Warp (warpToWindow)
@@ -40,7 +41,8 @@ import Data.Maybe (isJust, fromJust, listToMaybe, fromMaybe)
 
 import XMonad.Layout.CountLabel (addCount)
 import XMonad.Util.AccelerateScroll
-import XMonad.Actions.BringFrom (bringFrom)
+import XMonad.Actions.BringFrom (bringFrom, bringHeadOfMin)
+import qualified XMonad.Actions.Ring as Ring
 
 import System.Taffybar.Hooks.PagerHints (pagerHints)
 
@@ -48,6 +50,8 @@ import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
 import XMonad.Layout.ToggleLimit
 import qualified Data.Map as M
+
+import Control.Monad (liftM2)
 
 layout = XMonad.Layout.NoBorders.smartBorders $
          Boring.boringAuto $
@@ -81,6 +85,35 @@ manageHooks config = config {
 eventHooks config = config {
   handleEventHook = (handleEventHook config) <+>
                     fullscreenEventHook
+  }
+
+withHistoryHook config = config
+  {
+    logHook = logHook config >>
+              (Ring.update $
+                do st <- gets windowset
+                   let h = W.peek st
+                       c = W.allWindows st
+                   return $ (h, c)) >>
+              (Ring.update $
+                do st <- gets windowset
+                   return (Just $ W.currentTag st, map W.tag (W.workspaces st)))
+  }
+
+followShift = liftM2 (.) W.view W.shift
+
+-- this is a bit horrible; if we ever go to *, take a window off it and come back
+-- not sure what happens if * is empty and we go there.
+neverStar config = config
+  {
+    logHook = logHook config <+>
+              do
+                st <- gets windowset
+                let lastW = W.tag $ head $ W.hidden st
+                    thisW = W.currentTag st
+                if thisW == minWs then windows $ followShift lastW
+                  else return ()
+
   }
 
 typeKey :: String -> X ()
@@ -128,19 +161,17 @@ resetLayout = do
   h <- asks (layoutHook . config)
   setLayout h
 
-toggle' = C.toggleWS' [minWs]
-toggleUrgent = withUrgents f where
-  f [] = toggle'
-  f (h:_) = windows $ W.focusWindow h
+toggle' = Ring.rotate [xK_Super_L, xK_Shift_L] xK_space (windows . W.greedyView)
 
 windowKeys =
   [ ("M-S-k", kill)
   , ("M-M1-k", spawn "xkill")
   , ("M-m", windows $ W.shift minWs)
   , ("M-,", bringFrom minWs)
---  , ("M-.", bringMinned gsconfig)
   , ("M-p", focusUp)
   , ("M-n", focusDown)
+  , ("M-<Tab>", focusDown)
+  , ("M-S-<Tab>", focusUp)
   , ("M-M1-p", CW.rotUnfocusedUp)
   , ("M-M1-n", CW.rotUnfocusedDown)
   , ("M-;", CW.rotUnfocusedDown)
@@ -148,7 +179,7 @@ windowKeys =
   , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
   , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
   , ("M-<Return>", DWM.dwmpromote >> moose)
-  , ("M-u", toggleUrgent)
+  , ("M-u", focusUrgent)
   , ("M-S-u", clearUrgents)
   , ("M-y", XPW.windowPromptBring prompt)
   , ("M-j", XPW.windowPromptGoto prompt)
@@ -166,36 +197,35 @@ workspaceKeys =
   [(mod ++ k, (a ws)) |
     ks <- [["q", "w", "e", "r", "t"], map show [1..9]],
     (k, ws) <- zip ks wsNames,
-    (mod, a) <- [("M-", windows . W.greedyView),
-                 ("M-S-", windows . W.shift),
+    (mod, a) <- [("M-", C.toggleOrView),
+                 ("M-S-", windows . followShift),
                  ("M-M1-", \x -> (onOtherScreen$ windows $ W.greedyView x))
                 ] ]
   ++
-  [ ("M-s", toggle')
+  [ ("M-S-<Space>", toggle')
   , ("M-g", viewEmptyWorkspace)
   , ("M-S-g", tagToEmptyWorkspace)
-  , ("M-d", C.moveTo C.Prev interestingWS)
-  , ("M-f", C.moveTo C.Next interestingWS)
+  , ("M-<Space>", Ring.rotate [xK_Super_L] xK_space (windows . W.focusWindow))
   ]
 
 screenKeys =
-  [ ("M-c", C.nextScreen)
-  , ("M-S-c", C.shiftNextScreen)
-  , ("M-x", C.swapNextScreen)
-  , ("M-M1-d", onOtherScreen $ C.moveTo C.Prev interestingWS)
-  , ("M-M1-f", onOtherScreen $ C.moveTo C.Next interestingWS)
+  [ ("M-d", C.nextScreen)
+  , ("M-S-d", C.shiftNextScreen)
+  , ("M-s", C.swapNextScreen)
   ]
 
 commandKeys =
   [ ("M-S-<Return>", spawn "xterm")
   , ("M-a", commandMenu)
   , ("M-S-a", XPS.shellPrompt prompt)
+  , ("<XF86MonBrightnessDown>", spawn "xbacklight -dec 2")
+  , ("<XF86MonBrightnessUp>", spawn "xbacklight -inc 2")
   ]
 
 layoutKeys =
-  [ ("M-<Space>", sendMessage $ Toggle FULL)
+  [ ("M-f", sendMessage $ Toggle FULL)
   , ("M-b", sendMessage ToggleStruts)
-  , ("M-S-<Space>", resetLayout)
+  , ("M-S-l", resetLayout)
   , ("M-l", sendMessage $ Toggle $ TL 2)
   , ("M--", sendMessage VC.FewerColumns)
   , ("M-=", sendMessage VC.MoreColumns)
@@ -217,6 +247,8 @@ myKeys =
 
 main = do
   xmonad $
+    neverStar $
+    withHistoryHook $
     withUrgencyHookC BorderUrgencyHook
     { urgencyBorderColor = "cyan" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
     manageHooks $

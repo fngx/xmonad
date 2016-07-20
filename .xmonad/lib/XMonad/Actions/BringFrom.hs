@@ -5,9 +5,10 @@ import qualified XMonad.StackSet as W
 import XMonad.Actions.WindowBringer (bringWindow)
 import Data.Maybe (isJust, fromJust, listToMaybe)
 
-bringFrom w = windows bringHeadOfMin
-  where bringHeadOfMin :: WindowSet -> WindowSet
-        bringHeadOfMin ws =
+bringFrom w = windows $ bringHeadOfMin w
+
+bringHeadOfMin :: String -> WindowSet -> WindowSet
+bringHeadOfMin w ws =
           let minSpaces = filter ((== w) . W.tag) $ W.workspaces ws
               firstMin :: Maybe Window
               firstMin =
