@@ -94,10 +94,7 @@ withHistoryHook config = config
                 do st <- gets windowset
                    let h = W.peek st
                        c = W.allWindows st
-                   return $ (h, c)) >>
-              (Ring.update $
-                do st <- gets windowset
-                   return (Just $ W.currentTag st, map W.tag (W.workspaces st)))
+                   return $ (h, c))
   }
 
 followShift = liftM2 (.) W.view W.shift
@@ -121,10 +118,6 @@ typeKey k = spawn $ "xdotool key --clearmodifiers " ++ k
 
 minWs = "*"
 wsNames = ["q", "w", "e", "r", "t"] ++ [minWs]
-
-interestingWS = C.WSIs $ do
-  hs <- gets (map W.tag . W.hidden . windowset)
-  return (\w ->  (W.tag w /= minWs) && (W.tag w `elem` hs) && (isJust $ W.stack w))
 
 commands = [ ("emacs", spawn "emacsclient -c -n"),
              ("qutebrowser", spawn "qb"),
@@ -211,12 +204,15 @@ workspaceKeys =
                  ("M-M1-", \x -> (windows $ W.greedyView x))
                 ] ]
   ++
-  [ ("M-S-<Space>", Ring.rotate [xK_Super_L, xK_Shift_L] xK_space (windows . W.greedyView))
+  [ ("M-S-<Space>", C.moveTo C.Next interestingWS)
   , ("M-g", C.moveTo C.Next emptyNonMin)
   , ("M-S-g", C.doTo C.Next emptyNonMin getSortByIndex (windows . followShift))
   , ("M-<Space>", Ring.rotate [xK_Super_L] xK_space (windows . greedyFocusWindow))
   ]
   where emptyNonMin = (C.WSIs $ return $ \w -> (W.tag w /= minWs) && (not $ isJust $ W.stack w))
+        interestingWS = C.WSIs $ do
+          hs <- gets (map W.tag . W.hidden . windowset)
+          return (\w ->  (W.tag w /= minWs) && (W.tag w `elem` hs) && (isJust $ W.stack w))
 
 screenKeys =
   [ ("M-d", C.nextScreen)
