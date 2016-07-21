@@ -60,7 +60,7 @@ rotate modKey nextKey act = do
                     | otherwise -> select n
 
   io $ grabKeyboard d root False grabModeAsync grabModeAsync currentTime
-  select 1
+  select $ maybe 0 (const 1) c
   io $ ungrabKeyboard d currentTime
 
 data Ring a = Ring (Maybe a) (S.Seq a) deriving (Typeable, Read, Show)
