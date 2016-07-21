@@ -14,8 +14,6 @@ import Data.Int (Int32)
 import Data.Ratio ((%))
 import Data.List (elemIndex)
 
-import qualified Debug.Trace as D
-
 data Axis = V | H deriving (Read, Show)
 
 type Col = S.Seq Rational
@@ -52,7 +50,7 @@ type WDragger = (Window, Dragger)
 
 -- default layout that you may want to use
 varial = LS { cols = (Cols S.empty S.empty),
-              gap = 5,
+              gap = 3,
               balanceColumns = 1,
               insertColumns = 2,
               draggers = [],
@@ -333,8 +331,6 @@ instance LayoutClass LS Window where
           findWindowAnd w f = do st <- gets (W.stack . W.workspace . W.current . windowset)
                                  let maybeArgs = do stack@(W.Stack f u d) <- st
                                                     windowIndex <- elemIndex w lcon
---                                                                   if f == w then Just $ length u
---                                                                   else elemIndex w $ W.integrate stack
                                                     (c, r) <- findWindow windowIndex cs
                                                     return (c, r, windowIndex)
                                  case maybeArgs of
