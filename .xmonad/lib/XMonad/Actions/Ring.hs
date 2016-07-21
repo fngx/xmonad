@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, GADTs #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, GADTs, BangPatterns #-}
 
 module XMonad.Actions.Ring where
 
@@ -16,19 +16,20 @@ lg l = io $ hPutStrLn stderr l
 (<|?) Nothing b = b
 (<|?) (Just x) b = x S.<| b
 
-update :: (Show a, Ord a, Typeable a) => X ((Maybe a), [a]) -> X ()
+update :: (Read a, Show a, Ord a, Typeable a) => X ((Maybe a), [a]) -> X ()
 update g = do
   (cur, cands) <- g
   let del = maybe id Set.delete cur
       cands' = del $ Set.fromList cands
       update' (Ring e h) =
-        Ring cur (S.filter (flip Set.member cands') $ e <|? h)
+        let !newHist = (S.filter (flip Set.member cands') $ e <|? h) in
+          Ring cur newHist
   XS.modify $ update'
 
 remove :: Int -> S.Seq a -> S.Seq a
 remove k s = S.take (k - 1) s S.>< S.drop k s
 
-rotate :: forall a. (Show a, Typeable a) => [KeySym] -> KeySym -> (a -> X ()) -> X ()
+rotate :: forall a. (Read a, Show a, Typeable a) => [KeySym] -> KeySym -> (a -> X ()) -> X ()
 rotate modKey nextKey act = do
   (Ring c h) <- XS.get :: X (Ring a)
   XConf {theRoot = root, display = d} <- ask
@@ -62,7 +63,8 @@ rotate modKey nextKey act = do
   select 1
   io $ ungrabKeyboard d currentTime
 
-data Ring a = Ring (Maybe a) (S.Seq a) deriving (Show)
+data Ring a = Ring (Maybe a) (S.Seq a) deriving (Typeable, Read, Show)
 
-instance (Show a, Typeable a) => ExtensionClass (Ring a) where
+instance (Read a, Show a, Typeable a) => ExtensionClass (Ring a) where
   initialValue = Ring Nothing S.empty
+  extensionType = PersistentExtension

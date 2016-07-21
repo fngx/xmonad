@@ -28,7 +28,6 @@ import qualified XMonad.Prompt.Pass as XPP
 import qualified XMonad.Actions.CycleWindows as CW
 import qualified XMonad.Actions.DwmPromote as DWM
 
-import XMonad.Actions.FindEmptyWorkspace
 import qualified XMonad.Actions.CycleWS as C
 import XMonad.Actions.Warp (warpToWindow)
 
@@ -50,6 +49,7 @@ import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
 import XMonad.Layout.ToggleLimit
 import qualified Data.Map as M
+import XMonad.Util.WorkspaceCompare
 
 import Control.Monad (liftM2)
 
@@ -126,8 +126,6 @@ interestingWS = C.WSIs $ do
   hs <- gets (map W.tag . W.hidden . windowset)
   return (\w ->  (W.tag w /= minWs) && (W.tag w `elem` hs) && (isJust $ W.stack w))
 
-onOtherScreen x = C.nextScreen >> x >> C.prevScreen
-
 commands = [ ("emacs", spawn "emacsclient -c -n"),
              ("qutebrowser", spawn "qb"),
              ("hibernate", spawn "systemctl hibernate"),
@@ -161,7 +159,6 @@ resetLayout = do
   h <- asks (layoutHook . config)
   setLayout h
 
-toggle' = Ring.rotate [xK_Super_L, xK_Shift_L] xK_space (windows . W.greedyView)
 
 windowKeys =
   [ ("M-S-k", kill)
@@ -181,8 +178,8 @@ windowKeys =
   , ("M-<Return>", DWM.dwmpromote >> moose)
   , ("M-u", focusUrgent)
   , ("M-S-u", clearUrgents)
-  , ("M-y", XPW.windowPromptBring prompt)
-  , ("M-j", XPW.windowPromptGoto prompt)
+  , ("M-y", XPW.windowPromptBring autoPrompt)
+  , ("M-j", XPW.windowPromptGoto autoPrompt)
   , ("M-S-i", expandH 0.1)
   , ("M-S-o", expandH (-0.1))
   , ("M-i", expandV 0.1)
@@ -193,24 +190,37 @@ windowKeys =
   , ("M-/",  withFocused $ \w -> sendMessage $ VC.ToNewColumn w)
   ]
 
+-- Ideally I will write a focusWindow and greedyFocusWindow which bring from * when needed
+focusWindow' :: (WorkspaceId -> WindowSet -> WindowSet) -> Window -> WindowSet -> WindowSet
+focusWindow' v w s | Just w == W.peek s = s
+                   | otherwise        = fromMaybe s $ do
+                       n <- W.findTag w s
+                       let go = until ((Just w ==) . W.peek) W.focusUp (v n s)
+                           bring = bringWindow w s
+                       return $ if n == minWs then bring else go
+
+greedyFocusWindow = focusWindow' W.greedyView
+focusWindow = focusWindow' W.view
+
 workspaceKeys =
   [(mod ++ k, (a ws)) |
     ks <- [["q", "w", "e", "r", "t"], map show [1..9]],
     (k, ws) <- zip ks wsNames,
     (mod, a) <- [("M-", C.toggleOrView),
                  ("M-S-", windows . followShift),
-                 ("M-M1-", \x -> (onOtherScreen$ windows $ W.greedyView x))
+                 ("M-M1-", \x -> (windows $ W.greedyView x))
                 ] ]
   ++
-  [ ("M-S-<Space>", toggle')
-  , ("M-g", viewEmptyWorkspace)
-  , ("M-S-g", tagToEmptyWorkspace)
-  , ("M-<Space>", Ring.rotate [xK_Super_L] xK_space (windows . W.focusWindow))
+  [ ("M-S-<Space>", Ring.rotate [xK_Super_L, xK_Shift_L] xK_space (windows . W.greedyView))
+  , ("M-g", C.moveTo C.Next emptyNonMin)
+  , ("M-S-g", C.doTo C.Next emptyNonMin getSortByIndex (windows . followShift))
+  , ("M-<Space>", Ring.rotate [xK_Super_L] xK_space (windows . greedyFocusWindow))
   ]
+  where emptyNonMin = (C.WSIs $ return $ \w -> (W.tag w /= minWs) && (not $ isJust $ W.stack w))
 
 screenKeys =
   [ ("M-d", C.nextScreen)
-  , ("M-S-d", C.shiftNextScreen)
+  , ("M-S-s", C.shiftNextScreen)
   , ("M-s", C.swapNextScreen)
   ]
 
@@ -281,15 +291,15 @@ main = do
     deltah = 0.2
 
 prompt = XP.def
-   { XP.font = "xft:Mono-12"
-   , XP.height = 28
+   { XP.font = "xft:Mono:pixelsize=16"
+   , XP.height = 22
    , XP.position = XP.Top
-   , XP.borderColor = "#AAAAAA"
+   , XP.borderColor = "slate gray"
    , XP.fgColor = "#F5f5f5"
-   , XP.bgColor = "#494949"
+   , XP.bgColor = "dark slate gray"
    , XP.fgHLight = "#000000"
    , XP.bgHLight = "#ffffff"
-   , XP.promptBorderWidth = 2
+   , XP.promptBorderWidth = 1
    , XP.searchPredicate = \x y -> x == "" || (x `isInfixOf` (map toLower y))
    , XP.maxComplRows = Just 10
    , XP.historySize = 100
