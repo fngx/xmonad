@@ -51,6 +51,8 @@ import XMonad.Layout.ToggleLimit
 import qualified Data.Map as M
 import XMonad.Util.WorkspaceCompare
 
+import qualified XMonad.Layout.MouseResizablePile as Pile
+
 import Control.Monad (liftM2)
 
 layout = XMonad.Layout.NoBorders.smartBorders $
@@ -58,7 +60,7 @@ layout = XMonad.Layout.NoBorders.smartBorders $
          addCount $
          mkToggle (single FULL) $
          mkToggle (single (TL 2)) $
-         VC.varial
+         VC.varial ||| Pile.pile Pile.H
 
 -- bindings which work in certain layouts
 inLayout :: [(String, X ())] -> X () -> X ()
@@ -235,6 +237,7 @@ layoutKeys =
   , ("M-l", sendMessage $ Toggle $ TL 2)
   , ("M--", sendMessage VC.FewerColumns)
   , ("M-=", sendMessage VC.MoreColumns)
+  , ("M-h", sendMessage NextLayout)
   ]
 
 myKeys =
