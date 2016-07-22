@@ -5,8 +5,6 @@ import qualified XMonad.StackSet as W
 import XMonad.Config.Desktop
 import XMonad.Util.EZConfig
 
-import XMonad.Util.NamedWindows
-
 import XMonad.Hooks.UrgencyHook
 import XMonad.Hooks.Place
 import XMonad.Hooks.ManageHelpers
@@ -69,10 +67,8 @@ inLayout as d =
      let lname' = head $ words lname
      fromMaybe d $ lookup lname' as
 
-focusUp = inLayout [ ("Full", windows W.focusUp) ]
-          Boring.focusUp
-focusDown = inLayout [ ("Full", windows W.focusDown) ]
-            Boring.focusDown
+focusUp' = inLayout [ ("Full", windows W.focusUp) ] Boring.focusUp
+focusDown' = inLayout [ ("Full", windows W.focusDown) ] Boring.focusDown
 
 manageHooks config = config {
   manageHook = (manageHook config) <+>
@@ -85,18 +81,16 @@ manageHooks config = config {
   }
 
 eventHooks config = config {
-  handleEventHook = (handleEventHook config) <+>
-                    fullscreenEventHook
+  handleEventHook = (handleEventHook config) <+> fullscreenEventHook
   }
 
 withHistoryHook config = config
   {
     logHook = logHook config >>
-              (Ring.update $
-                do st <- gets windowset
-                   let h = W.peek st
-                       c = W.allWindows st
-                   return $ (h, c))
+              (Ring.update $ do st <- gets windowset
+                                let h = W.peek st
+                                    c = W.allWindows st
+                                return $ (h, c))
   }
 
 followShift = liftM2 (.) W.view W.shift
@@ -105,6 +99,8 @@ followShift = liftM2 (.) W.view W.shift
 -- not sure what happens if * is empty and we go there.
 neverStar config = config
   {
+
+
     logHook = logHook config <+>
               do
                 st <- gets windowset
@@ -154,20 +150,17 @@ resetLayout = do
   h <- asks (layoutHook . config)
   setLayout h
 
-
 windowKeys =
   [ ("M-S-k", kill)
   , ("M-M1-k", spawn "xkill")
   , ("M-m", windows $ W.shift minWs)
   , ("M-,", bringFrom minWs)
-  , ("M-p", focusUp)
-  , ("M-n", focusDown)
-  , ("M-<Tab>", focusDown)
-  , ("M-S-<Tab>", focusUp)
-  , ("M-M1-p", CW.rotUnfocusedUp)
-  , ("M-M1-n", CW.rotUnfocusedDown)
-  , ("M-;", CW.rotUnfocusedDown)
-  , ("M-S-;", CW.rotFocusedDown)
+  , ("M-p", focusUp')
+  , ("M-n", focusDown')
+  , ("M-<Tab>", focusDown')
+  , ("M-S-<Tab>", focusUp')
+  , ("M-M1-p", CW.rotFocusedUp)
+  , ("M-M1-n", CW.rotFocusedDown)
   , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
   , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
   , ("M-<Return>", DWM.dwmpromote >> moose)
