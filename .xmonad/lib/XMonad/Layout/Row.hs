@@ -40,7 +40,7 @@ data Pile a = Pile
   , gap :: !Int
   , sizes :: !(M.Map a Rational)
   , handles :: !(M.Map Window (Handle a))
-  , inGroup :: Bool
+  , isOuterLayout :: Bool
   } deriving (Read, Show)
 
 data Msg a = Drag (Handle a) Position Rational
@@ -77,11 +77,6 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
                            newLeftSize = currentLeftSize + safeDelta
                            newRightSize = currentRightSize - safeDelta
                        return $ st { sizes = M.insert left newLeftSize $ M.insert right newRightSize $ szs }
-    | (Just m) <- fromMessage msg :: (Maybe (Msg Int)) =
-        if (inGroup st)
-        then do sendMessage $ ToEnclosing $ SomeMessage m
-                return Nothing
-        else return Nothing
     | (Just Hide) <- fromMessage msg = cleanup
     | (Just ReleaseResources) <- fromMessage msg = cleanup
     -- this resize event is not transmitted to the group layout
@@ -93,19 +88,23 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
 
           resize e@(ButtonEvent {ev_window = w, ev_event_type = t}) handles =
             if t == buttonPress then
-              maybe (if (inGroup st) then (send e) else (return ()))
+              -- if I am an inner layout and I get a button event
+              -- it might be for the outer layout if it is
+              maybe (if (isOuterLayout st) then (return ()) else (sendOut e))
               dragHandler $ M.lookup w handles
             else return ()
           resize _ _ = return ()
 
-          send x = if (inGroup st)
-                   then sendMessage $ ToEnclosing $ SomeMessage x
-                   else sendMessage x
+          sendOut x = sendMessage $ ToEnclosing $ SomeMessage x
+
+          send = if (isOuterLayout st)
+                 then sendOut
+                 else sendMessage
 
           dragHandler :: Handle a -> X ()
           dragHandler h = maybe (return ())
             (\r -> (flip mouseDrag (return ()) $
-                    \x y -> sendMessage $ Drag h (ax x y) r))
+                    \x y -> send $ Drag h (ax x y) r))
             (M.lookup (fst (between h)) (sizes st))
 
 deleteHandles :: Pile a -> X ()
@@ -177,7 +176,7 @@ row a = Pile { gap = 3
               , sizes = M.empty
               , handles = M.empty
               , axis = a
-              , inGroup = False
+              , isOuterLayout = False
               }
 
-orderRow a = OrderLayout (row a)
+orderRow a = OrderLayout ((row a) {isOuterLayout = True})

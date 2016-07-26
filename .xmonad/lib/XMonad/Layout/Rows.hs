@@ -5,7 +5,7 @@ import XMonad.Core ( SomeMessage(..) )
 import XMonad (sendMessage, Window, ChangeLayout(NextLayout))
 import XMonad.StackSet (Stack (Stack))
 import XMonad.Util.Stack
-import XMonad.Layout.Row (row, orderRow, Axis (H, V), axis, inGroup)
+import XMonad.Layout.Row (row, orderRow, Axis (H, V), axis, isOuterLayout)
 import XMonad.Layout.Tabbed (simpleTabbed)
 import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wrap) )
 
@@ -13,7 +13,7 @@ import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wra
 import qualified XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.Groups
 
-rows = let inner = (row V) {inGroup = True} ||| simpleTabbed
+rows = let inner = row V ||| simpleTabbed
            outer = orderRow H
        in group inner outer
 
