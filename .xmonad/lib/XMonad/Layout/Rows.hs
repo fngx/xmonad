@@ -3,17 +3,20 @@ module XMonad.Layout.Rows where
 
 import XMonad.Core ( SomeMessage(..) )
 import XMonad (sendMessage, Window, ChangeLayout(NextLayout))
+--import XMonad.Layout (Full (Full))
 import XMonad.StackSet (Stack (Stack))
 import XMonad.Util.Stack
 import XMonad.Layout.Row (row, orderRow, Axis (H, V), axis, isOuterLayout)
-import XMonad.Layout.Tabbed (simpleTabbed)
+import XMonad.Layout.Tabbed (tabbed, shrinkText)
 import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wrap) )
+import XMonad.Util.Themes (smallClean, theme)
 
 -- maybe
 import qualified XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.Groups
 
-rows = let inner = row V ||| simpleTabbed
+rows = let t = tabbed shrinkText (theme smallClean)
+           inner = row V ||| t
            outer = orderRow H
        in group inner outer
 
@@ -61,5 +64,4 @@ onFocused f _ gs = onFocusedZ (onZipper f) gs
 -- fullscreen for group vs layout etc.
 
 groupToTabbed = sendMessage $ JumpToLayout "Tabbed"
-
 groupNextLayout = sendMessage $ ToFocused $ SomeMessage $ NextLayout

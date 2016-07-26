@@ -10,6 +10,8 @@ import System.Taffybar.Hooks.PagerHints (pagerHints)
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
 import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
 import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat)
+import XMonad.Layout.MultiToggle
+import XMonad.Layout.MultiToggle.Instances
 
 main = xmonad config
 
@@ -18,7 +20,7 @@ icon = "*"
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ (R.rows ||| Full)
+  where l = desktopLayoutModifiers $ smartBorders $ mkToggle (single NBFULL) $ R.rows
 
 hooks c = c
   { handleEventHook = (handleEventHook c) <+> fullscreenEventHook
@@ -56,6 +58,7 @@ bindings =
   , ("M-n", R.focusNext)
   , ("M-l t", R.groupToTabbed)
   , ("M-l M-l", R.groupNextLayout)
+  , ("M-f", sendMessage $ Toggle NBFULL)
 
   , ("M-;", R.makeGroup)
   , ("M-<Space>", sendMessage NextLayout)
