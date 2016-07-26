@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables #-}
 
-module XMonad.Layout.MouseResizablePile where
+-- a layout which provides a mouse resizable pile of windows
+-- punning on mouse resizable tile.
+
+module XMonad.Layout.Row where
 
 import Data.Ratio ((%))
 
@@ -9,23 +12,27 @@ import XMonad.Util.XUtils (deleteWindow, showWindow)
 import qualified XMonad.StackSet as W
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
+import XMonad.Layout.Groups ( GroupsMessage (ToEnclosing) )
+import qualified Debug.Trace as DT
 
 data Axis = V | H deriving (Read, Show, Eq)
 
-data OrderLayout a = OrderLayout (Pile Int)
+-- todo: maybe change groups to give access to the IDs
+data OrderLayout a = OrderLayout (Pile Int) deriving (Read, Show)
 
-instance LayoutClass OrderLayout a where
+instance (Show a) => LayoutClass OrderLayout a where
   description (OrderLayout p) = description p
   doLayout (OrderLayout p) screen stack = do
     let ws = W.integrate stack
         indices = take (length ws) [0..]
         stack' = fromJust $ W.differentiate indices
         inverse = M.fromList $ zip indices ws
-        invert (i, r) = (M.lookup i inverse, r)
+        invert (i, r) = (fromJust $ M.lookup i inverse, r)
     (indices, p') <- doLayout p screen stack'
     return (map invert indices, fmap OrderLayout p')
-  handleMessage (OrderLayout p) msg = return $ do p' <- handleMessage p msg
-                                                  return (OrderLayout p')
+  handleMessage (OrderLayout p) msg =
+    do p' <- handleMessage p msg
+       return $ fmap OrderLayout p'
 
 data Pile a = Pile
   {
@@ -33,6 +40,7 @@ data Pile a = Pile
   , gap :: !Int
   , sizes :: !(M.Map a Rational)
   , handles :: !(M.Map Window (Handle a))
+  , inGroup :: Bool
   } deriving (Read, Show)
 
 data Msg a = Drag (Handle a) Position Rational
@@ -50,14 +58,15 @@ data Handle a = Handle
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
   description p = show $ axis p
 
-  doLayout state screen stack = do
+  doLayout state screen stack =
+    DT.traceShow ("layout", state, screen, stack) $ do
     deleteHandles state
     let (rects, state') = render state screen $ W.integrate stack
     newHandles <- createHandles state' screen rects
     return (rects, Just $ state' {handles = newHandles})
 
   handleMessage st msg
-    | (Just (Drag h p origLeftSize)) <- (fromMessage msg :: Maybe (Msg a)) =
+    | (Just m@(Drag h p origLeftSize)) <- fromMessage msg =
         let (left, right) = between h
             szs = sizes st
         in return $ do currentLeftSize <- M.lookup left szs
@@ -68,18 +77,31 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
                            newLeftSize = currentLeftSize + safeDelta
                            newRightSize = currentRightSize - safeDelta
                        return $ st { sizes = M.insert left newLeftSize $ M.insert right newRightSize $ szs }
-
+    | (Just m) <- fromMessage msg :: (Maybe (Msg Int)) =
+        if (inGroup st)
+        then do sendMessage $ ToEnclosing $ SomeMessage m
+                return Nothing
+        else return Nothing
     | (Just Hide) <- fromMessage msg = cleanup
     | (Just ReleaseResources) <- fromMessage msg = cleanup
+    -- this resize event is not transmitted to the group layout
+    -- I could propagate the event back up from the lower level layout
     | (Just e) <- fromMessage msg :: Maybe Event = resize e (handles st) >> return Nothing
     | otherwise = return Nothing
     where cleanup = deleteHandles st >> (return $ Just $ st {handles=M.empty})
           ax x y = if (axis st) == H then x else y
-          resize (ButtonEvent {ev_window = w, ev_event_type = t}) handles =
+
+          resize e@(ButtonEvent {ev_window = w, ev_event_type = t}) handles =
             if t == buttonPress then
-              maybe (return ()) dragHandler $ M.lookup w handles
+              maybe (if (inGroup st) then (send e) else (return ()))
+              dragHandler $ M.lookup w handles
             else return ()
           resize _ _ = return ()
+
+          send x = if (inGroup st)
+                   then sendMessage $ ToEnclosing $ SomeMessage x
+                   else sendMessage x
+
           dragHandler :: Handle a -> X ()
           dragHandler h = maybe (return ())
             (\r -> (flip mouseDrag (return ()) $
@@ -128,11 +150,12 @@ createHandles st (Rectangle sx sy sw sh) rects =
   in
     fmap M.fromList $ mapM createHandle $ zip rects $ map fst $ drop 1 rects
 
-render :: (Ord a) => Pile a -> Rectangle -> [a] -> ([(a, Rectangle)], Pile a)
+render :: (Show a, Ord a) => Pile a -> Rectangle -> [a] -> ([(a, Rectangle)], Pile a)
 render st screen as =
+  DT.traceShow ("render", st, screen, as) $
   let -- lookup sizes
       szs :: [Rational]
-      szs = map (flip (M.findWithDefault (1 % (fromIntegral $ length as))) (sizes st)) as
+      szs = map (flip (M.findWithDefault (1 % (max 1 $ fromIntegral $ M.size $ sizes st))) (sizes st)) as
       t = sum szs
       nszs = map (flip (/) t) szs
       parts = scanl (+) 0 nszs
@@ -141,18 +164,20 @@ render st screen as =
       -- now we need to cut up the screen with the tuples
       (Rectangle sx sy sw sh) = screen
       cut (l, r)
-        | (axis st) == H = (Rectangle
-                            (floor ((fromIntegral sx) + (fromIntegral sw) * l) + (fromIntegral g) :: Position) sy
-                            (floor ((fromIntegral sw) * (r - l)) - g :: Dimension) sh)
-        | otherwise      = (Rectangle
-                            sx (floor ((fromIntegral sy) + (fromIntegral sh) * l) + (fromIntegral g) :: Position)
-                            sw (floor ((fromIntegral sh) * (r - l)) - g:: Dimension))
+        | (axis st) == H = (Rectangle (pos sx sw) sy          (ext sw) sh      )
+        | otherwise      = (Rectangle sx          (pos sy sh) sw       (ext sh))
         where g = if l == 0 then 0 else (fromIntegral $ gap st)
+              pos p h = (floor ((fromIntegral p) + (fromIntegral h) * l) + (fromIntegral g) :: Position)
+              ext h = (floor ((fromIntegral h) * (r - l)) - g :: Dimension)
+
       rects = map cut bounds
   in (zip as rects, st {sizes = M.fromList (zip as nszs)})
 
-pile a = Pile { gap = 3
+row a = Pile { gap = 3
               , sizes = M.empty
               , handles = M.empty
               , axis = a
+              , inGroup = False
               }
+
+orderRow a = OrderLayout (row a)

@@ -1,299 +1,68 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, NoMonomorphismRestriction #-}
-import qualified Debug.Trace as DT
-import XMonad hiding ( (|||) )
+import XMonad hiding (config)
 import qualified XMonad.StackSet as W
 import XMonad.Config.Desktop
-import XMonad.Util.EZConfig
-
-import XMonad.Hooks.UrgencyHook
-import XMonad.Hooks.Place
-import XMonad.Hooks.ManageHelpers
+import qualified Data.Map as M
+import XMonad.Util.EZConfig (additionalKeysP)
+import System.Exit (exitWith, ExitCode (ExitSuccess))
+import XMonad.Layout.NoBorders (smartBorders)
+import qualified XMonad.Layout.Rows as R
+import System.Taffybar.Hooks.PagerHints (pagerHints)
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
 import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
+import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat)
 
-import XMonad.Layout.NoBorders
-import qualified XMonad.Layout.MouseResizableTile as MRT
-import qualified XMonad.Layout.BoringWindows as Boring
-import qualified XMonad.Layout.VarialColumn as VC
-import XMonad.Layout.LayoutCombinators ( (|||), JumpToLayout (JumpToLayout) )
+main = xmonad config
 
-import qualified XMonad.Prompt as XP
-import qualified XMonad.Prompt.Shell as XPS
-import qualified XMonad.Prompt.XMonad as XPX
-import qualified XMonad.Prompt.Window as XPW
-import qualified XMonad.Prompt.Pass as XPP
+wsLabels = ["q", "w", "e", "r", "t"]
+icon = "*"
 
-import qualified XMonad.Actions.CycleWindows as CW
-import qualified XMonad.Actions.DwmPromote as DWM
+layout c = c
+  { layoutHook = l }
+  where l = desktopLayoutModifiers $ smartBorders $ (R.rows ||| Full)
 
-import qualified XMonad.Actions.CycleWS as C
-import XMonad.Actions.Warp (warpToWindow)
+hooks c = c
+  { handleEventHook = (handleEventHook c) <+> fullscreenEventHook
+  , manageHook = (manageHook c) <+>
+                 composeAll
+                 [ isDialog --> doFloat,
+                   isFullscreen --> doFullFloat ] }
 
-import XMonad.Actions.WindowBringer (bringWindow)
+config =
+  pagerHints $
+  flip additionalKeysP bindings $
+  hooks $
+  layout $
+  desktopConfig
+  { modMask = mod4Mask
+  , workspaces = wsLabels ++ [icon]
+  , keys = const $ M.empty }
 
-import System.Exit
-import Data.List (isInfixOf, (\\))
-import Data.Char (toLower)
-import Data.Maybe (isJust, fromJust, listToMaybe, fromMaybe)
+bindings =
+  [ -- xmonad controls
+    ("M-S-<Escape>", io (exitWith ExitSuccess))
+  , ("M-<Escape>", spawn "xmonad --recompile; xmonad --restart")
 
-import XMonad.Layout.CountLabel (addCount)
-import XMonad.Util.AccelerateScroll
-import XMonad.Actions.BringFrom (bringFrom, bringHeadOfMin)
-import qualified XMonad.Actions.Ring as Ring
+  -- keys to launch programs
+  , ("M-S-<Return>", spawn "xterm")
+  , ("M-a", spawn "dmenu_run")
 
-import System.Taffybar.Hooks.PagerHints (pagerHints)
+  -- keys to adjust the stack and focus
+  , ("M-<Backspace>", kill)
 
-import XMonad.Layout.MultiToggle
-import XMonad.Layout.MultiToggle.Instances
-import XMonad.Layout.ToggleLimit
-import qualified Data.Map as M
-import XMonad.Util.WorkspaceCompare
-
-import qualified XMonad.Layout.MouseResizablePile as Pile
-
-import Control.Monad (liftM2)
-
-layout = XMonad.Layout.NoBorders.smartBorders $
-         Boring.boringAuto $
-         addCount $
-         mkToggle (single FULL) $
-         mkToggle (single (TL 2)) $
-         VC.varial ||| Pile.pile Pile.H
-
--- bindings which work in certain layouts
-inLayout :: [(String, X ())] -> X () -> X ()
-inLayout as d =
-  do lname <- gets (description . W.layout . W.workspace . W.current . windowset)
-     let lname' = head $ words lname
-     fromMaybe d $ lookup lname' as
-
-focusUp' = inLayout [ ("Full", windows W.focusUp) ] Boring.focusUp
-focusDown' = inLayout [ ("Full", windows W.focusDown) ] Boring.focusDown
-
-manageHooks config = config {
-  manageHook = (manageHook config) <+>
-               placeHook (withGaps (16,16,16,16) (underMouse (0.5, 0.2))) <+>
-               composeAll
-               [
-                 isDialog --> doFloat,
-                 isFullscreen --> doFullFloat
-               ]
-  }
-
-eventHooks config = config {
-  handleEventHook = (handleEventHook config) <+> fullscreenEventHook
-  }
-
-withHistoryHook config = config
-  {
-    logHook = logHook config >>
-              (Ring.update $ do st <- gets windowset
-                                let h = W.peek st
-                                    c = W.allWindows st
-                                return $ (h, c))
-  }
-
-followShift = liftM2 (.) W.view W.shift
-
--- this is a bit horrible; if we ever go to *, take a window off it and come back
--- not sure what happens if * is empty and we go there.
-neverStar config = config
-  {
-
-
-    logHook = logHook config <+>
-              do
-                st <- gets windowset
-                let lastW = W.tag $ head $ W.hidden st
-                    thisW = W.currentTag st
-                if thisW == minWs then windows $ followShift lastW
-                  else return ()
-
-  }
-
-typeKey :: String -> X ()
-typeKey k = spawn $ "xdotool key --clearmodifiers " ++ k
-
-minWs = "*"
-wsNames = ["q", "w", "e", "r", "t"] ++ [minWs]
-
-commands = [ ("emacs", spawn "emacsclient -c -n"),
-             ("qutebrowser", spawn "qb"),
-             ("hibernate", spawn "systemctl hibernate"),
-             ("suspend", spawn "systemctl suspend"),
-             ("compose mail", spawn "xdg-open mailto:"),
-             ("check mail", spawn "notmuch new"),
-             ("chromium", spawn "chromium"),
-             ("volume control", spawn "pavucontrol"),
-             ("tenrox", spawn "chromium --new-window http://cse.tenrox.net/"),
-             ("lights", spawn "curl http://lights.research.cse.org.uk/toggle"),
-             ("HALT", spawn "systemctl poweroff"),
-             ("pass", XPP.passwordPrompt prompt)
-             ]
-
-autoPrompt = prompt
-             {
-               XP.alwaysHighlight = True,
-               XP.autoComplete = Just 500
-             }
-
-commandMenu = XPX.xmonadPromptC commands autoPrompt
-
-expandH :: Rational -> X ()
-expandH m = withFocused $ \w -> sendMessage $ VC.Embiggen m 0 w
-expandV :: Rational -> X ()
-expandV m = withFocused $ \w -> sendMessage $ VC.Embiggen 0 m w
-
-moose = warpToWindow 0.1 0.1
-
-resetLayout = do
-  h <- asks (layoutHook . config)
-  setLayout h
-
-windowKeys =
-  [ ("M-S-k", kill)
-  , ("M-M1-k", spawn "xkill")
-  , ("M-m", windows $ W.shift minWs)
-  , ("M-,", bringFrom minWs)
-  , ("M-p", focusUp')
-  , ("M-n", focusDown')
-  , ("M-<Tab>", focusDown')
-  , ("M-S-<Tab>", focusUp')
-  , ("M-M1-p", CW.rotFocusedUp)
-  , ("M-M1-n", CW.rotFocusedDown)
-  , ("M-S-p", withFocused $ \w -> sendMessage $ VC.UpOrLeft w)
-  , ("M-S-n", withFocused $ \w -> sendMessage $ VC.DownOrRight w)
-  , ("M-<Return>", DWM.dwmpromote >> moose)
-  , ("M-u", focusUrgent)
-  , ("M-S-u", clearUrgents)
-  , ("M-y", XPW.windowPromptBring autoPrompt)
-  , ("M-j", XPW.windowPromptGoto autoPrompt)
-  , ("M-S-i", expandH 0.1)
-  , ("M-S-o", expandH (-0.1))
-  , ("M-i", expandV 0.1)
-  , ("M-o", expandV (-0.1))
-  , ("M-M1-i", withFocused $ \w -> sendMessage $ VC.GrabColumn w)
-  , ("M-M1-o", withFocused $ \w -> sendMessage $ VC.EqualizeColumn 1 w)
+  -- keys to adjust the layout
   , ("M-z", withFocused $ windows . W.sink)
-  , ("M-/",  withFocused $ \w -> sendMessage $ VC.ToNewColumn w)
+
+  , ("M-p", R.focusPrev)
+  , ("M-n", R.focusNext)
+  , ("M-l t", R.groupToTabbed)
+  , ("M-l M-l", R.groupNextLayout)
+
+  , ("M-;", R.makeGroup)
+  , ("M-<Space>", sendMessage NextLayout)
   ]
-
--- Ideally I will write a focusWindow and greedyFocusWindow which bring from * when needed
-focusWindow' :: (WorkspaceId -> WindowSet -> WindowSet) -> Window -> WindowSet -> WindowSet
-focusWindow' v w s | Just w == W.peek s = s
-                   | otherwise        = fromMaybe s $ do
-                       n <- W.findTag w s
-                       let go = until ((Just w ==) . W.peek) W.focusUp (v n s)
-                           bring = bringWindow w s
-                       return $ if n == minWs then bring else go
-
-greedyFocusWindow = focusWindow' W.greedyView
-focusWindow = focusWindow' W.view
-
-workspaceKeys =
-  [(mod ++ k, (a ws)) |
-    ks <- [["q", "w", "e", "r", "t"], map show [1..9]],
-    (k, ws) <- zip ks wsNames,
-    (mod, a) <- [("M-", C.toggleOrView),
-                 ("M-S-", windows . followShift),
-                 ("M-M1-", \x -> (windows $ W.greedyView x))
-                ] ]
   ++
-  [ ("M-S-<Space>", C.moveTo C.Next interestingWS)
-  , ("M-g", C.moveTo C.Next emptyNonMin)
-  , ("M-S-g", C.doTo C.Next emptyNonMin getSortByIndex (windows . followShift))
-  , ("M-<Space>", Ring.rotate [xK_Super_L] xK_space (windows . greedyFocusWindow))
-  ]
-  where emptyNonMin = (C.WSIs $ return $ \w -> (W.tag w /= minWs) && (not $ isJust $ W.stack w))
-        interestingWS = C.WSIs $ do
-          hs <- gets (map W.tag . W.hidden . windowset)
-          return (\w ->  (W.tag w /= minWs) && (W.tag w `elem` hs) && (isJust $ W.stack w))
-
-screenKeys =
-  [ ("M-d", C.nextScreen)
-  , ("M-S-s", C.shiftNextScreen)
-  , ("M-s", C.swapNextScreen)
-  ]
-
-commandKeys =
-  [ ("M-S-<Return>", spawn "xterm")
-  , ("M-a", commandMenu)
-  , ("M-S-a", XPS.shellPrompt prompt)
-  , ("<XF86MonBrightnessDown>", spawn "xbacklight -dec 2")
-  , ("<XF86MonBrightnessUp>", spawn "xbacklight -inc 2")
-  ]
-
-layoutKeys =
-  [ ("M-f", sendMessage $ Toggle FULL)
-  , ("M-b", sendMessage ToggleStruts)
-  , ("M-S-l", resetLayout)
-  , ("M-l", sendMessage $ Toggle $ TL 2)
-  , ("M--", sendMessage VC.FewerColumns)
-  , ("M-=", sendMessage VC.MoreColumns)
-  , ("M-h", sendMessage NextLayout)
-  ]
-
-myKeys =
-  [ ("M-S-<Escape>", io (exitWith ExitSuccess))
-  , ("M-<Escape>", spawn "xmonad --recompile; xmonad --restart") ]
-  ++
-  windowKeys
-  ++
-  workspaceKeys
-  ++
-  screenKeys
-  ++
-  commandKeys
-  ++
-  layoutKeys
-
-main = do
-  xmonad $
-    neverStar $
-    withHistoryHook $
-    withUrgencyHookC BorderUrgencyHook
-    { urgencyBorderColor = "cyan" } urgencyConfig { suppressWhen = XMonad.Hooks.UrgencyHook.Never } $
-    manageHooks $
-    eventHooks $
-    pagerHints $
-    desktopConfig
-    { modMask     = mod4Mask
-    , clickJustFocuses = False
-    , layoutHook = desktopLayoutModifiers $
-                   layout
-    , workspaces = wsNames
-    , normalBorderColor = "gray50"
-    , focusedBorderColor = "orange"
-    , borderWidth = 2
-    , keys = const $ M.empty -- nuke defaults
-    }
-    `additionalMouseBindings`
-    [
-      ((0,4), const $ accelerateButton 4),
-      ((0,5), const $ accelerateButton 5),
-      ((mod4Mask, 4), const $ typeKey "XF86AudioLowerVolume"),
-      ((mod4Mask, 5), const $ typeKey "XF86AudioRaiseVolume")
-    ]
-    `additionalKeysP`
-    myKeys
-  where
-    deltaw :: Rational
-    deltaw = 0.2
-    deltah :: Rational
-    deltah = 0.2
-
-prompt = XP.def
-   { XP.font = "xft:Mono:pixelsize=16"
-   , XP.height = 22
-   , XP.position = XP.Top
-   , XP.borderColor = "slate gray"
-   , XP.fgColor = "#F5f5f5"
-   , XP.bgColor = "dark slate gray"
-   , XP.fgHLight = "#000000"
-   , XP.bgHLight = "#ffffff"
-   , XP.promptBorderWidth = 1
-   , XP.searchPredicate = \x y -> x == "" || (x `isInfixOf` (map toLower y))
-   , XP.maxComplRows = Just 10
-   , XP.historySize = 100
-   , XP.promptKeymap = XP.emacsLikeXPKeymap
- }
+  -- workspace switching keys
+  [ (mod ++ key, action key) |
+    key <- wsLabels,
+    (mod, action) <- [ ("M-", windows . W.greedyView)
+                     , ("M-S-", windows . W.shift)] ]
