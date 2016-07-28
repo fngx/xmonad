@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 import XMonad hiding (config)
 
 import qualified XMonad
@@ -20,11 +21,19 @@ import qualified XMonad.Actions.Ring as Ring
 import XMonad.Actions.Iconify (greedyFocusWindow, focusWindow, iconify, uniconify)
 import Control.Monad (liftM2)
 import XMonad.Actions.CycleWS
+import XMonad.Hooks.UrgencyHook
+import Data.Char (toLower)
+import qualified XMonad.Actions.Warp as Warp
+import XMonad.Actions.UpdatePointer
+import XMonad.Actions.WindowBringer
+import XMonad.Util.EMenu (Style(..), emenu)
 
 main = xmonad config
 
+followFocus = Warp.warpToWindow 0.9 0.1
+
 wsLabels = ["q", "w", "e", "r", "t"]
-icon = "*"
+icon = "▼"
 
 resetLayout = do
   layout <- asks (layoutHook . XMonad.config)
@@ -34,7 +43,12 @@ layout c = c
   { layoutHook = l }
   where l = desktopLayoutModifiers $ smartBorders $ mkToggle (single NBFULL) $ R.rows
 
-hooks c = c
+hooks c =
+  withUrgencyHookC
+  BorderUrgencyHook {urgencyBorderColor = "red"}
+  urgencyConfig {suppressWhen = Never}
+  $
+  c
   { handleEventHook = (handleEventHook c) <+> fullscreenEventHook
   , manageHook = (manageHook c) <+>
                  composeAll
@@ -42,6 +56,7 @@ hooks c = c
                    isFullscreen --> doFullFloat
                  ]
   , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
+  , startupHook = (startupHook c)
   }
 
 config =
@@ -54,7 +69,7 @@ config =
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
   , normalBorderColor  = "#333333"
-  , focusedBorderColor = "green"--"#5882FA"
+  , focusedBorderColor = "dark cyan"
   , borderWidth = 1
 }
 
@@ -74,10 +89,12 @@ bindings =
   -- keys to adjust the layout
   , ("M-z", withFocused $ windows . W.sink)
 
-  , ("M-p", R.focusPrev)
-  , ("M-n", R.focusNext)
+  , ("M-p",   R.focusPrev)
+  , ("M-n",   R.focusNext)
   , ("M-S-p", R.swapPrev)
   , ("M-S-n", R.swapNext)
+  , ("M-;",   R.maximize)
+  , ("M-S-;", R.equalize)
 
   , ("M-l M-l", R.groupNextLayout)
   , ("M-l r", resetLayout)
@@ -93,7 +110,17 @@ bindings =
   , ("M-,", uniconify icon)
 
   -- cycle and unminify
-  , ("M-<Space>", Ring.rotate [xK_Super_L] xK_space (windows . (greedyFocusWindow icon)))
+  , ("M-<Space>", do us <- readUrgents
+                     case us of
+                       (h:_) -> windows $ greedyFocusWindow icon h
+                       [] -> Ring.rotate [xK_Super_L] xK_space (windows . (greedyFocusWindow icon)))
+
+    -- one day I shall replace dmenu perhaps
+
+  , ("M-b", bringMenuArgs ["-i", "-l", "10", "-p", "bring"])
+  , ("M-g", gotoMenuArgs  ["-i", "-l", "10", "-p", "goto"])
+
+  , ("M-i", (emenu Style (const $ return []) (const "")) >> return ())
 
   , ("M-s", swapNextScreen)
   , ("M-S-s", shiftNextScreen)

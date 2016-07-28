@@ -1,47 +1,76 @@
 {-# LANGUAGE Rank2Types, FlexibleInstances, MultiParamTypeClasses #-}
 module XMonad.Layout.Rows where
 
-import XMonad.Core ( SomeMessage(..) )
-import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows)
+import XMonad.Core ( SomeMessage(..) , LayoutClass(..) )
+import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused)
 --import XMonad.Layout (Full (Full))
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
 import XMonad.Util.Stack
-import XMonad.Layout.Row (row, orderRow, Axis (H, V), axis, isOuterLayout)
+import XMonad.Layout.Row (row, orderRow, Axis (H, V), axis, isOuterLayout, Msg(..))
 import XMonad.Layout.Tabbed (tabbed, shrinkText)
 import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wrap) )
-import XMonad.Layout.Decoration (def, fontName, decoHeight, activeBorderColor)
+import XMonad.Layout.Decoration (def, fontName, decoHeight
+                                , inactiveBorderColor , activeBorderColor
+                                , activeColor, inactiveColor
+                                , inactiveTextColor , activeTextColor
+                                )
 
 import qualified XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.Groups
 import Control.Monad (unless, when)
 import qualified Data.Set as S
 import XMonad.Actions.MessageFeedback (send)
-import XMonad.Layout.LayoutModifier
+import Data.Maybe ( Maybe(..), fromMaybe, fromJust, isNothing )
 
 myTheme = def
   { fontName = "xft:Monospace-8"
   , decoHeight = 16
+  , inactiveBorderColor = "#708090"
+  , activeBorderColor   = "#5f9ea0"
+  , activeColor         = "#000000"
+  , inactiveColor       = "#333333"
+  , inactiveTextColor   = "#888888"
+  , activeTextColor     = "#87cefa"
   }
 
 rows = let t = tabbed shrinkText myTheme
            inner = row V ||| t
            outer = orderRow H
-       in group inner outer
+       in balance $ group inner outer
 
-data Balance a = Balance (S.Set a) deriving (Show, Read)
+balance x = Balanced 0 x
 
-balance = ModifiedLayout (Balance S.empty)
+data Balanced l a = Balanced Int (l a) deriving (Read, Show)
 
-instance (Ord a, Read a, Show a) => LayoutModifier Balance a where
-  redoLayout (Balance ws) _ st rs = do
-    let ws' = S.fromList $ W.integrate' st
-    when (ws' /= ws) $ sendMessage $ Modify rebalance
-    return $ (rs, Just $ Balance $ ws')
+stackSize Nothing = 0
+stackSize (Just (W.Stack a u d)) = 1+(length u)+(length d)
+
+instance (LayoutClass l a) => LayoutClass (Balanced l) a where
+  description (Balanced _ l) = description l
+
+  runLayout (W.Workspace t (Balanced size st) ms) r =
+    let size' = stackSize ms in
+      if size' == size then do
+        (rs, mst) <- runLayout (W.Workspace t st ms) r
+        return (rs, fmap (\x -> (Balanced size x)) mst)
+      else do
+        (rs, mst) <- runLayout (W.Workspace t st ms) r
+        mst' <- handleMessage (fromMaybe st mst) (SomeMessage $ Modify rebalance)
+        if isNothing mst' then return (rs, Just $ Balanced size' (fromMaybe st mst))
+          else do (rs', mst'') <- runLayout (W.Workspace t (fromJust mst') ms) r
+                  return (rs', Just $ Balanced size' (fromMaybe (fromJust mst') mst''))
+
+  handleMessage (Balanced n l) m = fmap (fmap (\x -> (Balanced n x))) $ handleMessage l m
 
 rebalance :: ModifySpec
-rebalance l gs@(Just (Stack (G _ (Just (Stack _ (_:_) _))) [] [])) = moveToNewGroupDown l gs
-rebalance l gs@(Just (Stack (G _ (Just (Stack _ _ (_:_)))) [] [])) = moveToNewGroupDown l gs
+rebalance l gs@(Just (Stack (G gl s) [] []))
+  | multipleWindows s -- && isRow gl
+  = moveToNewGroupDown l gs
+  | otherwise = gs
+  where multipleWindows (Just (Stack _ [] [])) = False
+        multipleWindows (Just (Stack _ _ _)) = True
+        multipleWindows _ = False
 rebalance _ gs = gs
 
 alt :: ModifySpec -> (WindowSet -> WindowSet) -> X ()
@@ -119,3 +148,5 @@ onFocused f _ gs = onFocusedZ (onZipper f) gs
 
 groupNextLayout = sendMessage $ ToFocused $ SomeMessage $ NextLayout
 
+maximize = withFocused $ \w -> sendMessage $ ToFocused $ SomeMessage $ Maximize w
+equalize = sendMessage $ ToFocused $ SomeMessage $ (Equalize :: Msg Window)

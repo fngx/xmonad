@@ -30,6 +30,7 @@ instance (Show a) => LayoutClass OrderLayout a where
         invert (i, r) = (fromJust $ M.lookup i inverse, r)
     (indices, p') <- doLayout p screen stack'
     return (map invert indices, fmap OrderLayout p')
+
   handleMessage (OrderLayout p) msg =
     do p' <- handleMessage p msg
        return $ fmap OrderLayout p'
@@ -43,7 +44,11 @@ data Pile a = Pile
   , isOuterLayout :: Bool
   } deriving (Read, Show)
 
-data Msg a = Drag (Handle a) Position Rational
+data Msg a = Drag (Handle a) Position Rational |
+             Grow a |
+             Shrink a |
+             Maximize a |
+             Equalize
   deriving (Read, Show, Typeable)
 
 instance (Typeable a) => Message (Msg a)
@@ -54,6 +59,8 @@ data Handle a = Handle
   , position :: !Position
   , range :: !Dimension
   } deriving (Read, Show)
+
+minSize = 0.05
 
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
   description p = show $ axis p
@@ -73,17 +80,32 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
                        currentRightSize <- M.lookup right szs
                        let deltaOrigSize = (fromIntegral $ p - position h) % (fromIntegral $ range h)
                            deltaCurrentSize = (origLeftSize + deltaOrigSize) - currentLeftSize
-                           safeDelta = min (currentRightSize - 0.05) $ max (0.05 - currentLeftSize) deltaCurrentSize
+                           safeDelta = min (currentRightSize - minSize) $ max (minSize - currentLeftSize) deltaCurrentSize
                            newLeftSize = currentLeftSize + safeDelta
                            newRightSize = currentRightSize - safeDelta
                        return $ st { sizes = M.insert left newLeftSize $ M.insert right newRightSize $ szs }
     | (Just Hide) <- fromMessage msg = cleanup
     | (Just ReleaseResources) <- fromMessage msg = cleanup
-    -- this resize event is not transmitted to the group layout
-    -- I could propagate the event back up from the lower level layout
+    | (Just Equalize) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ equalize st
+    | (Just (Maximize win)) <- fromMessage msg = return $ maximize st win
     | (Just e) <- fromMessage msg :: Maybe Event = resize e (handles st) >> return Nothing
     | otherwise = return Nothing
-    where cleanup = deleteHandles st >> (return $ Just $ st {handles=M.empty})
+    where equalize st = let sz = sizes st
+                            e :: Rational
+                            e = 1%(fromIntegral $ M.size sz)
+                        in st {sizes=fmap (const e) sz}
+
+          maximize st w = let sz = sizes st
+                              u = (fromIntegral $ M.size sz) * minSize
+                              m = 1 - u
+                          in
+                            if (M.member w sz) && (m >= minSize) then
+                             Just $ st { sizes =
+                                         M.insert w m $
+                                         fmap (const minSize) sz }
+                              else Nothing
+
+          cleanup = deleteHandles st >> (return $ Just $ st {handles=M.empty})
           ax x y = if (axis st) == H then x else y
 
           resize e@(ButtonEvent {ev_window = w, ev_event_type = t}) handles =
