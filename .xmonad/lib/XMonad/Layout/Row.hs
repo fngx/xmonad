@@ -13,7 +13,6 @@ import qualified XMonad.StackSet as W
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
 import XMonad.Layout.Groups ( GroupsMessage (ToEnclosing) )
-import qualified Debug.Trace as DT
 
 data Axis = V | H deriving (Read, Show, Eq)
 
@@ -65,8 +64,7 @@ minSize = 0.05
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
   description p = show $ axis p
 
-  doLayout state screen stack =
-    DT.traceShow ("layout", state, screen, stack) $ do
+  doLayout state screen stack = do
     deleteHandles state
     let (rects, state') = render state screen $ W.integrate stack
     newHandles <- createHandles state' screen rects
@@ -173,7 +171,6 @@ createHandles st (Rectangle sx sy sw sh) rects =
 
 render :: (Show a, Ord a) => Pile a -> Rectangle -> [a] -> ([(a, Rectangle)], Pile a)
 render st screen as =
-  DT.traceShow ("render", st, screen, as) $
   let -- lookup sizes
       szs :: [Rational]
       szs = map (flip (M.findWithDefault (1 % (max 1 $ fromIntegral $ M.size $ sizes st))) (sizes st)) as

@@ -26,7 +26,7 @@ import Data.Char (toLower)
 import qualified XMonad.Actions.Warp as Warp
 import XMonad.Actions.UpdatePointer
 import XMonad.Actions.WindowBringer
-import XMonad.Util.EMenu (Style(..), emenu)
+import XMonad.Util.EMenu (hintSubmap)
 
 main = xmonad config
 
@@ -61,9 +61,9 @@ hooks c =
 
 config =
   pagerHints $
-  flip additionalKeysP bindings $
   hooks $
   layout $
+  flip additionalKeysP bindings $
   desktopConfig
   { modMask = mod4Mask
   , workspaces = wsLabels ++ [icon]
@@ -80,7 +80,22 @@ bindings =
 
   -- keys to launch programs
   , ("M-S-<Return>", spawn "xterm")
-  , ("M-a", quick)
+
+  , ("M-a",
+     hintSubmap config
+     [ ("e", "emacs", spawn "emacsclient -c -n")
+     , ("q", "qutebrowser", spawn "qb")
+     , ("s h", "hibernate", spawn "systemctl hibernate")
+     , ("s s", "suspend", spawn "systemctl suspend")
+     ]
+    )
+
+  -- , ("M-a e", spawn "emacsclient -c -n")
+  -- , ("M-a q", spawn "qb")
+
+  -- , ("M-a s h", spawn "systemctl hibernate")
+  -- , ("M-a s s", spawn "systemctl suspend")
+
   , ("M-x", shell)
 
   -- keys to adjust the stack and focus
@@ -119,8 +134,6 @@ bindings =
 
   , ("M-b", bringMenuArgs ["-i", "-l", "10", "-p", "bring"])
   , ("M-g", gotoMenuArgs  ["-i", "-l", "10", "-p", "goto"])
-
-  , ("M-i", (emenu Style (const $ return []) (const "")) >> return ())
 
   , ("M-s", swapNextScreen)
   , ("M-S-s", shiftNextScreen)

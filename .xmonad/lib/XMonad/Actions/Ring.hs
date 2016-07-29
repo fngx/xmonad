@@ -47,7 +47,7 @@ rotate modKey nextKey act = do
 
       select :: Int -> X ()
       select n
-        | len < 2 = return ()
+        | len < 1 = return ()
         | otherwise =
           let offset = n `mod` len
               item = S.index order offset in
