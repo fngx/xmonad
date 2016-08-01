@@ -23,14 +23,13 @@ import Control.Monad (liftM2)
 import XMonad.Actions.CycleWS
 import XMonad.Hooks.UrgencyHook
 import Data.Char (toLower)
-import qualified XMonad.Actions.Warp as Warp
-import XMonad.Actions.UpdatePointer
 import XMonad.Actions.WindowBringer
 import XMonad.Util.EMenu (hintSubmap)
+import XMonad.Util.TemporaryBar
 
 main = xmonad config
 
-followFocus = Warp.warpToWindow 0.9 0.1
+popBar = tempShowBar 0.75
 
 wsLabels = ["q", "w", "e", "r", "t"]
 icon = "▼"
@@ -49,7 +48,8 @@ hooks c =
   urgencyConfig {suppressWhen = Never}
   $
   c
-  { handleEventHook = (handleEventHook c) <+> fullscreenEventHook
+  { handleEventHook = (handleEventHook c) <+> fullscreenEventHook <+>
+    toggleBarHook
   , manageHook = (manageHook c) <+>
                  composeAll
                  [ isDialog --> doFloat,
@@ -63,85 +63,87 @@ config =
   pagerHints $
   hooks $
   layout $
-  flip additionalKeysP bindings $
+  flip additionalKeysP (map (\(k, _, a) -> ("M-" ++ k, a)) bindings) $
   desktopConfig
   { modMask = mod4Mask
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
-  , normalBorderColor  = "#333333"
-  , focusedBorderColor = "dark cyan"
+  , normalBorderColor  = "#888888"
+  , focusedBorderColor = "cyan"
   , borderWidth = 1
 }
 
 bindings =
   [ -- xmonad controls
-    ("M-S-<Escape>", io (exitWith ExitSuccess))
-  , ("M-<Escape>", spawn "xmonad --recompile; xmonad --restart")
+    ("S-<Escape>", "exit", io (exitWith ExitSuccess))
+  , ("<Escape>", "restart", spawn "xmonad --recompile; xmonad --restart")
 
   -- keys to launch programs
-  , ("M-S-<Return>", spawn "xterm")
+  , ("S-<Return>", "terminal", spawn "xterm")
 
-  , ("M-a",
+  , ("a", "run keys",
      hintSubmap config
      [ ("e", "emacs", spawn "emacsclient -c -n")
      , ("q", "qutebrowser", spawn "qb")
-     , ("s h", "hibernate", spawn "systemctl hibernate")
-     , ("s s", "suspend", spawn "systemctl suspend")
+     , ("r", "prompt", shell)
+     , ("c", "chromium", spawn "chromium")
+     , ("p", "passwords", spawn "nop")
+     , ("t", "htop", spawn "xterm -e htop")
+     , ("h", "hibernate", spawn "systemctl hibernate")
+     , ("s", "suspend", spawn "systemctl suspend")
+     , ("m", "check mail", spawn "notmuch new")
      ]
     )
 
-  -- , ("M-a e", spawn "emacsclient -c -n")
-  -- , ("M-a q", spawn "qb")
-
-  -- , ("M-a s h", spawn "systemctl hibernate")
-  -- , ("M-a s s", spawn "systemctl suspend")
-
-  , ("M-x", shell)
-
   -- keys to adjust the stack and focus
-  , ("M-k", kill)
+  , ("k", "kill window", kill)
 
   -- keys to adjust the layout
-  , ("M-z", withFocused $ windows . W.sink)
+  , ("z", "sink window", withFocused $ windows . W.sink)
 
-  , ("M-p",   R.focusPrev)
-  , ("M-n",   R.focusNext)
-  , ("M-S-p", R.swapPrev)
-  , ("M-S-n", R.swapNext)
-  , ("M-;",   R.maximize)
-  , ("M-S-;", R.equalize)
+  , ("p",   "focus up", R.focusPrev)
+  , ("n",   "focus down", R.focusNext)
+  , ("S-p", "swap up", R.swapPrev)
+  , ("S-n", "swap down", R.swapNext)
+  , (";",   "max col", R.maximize)
+  , ("S-;", "eq col", R.equalize)
 
-  , ("M-l M-l", R.groupNextLayout)
-  , ("M-l r", resetLayout)
+  , ("l M-l", "group layout", R.groupNextLayout)
+  , ("l r", "reset layout", resetLayout)
 
-  , ("M-o", R.makeGroup)
-  , ("M-<Return>", G.swapGroupMaster)
+  , ("o", "+ column", R.makeGroup)
+  , ("<Return>","swap master", G.swapGroupMaster)
 
   -- this goes to the outer multitoggle
-  , ("M-f", sendMessage $ Toggle NBFULL)
+  , ("f", "fullscreen", popBar >> (sendMessage $ Toggle NBFULL))
 
   -- minify
-  , ("M-m", iconify icon)
-  , ("M-,", uniconify icon)
+  , ("m", "minify", popBar >> iconify icon)
+  , (",", "unminify", popBar >> uniconify icon)
 
   -- cycle and unminify
-  , ("M-<Space>", do us <- readUrgents
-                     case us of
-                       (h:_) -> windows $ greedyFocusWindow icon h
-                       [] -> Ring.rotate [xK_Super_L] xK_space (windows . (greedyFocusWindow icon)))
+  , ("<Space>", "cycle focus",
+     do us <- readUrgents
+        case us of
+          (h:_) -> windows $ greedyFocusWindow icon h
+          [] -> Ring.rotate [xK_Super_L] xK_space (windows . (greedyFocusWindow icon))
+        resetBar)
 
     -- one day I shall replace dmenu perhaps
 
-  , ("M-b", bringMenuArgs ["-i", "-l", "10", "-p", "bring"])
-  , ("M-g", gotoMenuArgs  ["-i", "-l", "10", "-p", "goto"])
+  , ("b", "bring window", bringMenuArgs ["-i", "-l", "10", "-p", "bring"])
+  , ("g", "find window", gotoMenuArgs  ["-i", "-l", "10", "-p", "goto"])
+  , ("c", "toggle bar", toggleBar) -- nop nop
 
-  , ("M-s", swapNextScreen)
-  , ("M-S-s", shiftNextScreen)
-  , ("M-M1-s", nextScreen)
+  , ("s", "swap screen", popBar >> swapNextScreen)
+  , ("S-s", "shift screen", popBar >> shiftNextScreen)
+  , ("M1-s", "focus screen", popBar >> nextScreen)
+
+  , ("S-/", "this page", hintSubmap config bindings)
   ]
   ++
   -- workspace switching keys
-  [ (mod ++ key, action key) |
+  [ (mod ++ key, dsc ++ key, action key) |
     key <- wsLabels,
-    (mod, action) <- [ ("M-", windows . W.greedyView)
-                     , ("M-S-", windows . W.shift)] ]
+    (mod, dsc, action) <- [ ("", "view ", \t -> (windows $ W.greedyView t) >> popBar)
+                          , ("S-", "shift ", \t -> (windows $ W.shift t) >> popBar)] ]

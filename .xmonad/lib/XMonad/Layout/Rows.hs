@@ -22,6 +22,7 @@ import Control.Monad (unless, when)
 import qualified Data.Set as S
 import XMonad.Actions.MessageFeedback (send)
 import Data.Maybe ( Maybe(..), fromMaybe, fromJust, isNothing )
+import XMonad.Layout.Renamed (renamed, Rename(Replace))
 
 myTheme = def
   { fontName = "xft:Monospace-8"
@@ -34,7 +35,7 @@ myTheme = def
   , activeTextColor     = "#87cefa"
   }
 
-rows = let t = tabbed shrinkText myTheme
+rows = let t = renamed [Replace "T"] $ tabbed shrinkText myTheme
            inner = row V ||| t
            outer = orderRow H
        in balance $ group inner outer

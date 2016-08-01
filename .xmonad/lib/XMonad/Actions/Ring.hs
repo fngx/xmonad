@@ -6,6 +6,7 @@ import XMonad
 import qualified XMonad.Util.ExtensibleState as XS
 import qualified Data.Sequence as S
 import qualified Data.Set as Set
+import Control.Monad
 
 import qualified Debug.Trace as DT
 import System.IO (hPutStrLn, stderr)
@@ -59,6 +60,8 @@ rotate modKey nextKey act = do
                         XS.put (Ring (Just item) (c <|? (remove offset h)))
                     | otherwise -> select n
 
+  -- annoyingly, grabbing here prevents grabbing elsewhere
+  -- which can cause problems when ungrabbing afterwards.
   io $ grabKeyboard d root False grabModeAsync grabModeAsync currentTime
   select $ maybe 0 (const 1) c
   io $ ungrabKeyboard d currentTime

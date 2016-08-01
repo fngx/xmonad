@@ -10,67 +10,101 @@ import XMonad.Actions.Submap
 import qualified Data.Map as M
 import qualified Debug.Trace as D
 
+data Theme = Theme
+  { font :: String
+  , bg :: String
+  , border :: (Int, String)
+  , sep :: String
+  , key_c :: String
+  , desc_c :: String
+  , sep_c :: String
+  }
+
+drawHints :: Theme -> [(String, String)] -> X (X ())
+drawHints theme stuff = do
+  XConf { display = d, theRoot = rw } <- ask
+  (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
+  xmf <- initXMF (font theme)
+  widths <- mapM (\(k, t) -> do a <- textWidthXMF d xmf k
+                                b <- textWidthXMF d xmf t
+                                return (a, b)) stuff
+
+  sepw <- textWidthXMF d xmf (sep theme)
+
+  (asc, dsc) <- textExtentsXMF xmf $ fst $ head stuff
+
+  let colspc = 40
+      rowspc = 3
+      (bwidth, bcol) = border theme
+      widest = maximum $ map (uncurry (+)) widths
+      widest' = widest + sepw + colspc
+      cols = (fi sw) `div` widest'
+      rows = ceiling $ (fi (length widths)) / (fi cols)
+      th = asc + dsc
+      wh :: Dimension
+      wh = fi $ 2 * bwidth +
+           (fi (rows * (fi th))) +
+           (fi $ (1 + rows) * rowspc)
+
+  win <- createNewWindow (Rectangle sx (sy + (fi sh) - (fi wh)) sw sh)
+         Nothing "Hints" True
+
+  showWindow win
+  paintWindow win sw wh (fi bwidth) (bg theme) bcol
+
+  pxm <- io $ createPixmap d win sw wh $
+         (defaultDepthOfScreen $ defaultScreenOfDisplay d)
+
+  gc <- io $ createGC d pxm
+
+  io $ setGraphicsExposures d gc False
+
+  let x0 = bwidth + 8
+      y0 = asc + (fi rowspc)
+  -- paint columns
+  foldM_
+    (\(x, y, z) ((key, lbl), (kw, lw)) -> do
+        -- align on arrow
+        printStringXMF d pxm xmf gc (key_c theme) (bg theme) x y key
+        printStringXMF d pxm xmf gc (sep_c theme) (bg theme) (x + (fi kw)) y (sep theme)
+        printStringXMF d pxm xmf gc (desc_c theme) (bg theme) (x+(fi kw)+(fi sepw)) y lbl
+        let delta = if (rows == 1) then (fi kw) + (fi sepw) + (fi colspc) + (fi lw)
+                    else (fi widest')
+        return $ if (rows > 1) && z == (cols - 1) then
+                   (fi x0, y + asc + dsc + (fi rowspc), 0)
+                 else (x + delta, y, z + 1))
+    (fi x0, fi y0, 0) (zip stuff widths)
+
+  io $ copyArea d pxm win gc 0 0 sw wh 0 0
+
+  -- window is drawn, return the release handler
+
+  return $ (do io $ freeGC d gc
+               io $ freePixmap d pxm
+               deleteWindow win
+               releaseXMF xmf)
+
+  -- drawColumn dsp pxm gc fg bg aln x0 x1 text =
+  -- foldM_ drawSkip 0 text
+  -- where drawSkip y0 str = do
+  --         (x, y) <- stringPosition dsp fnt (Rectangle x0 x1  d) aln str
+  --         printStringXMF dsp pxm fnt gc fg bg x y str
+  --         return y
+
+defaultTheme = Theme
+  { font = "xft:Monospace-10"
+  , bg = "#333333"
+  , border = (1, "#888888")
+  , sep = " → "
+  , sep_c = "#999999"
+  , key_c = "dark cyan"
+  , desc_c = "white"
+  }
+
 hintSubmap :: XConfig l -> [(String, String, X ())] -> X ()
 hintSubmap c keys =
   let km = mkKeymap c $ fmap (\(x, y, z) -> (x, z)) keys
-      binds = map (\(x,_,_) -> x) keys
-      descrs = map (\(_,x,_) -> x) keys
-  in
-    do XConf { display = d, theRoot = rw } <- ask
-       (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
-       font <- initXMF "xft:Monospace-12"
-       let widths = mapM (textWidthXMF d font)
-       dims <- liftM2 zip (widths binds) (widths descrs)
-       (ascent, descent) <- textExtentsXMF font (head descrs)
-       let maxDim =  maximum (map (\(a,b) -> (a+b)) dims)
-           cols =  (fi sw) `div` (fi maxDim)
-           rows =  max 1 $ (length dims) `div` (fi cols)
-           wh =  fi $ 8+rows * (fi (ascent + descent))
-
-       win <- createNewWindow (Rectangle sx (sy+(fi sh)-(fi wh)) sw wh) Nothing "Hints" True
-       showWindow win
-       paintWindow win sw wh 1 "#333333" "red"
-
-       p <- io $ createPixmap d win sw wh $ (defaultDepthOfScreen $ defaultScreenOfDisplay d)
-       gc <- io $ createGC d p
-
-       io $ setGraphicsExposures d gc False
-
-       arrw <- textWidthXMF d font " ->    "
-
-       forM_ (zip3 (scanl (\x (a, b) -> a+b+x+arrw) 10 dims) binds descrs) $ \(w, bind, descr) ->
-         printStringXMF d p font gc "white" "#333333" (fi w) (1+ascent) (bind ++ " -> " ++ descr)
-
-       io $ copyArea      d p win gc 0 0 sw wh 0 0
-
-       io $ freeGC d gc
-       io $ freePixmap d p
-
-       submap km
-       deleteWindow win
-       releaseXMF font
-
---
---   showWindow win
-
---   -- this draws a box on the window, but really we want to draw a few things
---   -- namely an input area and selection/results area, maybe having a description column or something
---   paintAndWrite win
---     font sw wh 2 "#333333" "dark cyan"
---     "white" "#333333" [AlignLeft] ["lorem ipsem dolor sit"]
---   status <- io $ grabKeyboard d win True grabModeAsync grabModeAsync currentTime
---   when (status == grabSuccess) $ do
---     io $ allocaXEvent $ \e -> do
---       maskEvent d keyPressMask e
---       ev <- getEvent e -- block for a keypress;; here we would run our loop
---       return ()
---     io $ ungrabKeyboard d currentTime
---   deleteWindow win
---   releaseXMF font
---   io $ sync d False
---   return $ Nothing
---   -- create window
---   -- generate inputs
---   -- render inputs
---   -- read keys and regenerate input
---   -- todo: thread results through in some way for state
+      dm = map (\(x, y, _) -> (x, y)) keys
+  in do cleanup <- drawHints defaultTheme dm
+        submap km
+        cleanup
