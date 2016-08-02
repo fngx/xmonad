@@ -97,6 +97,8 @@ bindings =
   -- keys to launch programs
   , ("S-<Return>", "terminal", spawn "xterm")
 
+  , (".", "time", spawn "notify-send \"$(date)\"")
+
   , ("a", "run keys",
      hintSubmap config
      [ ("e", "emacs", spawn "emacsclient -c -n")
