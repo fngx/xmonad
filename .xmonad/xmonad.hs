@@ -27,6 +27,7 @@ import XMonad.Actions.WindowBringer
 import XMonad.Util.HintedSubmap (hintSubmap)
 import XMonad.Util.TemporaryBar
 import XMonad.Prompt.Pass
+import qualified XMonad.Actions.Search as Search
 import qualified Data.List as L
 
 main = xmonad config
@@ -75,6 +76,14 @@ config =
   , borderWidth = 1
 }
 
+searchEngine = (Search.intelligent
+                (Search.wikipedia Search.!>
+                 Search.maps Search.!>
+                 Search.alpha Search.!>
+                 (Search.prefixAware $
+                  Search.searchEngine "ddg" "https://duckduckgo.com/?q="
+                 )))
+
 bindings =
   [ ("<Escape>", "session",
       hintSubmap config
@@ -91,6 +100,8 @@ bindings =
   , ("a", "run keys",
      hintSubmap config
      [ ("e", "emacs", spawn "emacsclient -c -n")
+     , ("q", "web search", Search.promptSearchBrowser pconfig "/home/hinton/bin/qb" searchEngine)
+
      , ("w w", "qutebrowser", spawn "qb")
      , ("w c", "chromium", spawn "chromium")
 
@@ -99,9 +110,8 @@ bindings =
      , ("m", "check mail", spawn "notmuch new")
      , ("u", "cmus", spawn "xterm -e cmus")
 
-     , ("r", "prompt", shell)
-     ]
-    )
+     , ("r", "prompt", shell)])
+
 
   -- keys to adjust the stack and focus
   , ("k", "kill window", kill)
@@ -122,6 +132,8 @@ bindings =
      , ("m", "max window", R.maximize)
      , ("e", "eq windows", R.equalize)
      , ("r", "reset layout", resetLayout)
+     , ("g m", "max col", R.maximizeC)
+     , ("g e", "max col", R.equalizeC)
      ]
      )
 
@@ -152,8 +164,8 @@ bindings =
   , ("S-s", "shift screen", popBar >> shiftNextScreen)
   , ("M1-s", "focus screen", popBar >> nextScreen)
 
-  , ("S-/", "this page", hintSubmap config bindings)
-  ]
+  , ("S-/", "this page", hintSubmap config bindings)]
+
   ++
   -- workspace switching keys
   [ (mod ++ key, dsc ++ key, action key) |

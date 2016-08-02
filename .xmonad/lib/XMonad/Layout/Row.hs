@@ -24,7 +24,7 @@ instance (Show a) => LayoutClass OrderLayout a where
   doLayout (OrderLayout p) screen stack = do
     let ws = W.integrate stack
         indices = take (length ws) [0..]
-        stack' = fromJust $ W.differentiate indices
+        stack' = iterate W.focusDown' (fromJust $ W.differentiate indices) !! (length $ W.up stack)
         inverse = M.fromList $ zip indices ws
         invert (i, r) = (fromJust $ M.lookup i inverse, r)
     (indices, p') <- doLayout p screen stack'
@@ -41,13 +41,15 @@ data Pile a = Pile
   , sizes :: !(M.Map a Rational)
   , handles :: !(M.Map Window (Handle a))
   , isOuterLayout :: Bool
+  , lastFocus :: !(Maybe a)
   } deriving (Read, Show)
 
 data Msg a = Drag (Handle a) Position Rational |
              Grow a |
              Shrink a |
              Maximize a |
-             Equalize
+             Equalize |
+             MaximizeLast
   deriving (Read, Show, Typeable)
 
 instance (Typeable a) => Message (Msg a)
@@ -68,7 +70,8 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
     deleteHandles state
     let (rects, state') = render state screen $ W.integrate stack
     newHandles <- createHandles state' screen rects
-    return (rects, Just $ state' {handles = newHandles})
+    return (rects, Just $ state' {handles = newHandles,
+                                  lastFocus = Just $ W.focus stack})
 
   handleMessage st msg
     | (Just m@(Drag h p origLeftSize)) <- fromMessage msg =
@@ -86,6 +89,11 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
     | (Just ReleaseResources) <- fromMessage msg = cleanup
     | (Just Equalize) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ equalize st
     | (Just (Maximize win)) <- fromMessage msg = return $ maximize st win
+    | (Just MaximizeLast) <- fromMessage msg :: Maybe (Msg a) = let f :: Maybe a
+                                                                    f = lastFocus st in
+                                                                  maybe (return Nothing)
+                                                                  (\w -> handleMessage st (SomeMessage $ Maximize w))
+                                                                  f
     | (Just e) <- fromMessage msg :: Maybe Event = resize e (handles st) >> return Nothing
     | otherwise = return Nothing
     where equalize st = let sz = sizes st
@@ -196,6 +204,7 @@ row a = Pile { gap = 3
               , handles = M.empty
               , axis = a
               , isOuterLayout = False
+              , lastFocus = Nothing
               }
 
 orderRow a = OrderLayout ((row a) {isOuterLayout = True})

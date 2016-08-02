@@ -151,3 +151,11 @@ groupNextLayout = sendMessage $ ToFocused $ SomeMessage $ NextLayout
 
 maximize = withFocused $ \w -> sendMessage $ ToFocused $ SomeMessage $ Maximize w
 equalize = sendMessage $ ToFocused $ SomeMessage $ (Equalize :: Msg Window)
+
+-- to max the focused column, I need its index which is I think not
+-- accessible readily. option B here is to retain the last focused
+-- element so I can target that
+
+maximizeC = sendMessage $ ToEnclosing $ SomeMessage $ (MaximizeLast :: Msg Int)
+equalizeC = sendMessage $ ToEnclosing $ SomeMessage $ (Equalize :: Msg Int)
+outerNextLayout = sendMessage $ ToEnclosing $ SomeMessage $ NextLayout
