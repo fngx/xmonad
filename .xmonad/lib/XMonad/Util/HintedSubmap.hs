@@ -1,4 +1,4 @@
-module XMonad.Util.EMenu where
+module XMonad.Util.HintedSubmap where
 
 import XMonad
 import qualified XMonad.StackSet as W
@@ -18,9 +18,21 @@ data Theme = Theme
   , key_c :: String
   , desc_c :: String
   , sep_c :: String
+  , top :: Bool
   }
 
-drawHints :: Theme -> [(String, String)] -> X (X ())
+defaultTheme = Theme
+  { font = "xft:Monospace-10"
+  , bg = "#333333"
+  , border = (1, "#888888")
+  , sep = " → "
+  , sep_c = "#999999"
+  , key_c = "cyan"
+  , desc_c = "white"
+  , top = False
+  }
+
+drawHints :: Theme -> [(String, String)] -> X (Bool -> X ())
 drawHints theme stuff = do
   XConf { display = d, theRoot = rw } <- ask
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
@@ -33,11 +45,13 @@ drawHints theme stuff = do
 
   (asc, dsc) <- textExtentsXMF xmf $ fst $ head stuff
 
-  let colspc = 40
+  let colspc = 20
       rowspc = 3
       (bwidth, bcol) = border theme
-      widest = maximum $ map (uncurry (+)) widths
-      widest' = widest + sepw + colspc
+      widestk = (maximum $ map fst widths)
+      widestd = (maximum $ map snd widths)
+--      widest =  maximum $ map (uncurry (+)) widths
+      widest' = widestk + widestd + sepw + colspc
       cols = (fi sw) `div` widest'
       rows = ceiling $ (fi (length widths)) / (fi cols)
       th = asc + dsc
@@ -45,8 +59,9 @@ drawHints theme stuff = do
       wh = fi $ 2 * bwidth +
            (fi (rows * (fi th))) +
            (fi $ (1 + rows) * rowspc)
+      wy = if (top theme) then 0 else (sy + (fi sh) - (fi wh))
 
-  win <- createNewWindow (Rectangle sx (sy + (fi sh) - (fi wh)) sw sh)
+  win <- createNewWindow (Rectangle sx wy sw wh)
          Nothing "Hints" True
 
   showWindow win
@@ -64,11 +79,11 @@ drawHints theme stuff = do
   -- paint columns
   foldM_
     (\(x, y, z) ((key, lbl), (kw, lw)) -> do
-        -- align on arrow
-        printStringXMF d pxm xmf gc (key_c theme) (bg theme) x y key
-        printStringXMF d pxm xmf gc (sep_c theme) (bg theme) (x + (fi kw)) y (sep theme)
-        printStringXMF d pxm xmf gc (desc_c theme) (bg theme) (x+(fi kw)+(fi sepw)) y lbl
-        let delta = if (rows == 1) then (fi kw) + (fi sepw) + (fi colspc) + (fi lw)
+        -- TODO align on arrow
+        printStringXMF d pxm xmf gc (key_c theme) (bg theme) (x + (fi (widestk - kw))) y key
+        printStringXMF d pxm xmf gc (sep_c theme) (bg theme) (x + (fi widestk)) y (sep theme)
+        printStringXMF d pxm xmf gc (desc_c theme) (bg theme) (x+(fi widestk)+(fi sepw)) y lbl
+        let delta = if (rows == 1) then (fi widestk) + (fi sepw) + (fi colspc) + (fi lw)
                     else (fi widest')
         return $ if (rows > 1) && z == (cols - 1) then
                    (fi x0, y + asc + dsc + (fi rowspc), 0)
@@ -79,10 +94,11 @@ drawHints theme stuff = do
 
   -- window is drawn, return the release handler
 
-  return $ (do io $ freeGC d gc
-               io $ freePixmap d pxm
-               deleteWindow win
-               releaseXMF xmf)
+  return $ (\x -> do deleteWindow win
+                     when x $ do io $ freeGC d gc
+                                 io $ freePixmap d pxm
+                                 releaseXMF xmf)
+
 
   -- drawColumn dsp pxm gc fg bg aln x0 x1 text =
   -- foldM_ drawSkip 0 text
@@ -91,20 +107,11 @@ drawHints theme stuff = do
   --         printStringXMF dsp pxm fnt gc fg bg x y str
   --         return y
 
-defaultTheme = Theme
-  { font = "xft:Monospace-10"
-  , bg = "#333333"
-  , border = (1, "#888888")
-  , sep = " → "
-  , sep_c = "#999999"
-  , key_c = "dark cyan"
-  , desc_c = "white"
-  }
 
 hintSubmap :: XConfig l -> [(String, String, X ())] -> X ()
-hintSubmap c keys =
-  let km = mkKeymap c $ fmap (\(x, y, z) -> (x, z)) keys
-      dm = map (\(x, y, _) -> (x, y)) keys
-  in do cleanup <- drawHints defaultTheme dm
-        submap km
-        cleanup
+hintSubmap c keys = do
+  let dm = map (\(x, y, _) -> (x, y)) keys
+  cleanup <- drawHints defaultTheme dm
+  let km = mkKeymap c $ fmap (\(x, y, z) -> (x, cleanup False >> z)) keys
+  submap km
+  cleanup True

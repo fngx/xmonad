@@ -7,7 +7,7 @@ import Data.Maybe (fromMaybe)
 import Data.List (isInfixOf)
 
 pconfig = def
-  { position = Top
+  { position = Bottom
   , font = "xft:Monospace-10"
   , height = 24
   , borderColor = "#222"

@@ -24,8 +24,10 @@ import XMonad.Actions.CycleWS
 import XMonad.Hooks.UrgencyHook
 import Data.Char (toLower)
 import XMonad.Actions.WindowBringer
-import XMonad.Util.EMenu (hintSubmap)
+import XMonad.Util.HintedSubmap (hintSubmap)
 import XMonad.Util.TemporaryBar
+import XMonad.Prompt.Pass
+import qualified Data.List as L
 
 main = xmonad config
 
@@ -55,7 +57,7 @@ hooks c =
                  [ isDialog --> doFloat,
                    isFullscreen --> doFullFloat
                  ]
-  , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
+  , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset)) >> resetBar
   , startupHook = (startupHook c)
   }
 
@@ -74,9 +76,14 @@ config =
 }
 
 bindings =
-  [ -- xmonad controls
-    ("S-<Escape>", "exit", io (exitWith ExitSuccess))
-  , ("<Escape>", "restart", spawn "xmonad --recompile; xmonad --restart")
+  [ ("<Escape>", "session",
+      hintSubmap config
+      [ ("r", "restart xmonad", spawn "xmonad --recompile; xmonad --restart")
+      , ("q", "exit xmonad", io (exitWith ExitSuccess))
+      , ("l", "reset layout", resetLayout)
+      , ("h", "hibernate", spawn "systemctl hibernate")
+      , ("s", "suspend", spawn "systemctl suspend")
+      ])
 
   -- keys to launch programs
   , ("S-<Return>", "terminal", spawn "xterm")
@@ -84,14 +91,15 @@ bindings =
   , ("a", "run keys",
      hintSubmap config
      [ ("e", "emacs", spawn "emacsclient -c -n")
-     , ("q", "qutebrowser", spawn "qb")
-     , ("r", "prompt", shell)
-     , ("c", "chromium", spawn "chromium")
-     , ("p", "passwords", spawn "nop")
+     , ("w w", "qutebrowser", spawn "qb")
+     , ("w c", "chromium", spawn "chromium")
+
+     , ("p", "passwords", passwordPrompt pconfig)
      , ("t", "htop", spawn "xterm -e htop")
-     , ("h", "hibernate", spawn "systemctl hibernate")
-     , ("s", "suspend", spawn "systemctl suspend")
      , ("m", "check mail", spawn "notmuch new")
+     , ("u", "cmus", spawn "xterm -e cmus")
+
+     , ("r", "prompt", shell)
      ]
     )
 
@@ -105,13 +113,18 @@ bindings =
   , ("n",   "focus down", R.focusNext)
   , ("S-p", "swap up", R.swapPrev)
   , ("S-n", "swap down", R.swapNext)
-  , (";",   "max col", R.maximize)
-  , ("S-;", "eq col", R.equalize)
 
-  , ("l M-l", "group layout", R.groupNextLayout)
-  , ("l r", "reset layout", resetLayout)
+  , ("l", "layout keys",
+     hintSubmap config
+     [ ("l", "switch group layout", R.groupNextLayout)
+     , ("M-l", "ditto", R.groupNextLayout)
+     , ("o", "focused to new group", R.makeGroup)
+     , ("m", "max window", R.maximize)
+     , ("e", "eq windows", R.equalize)
+     , ("r", "reset layout", resetLayout)
+     ]
+     )
 
-  , ("o", "+ column", R.makeGroup)
   , ("<Return>","swap master", G.swapGroupMaster)
 
   -- this goes to the outer multitoggle
@@ -133,7 +146,7 @@ bindings =
 
   , ("b", "bring window", bringMenuArgs ["-i", "-l", "10", "-p", "bring"])
   , ("g", "find window", gotoMenuArgs  ["-i", "-l", "10", "-p", "goto"])
-  , ("c", "toggle bar", toggleBar) -- nop nop
+  , (";", "toggle bar", toggleBar)
 
   , ("s", "swap screen", popBar >> swapNextScreen)
   , ("S-s", "shift screen", popBar >> shiftNextScreen)
@@ -145,5 +158,17 @@ bindings =
   -- workspace switching keys
   [ (mod ++ key, dsc ++ key, action key) |
     key <- wsLabels,
-    (mod, dsc, action) <- [ ("", "view ", \t -> (windows $ W.greedyView t) >> popBar)
-                          , ("S-", "shift ", \t -> (windows $ W.shift t) >> popBar)] ]
+    (mod, dsc, action) <- [ ("", "greedy view ", \t -> (windows $ W.greedyView t) >> popBar)
+                          , ("S-", "shift ", \t -> (windows $ W.shift t) >> popBar)
+                          , ("M1-", "view ", \t -> (windows $ lazyView t) >> popBar)
+                          ] ]
+
+lazyView :: (Eq s, Eq i) => i -> W.StackSet i l a s sd -> W.StackSet i l a s sd
+lazyView i s@(W.StackSet { W.hidden = _:_ })
+  -- if i is hidden, then we want to raise it on the next visible screen, if there is one
+  | Just x <- L.find ((i==) . W.tag) (W.hidden s) =
+      let (v1:vs) = W.visible s in
+        s { W.visible = (v1 { W.workspace = x }):vs
+          , W.hidden = W.workspace v1 : L.deleteBy (equating W.tag) x (W.hidden s) }
+  | otherwise = W.view i s
+  where equating f = \x y -> f x == f y

@@ -31,6 +31,7 @@ tempShowBar time = do
     Visible -> return ()
     _ -> do t <- startTimer time
             XS.put $ Temporary t
+  resetBar
 
 resetBar = do
   st <- XS.get
@@ -65,7 +66,7 @@ toggleBarHook e = do
   case st of
     (Temporary ti) -> handleTimer ti e $
       do XS.put Hidden
-         resetBar
          return Nothing
     _ -> return Nothing
+  resetBar
   return (All True)
