@@ -2,7 +2,7 @@
 module XMonad.Layout.Rows where
 
 import XMonad.Core ( SomeMessage(..) , LayoutClass(..) )
-import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused)
+import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..))
 --import XMonad.Layout (Full (Full))
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
@@ -37,7 +37,7 @@ myTheme = def
 
 rows = let t = renamed [Replace "T"] $ tabbed shrinkText myTheme
            inner = row V ||| t
-           outer = orderRow H
+           outer = (orderRow H ||| Full)
        in balance $ group inner outer
 
 balance x = Balanced 0 x

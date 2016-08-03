@@ -5,7 +5,7 @@ import qualified XMonad
 import qualified XMonad.StackSet as W
 import XMonad.Config.Desktop
 import qualified Data.Map as M
-import XMonad.Util.EZConfig (additionalKeysP)
+import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
 import System.Exit (exitWith, ExitCode (ExitSuccess))
 import XMonad.Layout.NoBorders (smartBorders)
 import qualified XMonad.Layout.Rows as R
@@ -13,8 +13,6 @@ import System.Taffybar.Hooks.PagerHints (pagerHints)
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
 import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
 import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat)
-import XMonad.Layout.MultiToggle
-import XMonad.Layout.MultiToggle.Instances
 import XMonad.Prompt.MyPrompt
 import XMonad.Layout.Groups.Helpers as G
 import qualified XMonad.Actions.Ring as Ring
@@ -27,8 +25,12 @@ import XMonad.Actions.WindowBringer
 import XMonad.Util.HintedSubmap (hintSubmap)
 import XMonad.Util.TemporaryBar
 import XMonad.Prompt.Pass
-import qualified XMonad.Actions.Search as Search
+import XMonad.Actions.Search
 import qualified Data.List as L
+import Data.Maybe (fromMaybe)
+import XMonad.Util.AccelerateScroll (accelerateButton)
+import XMonad.Util.NamedWindows (getName)
+import XMonad.Util.Run (safeSpawn)
 
 main = xmonad config
 
@@ -43,11 +45,23 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ mkToggle (single NBFULL) $ R.rows
+  where l = desktopLayoutModifiers $ smartBorders $ (R.rows ||| Full)
+
+data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
+
+instance UrgencyHook LibNotifyUrgencyHook where
+    urgencyHook LibNotifyUrgencyHook w = do
+        name     <- getName w
+        Just idx <- fmap (W.findTag w) $ gets windowset
+        safeSpawn "notify-send" [show name, "workspace " ++ idx]
+        withDisplay $ \d -> io $ do
+          c' <- initColor d "red"
+          case c' of
+            Just c -> setWindowBorder d w c
+            _ -> return ()
 
 hooks c =
-  withUrgencyHookC
-  BorderUrgencyHook {urgencyBorderColor = "red"}
+  withUrgencyHookC LibNotifyUrgencyHook
   urgencyConfig {suppressWhen = Never}
   $
   c
@@ -58,7 +72,7 @@ hooks c =
                  [ isDialog --> doFloat,
                    isFullscreen --> doFullFloat
                  ]
-  , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset)) >> resetBar
+  , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
   , startupHook = (startupHook c)
   }
 
@@ -66,6 +80,10 @@ config =
   pagerHints $
   hooks $
   layout $
+  flip additionalMouseBindings
+  [((0, button4), const $ accelerateButton 4)
+  ,((0, button5), const $ accelerateButton 5)]
+  $
   flip additionalKeysP (map (\(k, _, a) -> ("M-" ++ k, a)) bindings) $
   desktopConfig
   { modMask = mod4Mask
@@ -76,13 +94,20 @@ config =
   , borderWidth = 1
 }
 
-searchEngine = (Search.intelligent
-                (Search.wikipedia Search.!>
-                 Search.maps Search.!>
-                 Search.alpha Search.!>
-                 (Search.prefixAware $
-                  Search.searchEngine "ddg" "https://duckduckgo.com/?q="
-                 )))
+-- there is a bug in !>, it can't combine multiple prefixes
+mySearchEngine = intelligent $ searchEngineF (L.intercalate "," $ map fst se) msearch
+  where se :: [(String, SearchEngine)]
+        se = [ ("wp", wikipedia)
+             , ("osm", openstreetmap)]
+        msearch :: String -> String
+        msearch s = let p :: String
+                        p = fst $ break (==':') s
+
+                        ddg :: SearchEngine
+                        ddg = prefixAware $ searchEngine "ddg" "https://duckduckgo.com/?q="
+                        sel :: SearchEngine
+                        sel = fromMaybe ddg $ lookup p se
+                    in (use sel) s
 
 bindings =
   [ ("<Escape>", "session",
@@ -97,12 +122,13 @@ bindings =
   -- keys to launch programs
   , ("S-<Return>", "terminal", spawn "xterm")
 
-  , (".", "time", spawn "notify-send \"$(date)\"")
+  , ("-", "show bar", tempShowBar 2)
 
   , ("a", "run keys",
      hintSubmap config
      [ ("e", "emacs", spawn "emacsclient -c -n")
-     , ("q", "web search", Search.promptSearchBrowser pconfig "/home/hinton/bin/qb" searchEngine)
+     , ("q", "web search", promptSearchBrowser pconfig "/home/hinton/bin/qb" mySearchEngine)
+     , ("M-q", "search sel", selectSearchBrowser "/home/hinton/bin/qb" mySearchEngine)
 
      , ("w w", "qutebrowser", spawn "qb")
      , ("w c", "chromium", spawn "chromium")
@@ -134,26 +160,29 @@ bindings =
      , ("m", "max window", R.maximize)
      , ("e", "eq windows", R.equalize)
      , ("r", "reset layout", resetLayout)
-     , ("g m", "max col", R.maximizeC)
-     , ("g e", "max col", R.equalizeC)
+     , ("w", "max col", R.maximizeC)
+     , ("n", "max col", R.equalizeC)
+     , ("f", "fullscreen col", popBar >> R.outerNextLayout)
      ]
      )
 
   , ("<Return>","swap master", G.swapGroupMaster)
 
-  -- this goes to the outer multitoggle
-  , ("f", "fullscreen", popBar >> (sendMessage $ Toggle NBFULL))
+  -- this makes the outerlayout fullscreen
+
+  , ("f", "fullscreen", sendMessage NextLayout)
 
   -- minify
   , ("m", "minify", popBar >> iconify icon)
   , (",", "unminify", popBar >> uniconify icon)
+--  , (".", "cycle min", popBar >> (withFocused $ (\w -> cyclew icon w)))
 
   -- cycle and unminify
   , ("<Space>", "cycle focus",
      do us <- readUrgents
         case us of
           (h:_) -> windows $ greedyFocusWindow icon h
-          [] -> Ring.rotate [xK_Super_L] xK_space (windows . (greedyFocusWindow icon))
+          [] -> Ring.rotate [xK_Super_L] xK_space (windows . (focusWindow icon))
         resetBar)
 
     -- one day I shall replace dmenu perhaps

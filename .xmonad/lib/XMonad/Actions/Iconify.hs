@@ -32,3 +32,4 @@ bringFirst w ws =
                    return $ win
           in if isJust firstMin then bringWindow (fromJust firstMin) ws
              else ws
+
