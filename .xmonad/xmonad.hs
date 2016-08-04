@@ -1,38 +1,43 @@
 {-# LANGUAGE FlexibleContexts #-}
-import XMonad hiding (config)
 
-import qualified XMonad
-import qualified XMonad.StackSet as W
-import XMonad.Config.Desktop
-import qualified Data.Map as M
-import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
+import Control.Monad (liftM2)
+import Data.Char (toLower)
+import Data.Maybe (fromMaybe)
 import System.Exit (exitWith, ExitCode (ExitSuccess))
-import XMonad.Layout.NoBorders (smartBorders)
-import qualified XMonad.Layout.Rows as R
 import System.Taffybar.Hooks.PagerHints (pagerHints)
+import XMonad hiding (config)
+import XMonad.Actions.CycleWS
+import XMonad.Actions.Iconify (greedyFocusWindow, focusWindow, iconify, uniconify)
+import XMonad.Actions.Search
+import XMonad.Actions.WindowBringer
+import XMonad.Config.Desktop
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
 import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
 import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat)
-import XMonad.Prompt.MyPrompt
-import XMonad.Layout.Groups.Helpers as G
-import qualified XMonad.Actions.Ring as Ring
-import XMonad.Actions.Iconify (greedyFocusWindow, focusWindow, iconify, uniconify)
-import Control.Monad (liftM2)
-import XMonad.Actions.CycleWS
 import XMonad.Hooks.UrgencyHook
-import Data.Char (toLower)
-import XMonad.Actions.WindowBringer
-import XMonad.Util.HintedSubmap (hintSubmap)
-import XMonad.Util.TemporaryBar
+import XMonad.Layout.Groups.Helpers as G
+import XMonad.Layout.NoBorders (smartBorders)
+import XMonad.Prompt.MyPrompt
 import XMonad.Prompt.Pass
-import XMonad.Actions.Search
-import qualified Data.List as L
-import Data.Maybe (fromMaybe)
 import XMonad.Util.AccelerateScroll (accelerateButton)
+import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
+import XMonad.Util.HintedSubmap (hintSubmap)
 import XMonad.Util.NamedWindows (getName)
-import XMonad.Util.Run (safeSpawn)
+import XMonad.Util.Run (safeSpawn, spawnPipe, hPutStrLn)
+import XMonad.Util.TemporaryBar
+import qualified Data.List as L
+import qualified Data.Map as M
+import qualified XMonad
+import qualified XMonad.Actions.Ring as Ring
+import qualified XMonad.Layout.Rows as R
+import qualified XMonad.StackSet as W
+import qualified XMonad.Hooks.DynamicLog as Log
 
-main = xmonad config
+main = do pipe <- spawnPipe "xmobar"
+          let logToPipe = (Log.dynamicLogWithPP $ Log.sjanssenPP
+                           { Log.ppOutput = hPutStrLn pipe })
+          xmonad $ config
+            { logHook = (logHook config) >> logToPipe }
 
 popBar = tempShowBar 0.75
 
