@@ -7,14 +7,21 @@ Config { font = "xft:DejaVuSansMono:size=10:antialias=true"
        , position = Bottom
        , lowerOnStart = True
        , commands = [ Run MultiCpu ["-t", "C: <total>%", "-H","50","--high","#dc322f"] 10
-                    , Run Wireless "wlp2s0b1" [] 10
+                     , Run DynNetwork     [ "--template" , "<dev>: <tx>:<rx>kB/s"
+                         , "--Low"      , "1000"       -- units: kB/s
+                         , "--High"     , "5000"       -- units: kB/s
+                         , "--low"      , "grey"
+                         , "--normal"   , "white"
+                         , "--high"     , "red"
+                         ] 10
                     , Run Memory ["-t","M: <usedratio>%","-H","80","--high","#dc322f"] 10
                     , Run Date "<fc=#faffff>%_d %b %H:%M</fc>" "date" 10
                     , Run BatteryP ["BAT0"] ["-t", "B: <left>%", "-L", "10", "-H", "80", "-p", "3", "--", "-O", "<fc=green>On</fc> - ", "-o", "", "-L", "-15", "-H", "-5", "-l", "red", "-m", "blue", "-h", "green"] 600
                     , Run StdinReader
-                    , Run Volume "default" "Master" [ "-t", "V: <volume>%<status>", "--", "--off", " X", "--on", "" ] 10
+                    , Run Volume "default" "Master" [ "-t", "<action=`pavucontrol` button=3><action=`pamixer -i 1` button=4><action=`pamixer -d 1` button=5><action=`pamixer -t` button=1>V: <volume>%<status></action></action></action></action>",
+                                                      "--", "--off", " X", "--on", "" ] 10
                     ]
        , sepChar = "%"
        , alignSep = "}{"
-       , template = "%StdinReader%}{%battery% %multicpu% %memory% | <action=`xterm -e wicd-curses` button=1>%wlp2s0b1wi%</action> | %default:Master% | %date%"
+       , template = "%StdinReader%}{%battery% %multicpu% %memory% | %dynnetwork% | %default:Master% | %date%"
        }
