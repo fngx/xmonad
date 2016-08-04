@@ -11,7 +11,7 @@ import XMonad
 import XMonad.Util.XUtils (deleteWindow, showWindow)
 import qualified XMonad.StackSet as W
 import qualified Data.Map.Strict as M
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import XMonad.Layout.Groups ( GroupsMessage (ToEnclosing) )
 
 data Axis = V | H deriving (Read, Show, Eq)
@@ -21,13 +21,14 @@ data OrderLayout a = OrderLayout (Pile Int) deriving (Read, Show)
 
 instance (Show a) => LayoutClass OrderLayout a where
   description (OrderLayout p) = description p
-  doLayout (OrderLayout p) screen stack = do
-    let ws = W.integrate stack
+
+  runLayout (W.Workspace t (OrderLayout p) ms) screen = do
+    let ws = W.integrate' ms
         indices = take (length ws) [0..]
-        stack' = iterate W.focusDown' (fromJust $ W.differentiate indices) !! (length $ W.up stack)
+        stack' = fmap (\st -> (iterate W.focusDown' st) !! (length $ maybe [] W.up ms)) (W.differentiate indices)
         inverse = M.fromList $ zip indices ws
         invert (i, r) = (fromJust $ M.lookup i inverse, r)
-    (indices, p') <- doLayout p screen stack'
+    (indices, p') <- runLayout (W.Workspace t p stack') screen
     return (map invert indices, fmap OrderLayout p')
 
   handleMessage (OrderLayout p) msg =
@@ -66,12 +67,16 @@ minSize = 0.05
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
   description p = show $ axis p
 
-  doLayout state screen stack = do
+  runLayout (W.Workspace _ state ms) screen = do
     deleteHandles state
-    let (rects, state') = render state screen $ W.integrate stack
+    (rects, statem) <- maybe (emptyLayout state screen) (doLayout state screen) ms
+    let state' = (fromMaybe state statem)
     newHandles <- createHandles state' screen rects
-    return (rects, Just $ state' {handles = newHandles,
-                                  lastFocus = Just $ W.focus stack})
+    return (rects, Just $ state' { handles = newHandles })
+
+  doLayout state screen stack = do
+    let (rects, state') = render state screen $ W.integrate stack
+    return (rects, Just $ state' { lastFocus = Just $ W.focus stack })
 
   handleMessage st msg
     | (Just m@(Drag h p origLeftSize)) <- fromMessage msg =

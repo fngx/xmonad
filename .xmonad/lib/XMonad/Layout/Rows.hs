@@ -24,21 +24,21 @@ import XMonad.Actions.MessageFeedback (send)
 import Data.Maybe ( Maybe(..), fromMaybe, fromJust, isNothing )
 import XMonad.Layout.Renamed (renamed, Rename(Replace))
 
-myTheme = def
+myTheme tc = def
   { fontName = "xft:Monospace-8"
   , decoHeight = 16
-  , inactiveBorderColor = "#708090"
-  , activeBorderColor   = "#5f9ea0"
-  , activeColor         = "#000000"
+  , inactiveBorderColor = "#333333"
+  , activeBorderColor   = tc
+  , activeColor         = tc
   , inactiveColor       = "#333333"
   , inactiveTextColor   = "#888888"
-  , activeTextColor     = "#87cefa"
+  , activeTextColor     = "black"
   }
 
-rows = let t = renamed [Replace "T"] $ tabbed shrinkText myTheme
-           inner = row V ||| t
-           outer = (orderRow H ||| Full)
-       in balance $ group inner outer
+rows tc = let t = renamed [Replace "T"] $ tabbed shrinkText $ myTheme tc
+              inner = row V ||| t
+              outer = (orderRow H ||| Full)
+          in balance $ group inner outer
 
 balance x = Balanced 0 x
 

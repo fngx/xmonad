@@ -1,15 +1,20 @@
 Config { font = "xft:DejaVuSansMono:size=10:antialias=true"
+       , additionalFonts = [
+          "xft:DejaVuSansMono:style=bold:size=10:antialias=true"
+       ]
        , fgColor = "#eee8d5"
-       , bgColor = "#333333"
+       , bgColor = "#222222"
        , position = Bottom
        , lowerOnStart = True
        , commands = [ Run MultiCpu ["-t", "C: <total>%", "-H","50","--high","#dc322f"] 10
+                    , Run Wireless "wlp2s0b1" [] 10
                     , Run Memory ["-t","M: <usedratio>%","-H","80","--high","#dc322f"] 10
                     , Run Date "<fc=#faffff>%_d %b %H:%M</fc>" "date" 10
                     , Run BatteryP ["BAT0"] ["-t", "B: <left>%", "-L", "10", "-H", "80", "-p", "3", "--", "-O", "<fc=green>On</fc> - ", "-o", "", "-L", "-15", "-H", "-5", "-l", "red", "-m", "blue", "-h", "green"] 600
                     , Run StdinReader
+                    , Run Volume "default" "Master" [ "-t", "V: <volume>%<status>", "--", "--off", " X", "--on", "" ] 10
                     ]
        , sepChar = "%"
        , alignSep = "}{"
-       , template = "%StdinReader% }{%battery% %multicpu% %memory% | %date%"
+       , template = "%StdinReader%}{%battery% %multicpu% %memory% | <action=`xterm -e wicd-curses` button=1>%wlp2s0b1wi%</action> | %default:Master% | %date%"
        }

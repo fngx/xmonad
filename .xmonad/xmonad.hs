@@ -19,6 +19,7 @@ import XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.NoBorders (smartBorders)
 import XMonad.Prompt.MyPrompt
 import XMonad.Prompt.Pass
+import XMonad.Prompt.NetworkManager (nmPrompt)
 import XMonad.Util.AccelerateScroll (accelerateButton)
 import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
 import XMonad.Util.HintedSubmap (hintSubmap)
@@ -31,13 +32,9 @@ import qualified XMonad
 import qualified XMonad.Actions.Ring as Ring
 import qualified XMonad.Layout.Rows as R
 import qualified XMonad.StackSet as W
-import qualified XMonad.Hooks.DynamicLog as Log
+import XMonad.Util.XMobar (runWithBar)
 
-main = do pipe <- spawnPipe "xmobar"
-          let logToPipe = (Log.dynamicLogWithPP $ Log.sjanssenPP
-                           { Log.ppOutput = hPutStrLn pipe })
-          xmonad $ config
-            { logHook = (logHook config) >> logToPipe }
+main = runWithBar config
 
 popBar = tempShowBar 0.75
 
@@ -50,7 +47,7 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ (R.rows ||| Full)
+  where l = desktopLayoutModifiers $ smartBorders $ (R.rows (focusedBorderColor c) ||| Full)
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
@@ -58,7 +55,7 @@ instance UrgencyHook LibNotifyUrgencyHook where
     urgencyHook LibNotifyUrgencyHook w = do
         name     <- getName w
         Just idx <- fmap (W.findTag w) $ gets windowset
-        safeSpawn "notify-send" [show name]
+        safeSpawn "notify-send" ["urgent: " ++ (show name)]
         withDisplay $ \d -> io $ do
           c' <- initColor d "red"
           case c' of
@@ -95,8 +92,8 @@ config =
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
   , normalBorderColor  = "#888888"
-  , focusedBorderColor = "cyan"
-  , borderWidth = 1
+  , focusedBorderColor = "darkorange"
+  , borderWidth = 2
 }
 
 -- there is a bug in !>, it can't combine multiple prefixes
@@ -143,7 +140,9 @@ bindings =
      , ("m", "check mail", spawn "notmuch new")
      , ("u", "cmus", spawn "xterm -e cmus")
 
-     , ("r", "prompt", shell)])
+     , ("r", "prompt", shell)
+     , ("n", "network", nmPrompt "up")
+     ])
 
 
   -- keys to adjust the stack and focus
@@ -166,7 +165,7 @@ bindings =
      , ("e", "eq windows", R.equalize)
      , ("r", "reset layout", resetLayout)
      , ("w", "max col", R.maximizeC)
-     , ("n", "max col", R.equalizeC)
+     , ("n", "eq col", R.equalizeC)
      , ("f", "fullscreen col", popBar >> R.outerNextLayout)
      ]
      )
