@@ -53,9 +53,10 @@ data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
 instance UrgencyHook LibNotifyUrgencyHook where
     urgencyHook LibNotifyUrgencyHook w = do
-        name     <- getName w
-        Just idx <- fmap (W.findTag w) $ gets windowset
-        safeSpawn "notify-send" ["urgent: " ++ (show name)]
+        whenX (fmap not $ runQuery (className =? "qutebrowser") w) $ do
+          name     <- getName w
+          Just idx <- fmap (W.findTag w) $ gets windowset
+          safeSpawn "notify-send" ["urgent: " ++ (show name)]
         withDisplay $ \d -> io $ do
           c' <- initColor d "red"
           case c' of
