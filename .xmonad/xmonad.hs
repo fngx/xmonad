@@ -19,7 +19,7 @@ import XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.NoBorders (smartBorders)
 import XMonad.Prompt.MyPrompt
 import XMonad.Prompt.Pass
-import XMonad.Prompt.NetworkManager (nmPrompt)
+--import XMonad.Prompt.NetworkManager (nmPrompt)
 import XMonad.Util.AccelerateScroll (accelerateButton)
 import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
 import XMonad.Util.HintedSubmap (hintSubmap)
@@ -67,8 +67,7 @@ hooks c =
   urgencyConfig {suppressWhen = Never}
   $
   c
-  { handleEventHook = (handleEventHook c) <+> fullscreenEventHook <+>
-    toggleBarHook
+  { handleEventHook =  toggleBarHook <+> (handleEventHook c) <+> fullscreenEventHook
   , manageHook = (manageHook c) <+>
                  composeAll
                  [ isDialog --> doFloat,
@@ -143,7 +142,6 @@ bindings =
      , ("u", "cmus", spawn "xterm -e cmus")
 
      , ("r", "prompt", shell)
-     , ("n", "network", nmPrompt "up")
      ])
 
 
