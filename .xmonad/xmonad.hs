@@ -118,6 +118,8 @@ bindings =
       , ("q", "exit xmonad", io (exitWith ExitSuccess))
       , ("l", "reset layout", resetLayout)
       , ("h", "hibernate", spawn "systemctl hibernate")
+      , ("b", "reboot", spawn "systemctl reboot")
+      , ("p", "poweroff", spawn "systemctl poweroff")
       , ("s", "suspend", spawn "systemctl suspend")
       ])
 
