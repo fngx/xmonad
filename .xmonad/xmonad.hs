@@ -9,7 +9,7 @@ import XMonad hiding (config)
 import XMonad.Actions.CycleWS
 import XMonad.Actions.Iconify (greedyFocusWindow, focusWindow, iconify, uniconify)
 import XMonad.Actions.Search
-import XMonad.Actions.WindowBringer
+import XMonad.Actions.WindowBringer (bringWindow)
 import XMonad.Config.Desktop
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
 import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
@@ -33,6 +33,7 @@ import qualified XMonad.Actions.Ring as Ring
 import qualified XMonad.Layout.Rows as R
 import qualified XMonad.StackSet as W
 import XMonad.Util.XMobar (runWithBar)
+import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
 
 main = runWithBar config
 
@@ -192,8 +193,14 @@ bindings =
 
     -- one day I shall replace dmenu perhaps
 
-  , ("b", "bring window", bringMenuArgs ["-i", "-l", "10", "-p", "bring"])
-  , ("g", "find window", gotoMenuArgs  ["-i", "-l", "10", "-p", "goto"])
+  , ("b", "bring window",
+     windowPrompt (WindowPrompt "bring window: ") qconfig >>=
+     \w -> maybe (return ()) (windows.bringWindow) w)
+
+  , ("g", "find window",
+     windowPrompt (WindowPrompt "find window: ") qconfig >>=
+     \w -> maybe (return ()) (windows . (focusWindow icon)) w)
+
   , (";", "toggle bar", toggleBar)
 
   , ("s", "swap screen", popBar >> swapNextScreen)

@@ -111,7 +111,7 @@ drawHints theme stuff = do
 hintSubmap :: XConfig l -> [(String, String, X ())] -> X ()
 hintSubmap c keys = do
   let dm = map (\(x, y, _) -> (x, y)) keys
-  cleanup <- drawHints defaultTheme dm
+  cleanup <- drawHints (defaultTheme {key_c = (focusedBorderColor c)}) dm
   let km = mkKeymap c $ fmap (\(x, y, z) -> (x, cleanup False >> z)) keys
   submap km
   cleanup True
