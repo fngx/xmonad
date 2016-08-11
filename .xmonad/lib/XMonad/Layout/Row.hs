@@ -46,8 +46,8 @@ data Pile a = Pile
   } deriving (Read, Show)
 
 data Msg a = Drag (Handle a) Position Rational |
-             Grow a |
-             Shrink a |
+             Grow |
+             Shrink |
              Maximize a |
              Equalize |
              MaximizeLast
@@ -99,12 +99,20 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
                                                                   maybe (return Nothing)
                                                                   (\w -> handleMessage st (SomeMessage $ Maximize w))
                                                                   f
+    | (Just (XMonad.Layout.Row.Grow)) <- fromMessage msg :: Maybe (Msg a) =
+        return $ maybe (Nothing) (\w -> Just $ resz st minSize w) (lastFocus st)
+    | (Just (XMonad.Layout.Row.Shrink)) <- fromMessage msg :: Maybe (Msg a) =
+        return $ maybe (Nothing) (\w -> Just $ resz st (- minSize) w) (lastFocus st)
     | (Just e) <- fromMessage msg :: Maybe Event = resize e (handles st) >> return Nothing
     | otherwise = return Nothing
     where equalize st = let sz = sizes st
                             e :: Rational
                             e = 1%(fromIntegral $ M.size sz)
                         in st {sizes=fmap (const e) sz}
+
+          resz st d w = let sz = sizes st
+                            shrink = d/(fromIntegral $ M.size sz)
+                        in st {sizes=M.adjust (+ d) w $ fmap (flip (-) shrink) sz}
 
           maximize st w = let sz = sizes st
                               u = (fromIntegral $ M.size sz) * minSize

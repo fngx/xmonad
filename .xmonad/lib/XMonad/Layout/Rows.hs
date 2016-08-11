@@ -163,3 +163,9 @@ equalize = sendMessage $ ToFocused $ SomeMessage $ (Equalize :: Msg Window)
 maximizeC = sendMessage $ ToEnclosing $ SomeMessage $ (MaximizeLast :: Msg Int)
 equalizeC = sendMessage $ ToEnclosing $ SomeMessage $ (Equalize :: Msg Int)
 outerNextLayout = sendMessage $ ToEnclosing $ SomeMessage $ NextLayout
+
+shrinkFocusedColumn = sendMessage $ ToEnclosing $ SomeMessage $ (Shrink :: Msg Int)
+growFocusedColumn = sendMessage $ ToEnclosing $ SomeMessage $ (Grow :: Msg Int)
+
+shrinkFocusedRow = sendMessage $ ToFocused $ SomeMessage $ (Shrink :: Msg Window)
+growFocusedRow = sendMessage $ ToFocused $ SomeMessage $ (Grow :: Msg Window)

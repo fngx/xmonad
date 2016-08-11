@@ -86,7 +86,14 @@ config =
   layout $
   flip additionalMouseBindings
   [((0, button4), const $ accelerateButton 4)
-  ,((0, button5), const $ accelerateButton 5)]
+  ,((0, button5), const $ accelerateButton 5)
+
+  ,((mod4Mask, button4), const $ R.shrinkFocusedColumn)
+  ,((mod4Mask, button5), const $ R.growFocusedColumn)
+
+  ,((mod4Mask .|. shiftMask, button4), const $ R.shrinkFocusedRow)
+  ,((mod4Mask .|. shiftMask, button5), const $ R.growFocusedRow)
+  ]
   $
   flip additionalKeysP bindings $
   desktopConfig
