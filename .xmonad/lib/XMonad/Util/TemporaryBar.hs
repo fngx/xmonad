@@ -36,31 +36,11 @@ tempShowBar time = do
 resetBar = do
   st <- XS.get
   case st of
-    Visible -> sendMessage $ SetStruts [U, D] []
-    Hidden -> sendMessage $ SetStruts [] [U, D]
+    Visible -> do sendMessage $ SetStruts [U, D] []
+    Hidden -> do sendMessage $ SetStruts [] [U, D]
     _ -> return ()
 
--- ungrab :: X ()
--- ungrab = do XConf {theRoot = root, display = d} <- ask
---             io $ ungrabKeyboard d currentTime
---             resetBar
-
 toggleBarHook :: Event -> X All
--- toggleBarHook (KeyEvent {ev_event_type = t, ev_state = m, ev_keycode = c})
---   | t == keyPress && (m .&. mod4Mask /= 0) =
---     do XConf {theRoot = root, display = d} <- ask
---        setBar True
---        io $ grabKeyboard d root False grabModeAsync grabModeAsync currentTime
---        return (All True)
---   | t == keyRelease =
---     do XConf {theRoot = root, display = d} <- ask
---        s <- io $ keycodeToKeysym d c 0
---        if s == xK_Super_L then do
---          setBar False
---          io $ ungrabKeyboard d currentTime
---          return (All True)
---          else return (All True)
-
 toggleBarHook e = do
   st <- XS.get
   case st of

@@ -220,8 +220,8 @@ mainBindings =
 bindings = (map (\(k, _, a) -> ("M-" ++ k, a)) mainBindings)
   ++
    --laptop keys
-  [ ("XF86MonBrightnessUp", spawn "xbacklight -inc 5")
-  , ("XF86MonBrightnessUp", spawn "xbacklight -dec 5")
+  [ ("<XF86MonBrightnessUp>", spawn "xbacklight -inc 5")
+  , ("<XF86MonBrightnessDown>", spawn "xbacklight -dec 5")
   ]
   ++
   -- workspace switching keys
