@@ -14,6 +14,7 @@ import XMonad.Layout.Decoration (def, fontName, decoHeight
                                 , inactiveBorderColor , activeBorderColor
                                 , activeColor, inactiveColor
                                 , inactiveTextColor , activeTextColor
+                                , urgentTextColor, urgentBorderColor, urgentColor
                                 )
 
 import qualified XMonad.Layout.Groups.Helpers as G
@@ -27,12 +28,15 @@ import XMonad.Layout.Renamed (renamed, Rename(Replace))
 myTheme tc = def
   { fontName = "xft:Monospace-8"
   , decoHeight = 16
-  , inactiveBorderColor = "#333333"
+  , inactiveBorderColor = "#444444"
   , activeBorderColor   = tc
   , activeColor         = tc
   , inactiveColor       = "#333333"
   , inactiveTextColor   = "#888888"
   , activeTextColor     = "black"
+  , urgentBorderColor   = "red"
+  , urgentColor         = "red"
+  , urgentTextColor     = "white"
   }
 
 rows tc = let t = renamed [Replace "T"] $ tabbed shrinkText $ myTheme tc
@@ -52,9 +56,9 @@ instance (LayoutClass l a) => LayoutClass (Balanced l) a where
 
   runLayout (W.Workspace t (Balanced size st) ms) r =
     let size' = stackSize ms in
-      if size' == size then do
+      if size' <= size then do
         (rs, mst) <- runLayout (W.Workspace t st ms) r
-        return (rs, fmap (\x -> (Balanced size x)) mst)
+        return (rs, fmap (\x -> (Balanced size' x)) mst)
       else do
         (rs, mst) <- runLayout (W.Workspace t st ms) r
         mst' <- handleMessage (fromMaybe st mst) (SomeMessage $ Modify rebalance)

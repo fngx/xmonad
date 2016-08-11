@@ -57,7 +57,8 @@ instance UrgencyHook LibNotifyUrgencyHook where
         whenX (fmap not $ runQuery (className =? "qutebrowser") w) $ do
           name     <- getName w
           Just idx <- fmap (W.findTag w) $ gets windowset
-          safeSpawn "notify-send" ["urgent: " ++ (show name)]
+          safeSpawn "notify-send"
+            ["urgent: " ++ (show name), "-a", "urgency"]
         withDisplay $ \d -> io $ do
           c' <- initColor d "red"
           case c' of
@@ -87,7 +88,7 @@ config =
   [((0, button4), const $ accelerateButton 4)
   ,((0, button5), const $ accelerateButton 5)]
   $
-  flip additionalKeysP (map (\(k, _, a) -> ("M-" ++ k, a)) bindings) $
+  flip additionalKeysP bindings $
   desktopConfig
   { modMask = mod4Mask
   , workspaces = wsLabels ++ [icon]
@@ -112,7 +113,7 @@ mySearchEngine = intelligent $ searchEngineF (L.intercalate "," $ map fst se) ms
                         sel = fromMaybe ddg $ lookup p se
                     in (use sel) s
 
-bindings =
+mainBindings =
   [ ("<Escape>", "session",
       hintSubmap config
       [ ("r", "restart xmonad", spawn "xmonad --recompile; xmonad --restart")
@@ -140,7 +141,7 @@ bindings =
 
      , ("p", "passwords", passwordPrompt pconfig)
      , ("t", "htop", spawn "xterm -e htop")
-     , ("m", "check mail", spawn "notmuch new")
+--     , ("m", "check mail", spawn "notmuch new")
      , ("u", "cmus", spawn "xterm -e cmus")
 
      , ("r", "prompt", shell)
@@ -187,7 +188,7 @@ bindings =
   , ("<Space>", "cycle focus",
      do us <- readUrgents
         case us of
-          (h:_) -> windows $ greedyFocusWindow icon h
+          (h:_) -> windows $ focusWindow icon h
           [] -> Ring.rotate [xK_Super_L] xK_space (windows . (focusWindow icon))
         resetBar)
 
@@ -207,16 +208,22 @@ bindings =
   , ("S-s", "shift screen", popBar >> shiftNextScreen)
   , ("M1-s", "focus screen", popBar >> nextScreen)
 
-  , ("S-/", "this page", hintSubmap config bindings)]
+  , ("S-/", "this page", hintSubmap config mainBindings)]
 
+bindings = (map (\(k, _, a) -> ("M-" ++ k, a)) mainBindings)
+  ++
+   --laptop keys
+  [ ("XF86MonBrightnessUp", spawn "xbacklight -inc 5")
+  , ("XF86MonBrightnessUp", spawn "xbacklight -dec 5")
+  ]
   ++
   -- workspace switching keys
-  [ (mod ++ key, dsc ++ key, action key) |
+  [ (mod ++ key, action key) |
     key <- wsLabels,
-    (mod, dsc, action) <- [ ("", "greedy view ", \t -> (windows $ W.greedyView t) >> popBar)
-                          , ("S-", "shift ", \t -> (windows $ W.shift t) >> popBar)
-                          , ("M1-", "view ", \t -> (windows $ lazyView t) >> popBar)
-                          ] ]
+    (mod, action) <- [ ("M-", \t -> (windows $ W.greedyView t) >> popBar)
+                     , ("M-S-", \t -> (windows $ W.shift t) >> popBar)
+                     , ("M-M1-", \t -> (windows $ lazyView t) >> popBar)
+                     ] ]
 
 lazyView :: (Eq s, Eq i) => i -> W.StackSet i l a s sd -> W.StackSet i l a s sd
 lazyView i s@(W.StackSet { W.hidden = _:_ })

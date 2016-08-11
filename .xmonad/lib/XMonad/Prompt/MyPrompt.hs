@@ -10,29 +10,14 @@ pconfig = def
   { position = Bottom
   , font = "xft:Monospace-10"
   , height = 24
-  , borderColor = "#222"
+  , borderColor = "#888888"
+  , fgColor = "white"
   , searchPredicate = \i c -> i `isInfixOf` c
   }
 
 qconfig = pconfig
-  { autoComplete = Just 5000
+  { autoComplete = Just 100000
   , alwaysHighlight = True
   }
 
 shell = shellPrompt pconfig
-
-data Quick = Quick
-
-instance XPrompt Quick where
-  showXPrompt Quick = "Act: "
-
-quick =
-  let commands = [ ("emacs", spawn "emacsclient -c -n")
-                 , ("qb", spawn "qb")
-                 -- todo read zsh marks file
-                 , ("hibernate", spawn "systemctl hibernate")
-                 , ("suspend", spawn "systemctl suspend")
-                 , ("poweroff", spawn "systemctl poweroff")
-                 ]
-  in mkXPrompt Quick qconfig (\s -> return $ filter (searchPredicate qconfig $ s) (map fst commands)) $
-     fromMaybe (return ()) . (`lookup` commands)
