@@ -2,12 +2,11 @@
 module XMonad.Layout.Rows where
 
 import XMonad.Core ( SomeMessage(..) , LayoutClass(..) )
-import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..))
+import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..), Mirror(..) )
 --import XMonad.Layout (Full (Full))
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
 import XMonad.Util.Stack
-import XMonad.Layout.Row (row, orderRow, Axis (H, V), axis, isOuterLayout, Msg(..))
 import XMonad.Layout.Tabbed (tabbed, shrinkText)
 import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wrap) )
 import XMonad.Layout.Decoration (def, fontName, decoHeight
@@ -24,6 +23,9 @@ import qualified Data.Set as S
 import XMonad.Actions.MessageFeedback (send)
 import Data.Maybe ( Maybe(..), fromMaybe, fromJust, isNothing )
 import XMonad.Layout.Renamed (renamed, Rename(Replace))
+import Control.Applicative
+import XMonad.Layout.ZoomRow
+import XMonad.Layout.LayoutCombinators
 
 myTheme tc = def
   { fontName = "xft:Monospace-8"
@@ -39,9 +41,19 @@ myTheme tc = def
   , urgentTextColor     = "white"
   }
 
-rows tc = let t = renamed [Replace "T"] $ tabbed shrinkText $ myTheme tc
-              inner = row V ||| t
-              outer = (orderRow H ||| Full)
+data GroupEQ a = GroupEQ
+  deriving (Show, Read)
+
+instance Eq a => EQF GroupEQ (Group l a) where
+    eq _ (G l1 _) (G l2 _) = sameID l1 l2
+
+rows tc = let theme = myTheme tc
+              t = renamed [Replace "T"] $ tabbed shrinkText theme
+              rows = (renamed [Replace "R"] $ Mirror zoomRow)
+              inner = rows ||| t
+              outer = (column ||| f)
+              f = renamed [Replace "F"] Full
+              column = renamed [Replace "C"] $ zoomRowWith GroupEQ
           in balance $ group inner outer
 
 balance x = Balanced 0 x
@@ -55,16 +67,22 @@ instance (LayoutClass l a) => LayoutClass (Balanced l) a where
   description (Balanced _ l) = description l
 
   runLayout (W.Workspace t (Balanced size st) ms) r =
-    let size' = stackSize ms in
-      if size' <= size then do
-        (rs, mst) <- runLayout (W.Workspace t st ms) r
-        return (rs, fmap (\x -> (Balanced size' x)) mst)
-      else do
-        (rs, mst) <- runLayout (W.Workspace t st ms) r
-        mst' <- handleMessage (fromMaybe st mst) (SomeMessage $ Modify rebalance)
-        if isNothing mst' then return (rs, Just $ Balanced size' (fromMaybe st mst))
-          else do (rs', mst'') <- runLayout (W.Workspace t (fromJust mst') ms) r
-                  return (rs', Just $ Balanced size' (fromMaybe (fromJust mst') mst''))
+    let size' = stackSize ms
+        upd (rs, mst)
+          | size == size' = (rs, fmap (Balanced size') mst)
+          | otherwise = (rs, Just $ Balanced size' $ fromMaybe st mst)
+        balanced (rs, mst)
+          | size < size'  = do mbst <- handleMessage st' (SomeMessage $ Modify rebalance)
+                               case mbst of
+                                 Nothing -> return (rs, mst)
+                                 (Just bst) -> runLayout (W.Workspace t bst ms) r
+            -- a distressing hack. this doesn't work, it just deletes the handles all the time
+            -- maybe I should just make some other method like right click resize of tiles.
+          | otherwise = -- handleMessage st' (SomeMessage $ ToEnclosing $ SomeMessage $ (DeleteHandles :: Msg Int)) >>
+                        -- handleMessage st' (SomeMessage $ ToAll $ SomeMessage $ (DeleteHandles :: Msg Window))>>
+                        return (rs, mst)
+          where st' = (fromMaybe st mst)
+    in fmap upd $ runLayout (W.Workspace t st ms) r >>= balanced
 
   handleMessage (Balanced n l) m = fmap (fmap (\x -> (Balanced n x))) $ handleMessage l m
 
@@ -152,20 +170,22 @@ onFocused f _ gs = onFocusedZ (onZipper f) gs
 -- fullscreen for group vs layout etc.
 
 groupNextLayout = sendMessage $ ToFocused $ SomeMessage $ NextLayout
-
-maximize = withFocused $ \w -> sendMessage $ ToFocused $ SomeMessage $ Maximize w
-equalize = sendMessage $ ToFocused $ SomeMessage $ (Equalize :: Msg Window)
-
--- to max the focused column, I need its index which is I think not
--- accessible readily. option B here is to retain the last focused
--- element so I can target that
-
-maximizeC = sendMessage $ ToEnclosing $ SomeMessage $ (MaximizeLast :: Msg Int)
-equalizeC = sendMessage $ ToEnclosing $ SomeMessage $ (Equalize :: Msg Int)
 outerNextLayout = sendMessage $ ToEnclosing $ SomeMessage $ NextLayout
 
-shrinkFocusedColumn = sendMessage $ ToEnclosing $ SomeMessage $ (Shrink :: Msg Int)
-growFocusedColumn = sendMessage $ ToEnclosing $ SomeMessage $ (Grow :: Msg Int)
+shrinkFocusedColumn :: X ()
+shrinkFocusedColumn = sendMessage $ ToEnclosing $ SomeMessage $ zoomOut
 
-shrinkFocusedRow = sendMessage $ ToFocused $ SomeMessage $ (Shrink :: Msg Window)
-growFocusedRow = sendMessage $ ToFocused $ SomeMessage $ (Grow :: Msg Window)
+growFocusedColumn :: X ()
+growFocusedColumn = sendMessage $ ToEnclosing $ SomeMessage $ zoomIn
+
+shrinkFocusedRow :: X ()
+shrinkFocusedRow = sendMessage zoomOut
+
+growFocusedRow :: X ()
+growFocusedRow = sendMessage zoomIn
+
+toggleWindowFull :: X ()
+toggleWindowFull = sendMessage ZoomFullToggle
+
+resetColumn = sendMessage $ ToEnclosing $ SomeMessage $ zoomReset
+resetRow = sendMessage zoomReset

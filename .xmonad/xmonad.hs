@@ -48,7 +48,7 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ (R.rows (focusedBorderColor c) ||| Full)
+  where l = desktopLayoutModifiers $ smartBorders $ (R.rows (focusedBorderColor c)) ||| Full
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
@@ -101,8 +101,8 @@ config =
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
   , normalBorderColor  = "#888888"
-  , focusedBorderColor = "darkorange"
-  , borderWidth = 2
+  , focusedBorderColor = "cyan"
+  , borderWidth = 1
 }
 
 -- there is a bug in !>, it can't combine multiple prefixes
@@ -134,8 +134,6 @@ mainBindings =
 
   -- keys to launch programs
   , ("S-<Return>", "terminal", spawn "xterm")
-
-  , ("-", "show bar", tempShowBar 2)
 
   , ("a", "run keys",
      hintSubmap config
@@ -171,14 +169,20 @@ mainBindings =
      [ ("l", "switch group layout", R.groupNextLayout)
      , ("M-l", "ditto", R.groupNextLayout)
      , ("o", "focused to new group", R.makeGroup)
-     , ("m", "max window", R.maximize)
-     , ("e", "eq windows", R.equalize)
      , ("r", "reset layout", resetLayout)
-     , ("w", "max col", R.maximizeC)
-     , ("n", "eq col", R.equalizeC)
      , ("f", "fullscreen col", popBar >> R.outerNextLayout)
+     , ("x", "maximize window", R.toggleWindowFull)
+     , (".", "reset row", R.resetRow)
+     , (",", "reset col", R.resetColumn)
      ]
      )
+
+  , ("=", "new col", R.makeGroup)
+
+  , (",", "- row", R.growFocusedRow)
+  , (".", "+ row", R.growFocusedColumn)
+  , ("S-,", "- col", R.shrinkFocusedRow)
+  , ("S-.", "+ col", R.shrinkFocusedColumn)
 
   , ("<Return>","swap master", G.swapGroupMaster)
 
@@ -188,8 +192,7 @@ mainBindings =
 
   -- minify
   , ("m", "minify", popBar >> iconify icon)
-  , (",", "unminify", popBar >> uniconify icon)
---  , (".", "cycle min", popBar >> (withFocused $ (\w -> cyclew icon w)))
+  , ("-", "unminify", popBar >> uniconify icon)
 
   -- cycle and unminify
   , ("<Space>", "cycle focus",
@@ -210,6 +213,7 @@ mainBindings =
      \w -> maybe (return ()) (windows . (focusWindow icon)) w)
 
   , (";", "toggle bar", toggleBar)
+  , ("S-;", "show bar", tempShowBar 2)
 
   , ("s", "swap screen", popBar >> swapNextScreen)
   , ("S-s", "shift screen", popBar >> shiftNextScreen)
