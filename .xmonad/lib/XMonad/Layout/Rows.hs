@@ -2,7 +2,7 @@
 module XMonad.Layout.Rows where
 
 import XMonad.Core ( SomeMessage(..) , LayoutClass(..) )
-import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..), Mirror(..) )
+import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..), Mirror(..), Event(..), fromMessage )
 --import XMonad.Layout (Full (Full))
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
@@ -84,7 +84,12 @@ instance (LayoutClass l a) => LayoutClass (Balanced l) a where
           where st' = (fromMaybe st mst)
     in fmap upd $ runLayout (W.Workspace t st ms) r >>= balanced
 
-  handleMessage (Balanced n l) m = fmap (fmap (\x -> (Balanced n x))) $ handleMessage l m
+  handleMessage (Balanced n l) m = fmap (fmap (\x -> (Balanced n x))) $ handleMessage l m'
+    where
+      m' -- this is a hack to make the tabs update
+        | Just e@(PropertyEvent {}) <- fromMessage m = SomeMessage $ ToAll $ SomeMessage e
+        | Just e@(ExposeEvent {}) <- fromMessage m = SomeMessage $ ToAll $ SomeMessage e
+        | otherwise = m
 
 rebalance :: ModifySpec
 rebalance l gs@(Just (Stack (G gl s) [] []))
