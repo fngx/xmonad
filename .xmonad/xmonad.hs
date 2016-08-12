@@ -218,6 +218,7 @@ mainBindings =
   , ("s", "swap screen", popBar >> swapNextScreen)
   , ("S-s", "shift screen", popBar >> shiftNextScreen)
   , ("M1-s", "focus screen", popBar >> nextScreen)
+  , ("x", "focus screen", popBar >> nextScreen)
 
   , ("S-/", "this page", hintSubmap config mainBindings)]
 
