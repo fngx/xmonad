@@ -150,6 +150,7 @@ mainBindings =
      , ("u", "cmus", spawn "xterm -e cmus")
 
      , ("r", "prompt", shell)
+     , ("v", "vol", spawn "pavucontrol")
      ])
 
 
@@ -163,6 +164,9 @@ mainBindings =
   , ("n",   "focus down", R.focusNext)
   , ("S-p", "swap up", R.swapPrev)
   , ("S-n", "swap down", R.swapNext)
+
+  , ("j", "next in group", R.nextInGroup)
+  , ("h", "next group", R.nextGroup)
 
   , ("l", "layout keys",
      hintSubmap config

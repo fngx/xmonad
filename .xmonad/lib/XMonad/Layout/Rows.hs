@@ -50,7 +50,7 @@ instance Eq a => EQF GroupEQ (Group l a) where
 rows tc = let theme = myTheme tc
               t = renamed [Replace "T"] $ tabbed shrinkText theme
               rows = (renamed [Replace "R"] $ Mirror zoomRow)
-              inner = rows ||| t
+              inner = t ||| rows
               outer = (column ||| f)
               f = renamed [Replace "F"] Full
               column = renamed [Replace "C"] $ zoomRowWith GroupEQ
@@ -87,6 +87,7 @@ instance (LayoutClass l a) => LayoutClass (Balanced l) a where
   handleMessage (Balanced n l) m = fmap (fmap (\x -> (Balanced n x))) $ handleMessage l m'
     where
       m' -- this is a hack to make the tabs update
+        | Just e@(ButtonEvent {}) <- fromMessage m = SomeMessage $ ToAll $ SomeMessage e
         | Just e@(PropertyEvent {}) <- fromMessage m = SomeMessage $ ToAll $ SomeMessage e
         | Just e@(ExposeEvent {}) <- fromMessage m = SomeMessage $ ToAll $ SomeMessage e
         | otherwise = m
@@ -194,3 +195,10 @@ toggleWindowFull = sendMessage ZoomFullToggle
 
 resetColumn = sendMessage $ ToEnclosing $ SomeMessage $ zoomReset
 resetRow = sendMessage zoomReset
+
+
+nextGroup :: X ()
+nextGroup = sendMessage $ Modify $ focusGroupDown
+
+nextInGroup :: X ()
+nextInGroup = sendMessage $ Modify $ focusDown
