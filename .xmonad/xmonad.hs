@@ -183,10 +183,10 @@ mainBindings =
 
   , ("=", "new col", R.makeGroup)
 
-  , (",", "- row", R.growFocusedRow)
-  , (".", "+ row", R.growFocusedColumn)
+  , (",", "small", R.shrinkFocusedColumn)
+  , (".", "big", R.growFocusedColumn)
   , ("S-,", "- col", R.shrinkFocusedRow)
-  , ("S-.", "+ col", R.shrinkFocusedColumn)
+  , ("S-.", "+ col", R.growFocusedRow)
 
   , ("<Return>","swap master", G.swapGroupMaster)
 
