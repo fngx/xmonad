@@ -29,12 +29,17 @@ taffyColor fg bg = wrap t "</span>"
 
 myPP c = xmobarPP
   { ppCurrent = taffyColor c "" . taffyBold
-  , ppVisible = taffyColor "white" "" . taffyBold
+  , ppVisible = taffyColor "white" ""
+  , ppHidden = taffyColor "grey" ""
   , ppUrgent = taffyColor "red" ""
   , ppTitle = taffyColor "white" "" . raw . shorten 120
-  , ppLayout = \s -> taffyColor "grey" "" $ case s of
-      "Full" -> "+"
-      x:" by H" -> x:""
-      x:" by Full" -> x:"+"
-      s -> s
+  , ppLayout = \s -> taffyBold $
+                     case words s of
+                       ["Full"] -> "+"
+                       [l, "by", x] -> l ++ case x of
+                                              "C" -> ""
+                                              "F" -> "+"
+                                              _ -> x
+                       _ -> s
+  , ppSep = taffyColor "#777777" "" " | "
   }

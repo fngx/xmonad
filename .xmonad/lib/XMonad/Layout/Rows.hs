@@ -2,7 +2,7 @@
 module XMonad.Layout.Rows where
 
 import XMonad.Core ( SomeMessage(..) , LayoutClass(..) )
-import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..), Mirror(..), Event(..), fromMessage )
+import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, windows, withFocused, Full(..), Mirror(..), Event(..), fromMessage, Rectangle (..), Message (..) )
 --import XMonad.Layout (Full (Full))
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
@@ -34,7 +34,7 @@ myTheme tc = def
   , activeBorderColor   = tc
   , activeColor         = tc
   , inactiveColor       = "#333333"
-  , inactiveTextColor   = "#888888"
+  , inactiveTextColor   = "#aaaaaa"
   , activeTextColor     = "black"
   , urgentBorderColor   = "red"
   , urgentColor         = "red"
@@ -56,35 +56,37 @@ rows tc = let theme = myTheme tc
               column = renamed [Replace "C"] $ zoomRowWith GroupEQ
           in balance $ group inner outer
 
-balance x = Balanced 0 x
+balance x = Balanced True 0 x
 
-data Balanced l a = Balanced Int (l a) deriving (Read, Show)
+data Balanced l a = Balanced Bool Int (l a) deriving (Read, Show)
+
+data BalanceToggle = BalanceToggle
+
+instance Message BalanceToggle
 
 stackSize Nothing = 0
 stackSize (Just (W.Stack a u d)) = 1+(length u)+(length d)
 
 instance (LayoutClass l a) => LayoutClass (Balanced l) a where
-  description (Balanced _ l) = description l
+  description (Balanced e _ l) = (if e then "B" else "") ++ (description l)
 
-  runLayout (W.Workspace t (Balanced size st) ms) r =
+  runLayout (W.Workspace t (Balanced b size st) ms) r@(Rectangle _ _ sw _) =
     let size' = stackSize ms
         upd (rs, mst)
-          | size == size' = (rs, fmap (Balanced size') mst)
-          | otherwise = (rs, Just $ Balanced size' $ fromMaybe st mst)
+          | size == size' = (rs, fmap (Balanced b size') mst)
+          | otherwise = (rs, Just $ Balanced b size' $ fromMaybe st mst)
         balanced (rs, mst)
-          | size < size'  = do mbst <- handleMessage st' (SomeMessage $ Modify rebalance)
-                               case mbst of
-                                 Nothing -> return (rs, mst)
-                                 (Just bst) -> runLayout (W.Workspace t bst ms) r
-            -- a distressing hack. this doesn't work, it just deletes the handles all the time
-            -- maybe I should just make some other method like right click resize of tiles.
-          | otherwise = -- handleMessage st' (SomeMessage $ ToEnclosing $ SomeMessage $ (DeleteHandles :: Msg Int)) >>
-                        -- handleMessage st' (SomeMessage $ ToAll $ SomeMessage $ (DeleteHandles :: Msg Window))>>
-                        return (rs, mst)
+          | size < size' && b = do mbst <- handleMessage st' (SomeMessage $ Modify rebalance)
+                                   case mbst of
+                                     Nothing -> return (rs, mst)
+                                     (Just bst) -> runLayout (W.Workspace t bst ms) r
+          | otherwise = return (rs, mst)
           where st' = (fromMaybe st mst)
     in fmap upd $ runLayout (W.Workspace t st ms) r >>= balanced
 
-  handleMessage (Balanced n l) m = fmap (fmap (\x -> (Balanced n x))) $ handleMessage l m'
+  handleMessage (Balanced b n l) m
+    | Just BalanceToggle <- fromMessage m = return $ Just $ Balanced (not b) n l
+    | otherwise = fmap (fmap (\x -> (Balanced b n x))) $ handleMessage l m'
     where
       m' -- this is a hack to make the tabs update
         | Just e@(ButtonEvent {}) <- fromMessage m = SomeMessage $ ToAll $ SomeMessage e
@@ -94,8 +96,7 @@ instance (LayoutClass l a) => LayoutClass (Balanced l) a where
 
 rebalance :: ModifySpec
 rebalance l gs@(Just (Stack (G gl s) [] []))
-  | multipleWindows s -- && isRow gl
-  = moveToNewGroupDown l gs
+  | multipleWindows s = moveToNewGroupDown l gs -- there is no easy way to detect a tabbed layout
   | otherwise = gs
   where multipleWindows (Just (Stack _ [] [])) = False
         multipleWindows (Just (Stack _ _ _)) = True

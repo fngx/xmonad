@@ -80,8 +80,8 @@ drawHints theme stuff = do
   foldM_
     (\(x, y, z) ((key, lbl), (kw, lw)) -> do
         -- TODO align on arrow
-        printStringXMF d pxm xmf gc (key_c theme) (bg theme) (x + (fi (widestk - kw))) y key
         printStringXMF d pxm xmf gc (sep_c theme) (bg theme) (x + (fi widestk)) y (sep theme)
+        printStringXMF d pxm xmf gc (key_c theme) (bg theme) (x + (fi (widestk - kw))) y key
         printStringXMF d pxm xmf gc (desc_c theme) (bg theme) (x+(fi widestk)+(fi sepw)) y lbl
         let delta = if (rows == 1) then (fi widestk) + (fi sepw) + (fi colspc) + (fi lw)
                     else (fi widest')

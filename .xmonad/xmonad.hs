@@ -101,7 +101,7 @@ config =
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
   , normalBorderColor  = "#888888"
-  , focusedBorderColor = "cyan"
+  , focusedBorderColor = "#00ff00"
   , borderWidth = 1
 }
 
@@ -178,6 +178,7 @@ mainBindings =
      , ("x", "maximize window", R.toggleWindowFull)
      , (".", "reset row", R.resetRow)
      , (",", "reset col", R.resetColumn)
+     , ("b", "balance?", sendMessage R.BalanceToggle)
      ]
      )
 
