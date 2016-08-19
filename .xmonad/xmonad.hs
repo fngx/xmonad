@@ -35,7 +35,10 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.XMobar (runWithBar)
 import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
 
-main = runWithBar config
+urgentC = "#ff0000"
+borderC = "#00ff00"
+
+main = runWithBar config urgentC
 
 popBar = tempShowBar 0.75
 
@@ -48,7 +51,7 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ (R.rows (focusedBorderColor c)) ||| Full
+  where l = desktopLayoutModifiers $ smartBorders $ (R.rows (focusedBorderColor c) urgentC) ||| Full
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
@@ -60,7 +63,7 @@ instance UrgencyHook LibNotifyUrgencyHook where
           safeSpawn "notify-send"
             ["urgent: " ++ (show name), "-a", "urgency"]
         withDisplay $ \d -> io $ do
-          c' <- initColor d "red"
+          c' <- initColor d urgentC
           case c' of
             Just c -> setWindowBorder d w c
             _ -> return ()
@@ -101,7 +104,7 @@ config =
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
   , normalBorderColor  = "#888888"
-  , focusedBorderColor = "#00ff00"
+  , focusedBorderColor = borderC
   , borderWidth = 1
 }
 

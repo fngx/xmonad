@@ -27,7 +27,7 @@ import Control.Applicative
 import XMonad.Layout.ZoomRow
 import XMonad.Layout.LayoutCombinators
 
-myTheme tc = def
+myTheme tc uc = def
   { fontName = "xft:Monospace-8"
   , decoHeight = 16
   , inactiveBorderColor = "#444444"
@@ -36,8 +36,8 @@ myTheme tc = def
   , inactiveColor       = "#333333"
   , inactiveTextColor   = "#aaaaaa"
   , activeTextColor     = "black"
-  , urgentBorderColor   = "red"
-  , urgentColor         = "red"
+  , urgentBorderColor   = uc
+  , urgentColor         = uc
   , urgentTextColor     = "white"
   }
 
@@ -47,14 +47,14 @@ data GroupEQ a = GroupEQ
 instance Eq a => EQF GroupEQ (Group l a) where
     eq _ (G l1 _) (G l2 _) = sameID l1 l2
 
-rows tc = let theme = myTheme tc
-              t = renamed [Replace "T"] $ tabbed shrinkText theme
-              rows = (renamed [Replace "R"] $ Mirror zoomRow)
-              inner = t ||| rows
-              outer = (column ||| f)
-              f = renamed [Replace "F"] Full
-              column = renamed [Replace "C"] $ zoomRowWith GroupEQ
-          in balance $ group inner outer
+rows tc uc = let theme = myTheme tc uc
+                 t = renamed [Replace "T"] $ tabbed shrinkText theme
+                 rows = (renamed [Replace "R"] $ Mirror zoomRow)
+                 inner = t ||| rows
+                 outer = (column ||| f)
+                 f = renamed [Replace "F"] Full
+                 column = renamed [Replace "C"] $ zoomRowWith GroupEQ
+             in balance $ group inner outer
 
 balance x = Balanced True 0 x
 
