@@ -96,7 +96,9 @@ instance (LayoutClass l a) => LayoutClass (Balanced l) a where
 
 rebalance :: ModifySpec
 rebalance l gs@(Just (Stack (G gl s) [] []))
-  | multipleWindows s = moveToNewGroupDown l gs -- there is no easy way to detect a tabbed layout
+  -- the shenanigans below pops out the new window into a new group, and then focuses down 1 in the existing
+  -- group because otherwise the focus travels up one in the old group.
+  | multipleWindows s = focusGroupDown l $ focusDown l $ focusGroupUp l $ moveToNewGroupDown l gs
   | otherwise = gs
   where multipleWindows (Just (Stack _ [] [])) = False
         multipleWindows (Just (Stack _ _ _)) = True
