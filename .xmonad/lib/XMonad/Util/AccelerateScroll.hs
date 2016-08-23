@@ -23,7 +23,7 @@ accelerateButton btn = do
   XS.put state'
   io $ do ungrabButton dpy btn 0 rootw
           sync dpy False
-          replicateM_ n $ XTest.fakeButtonPress dpy btn >> threadDelay 5
+          replicateM_ n $ XTest.fakeButtonPress dpy btn
           sync dpy False
           grabButton dpy btn 0 rootw False 0 grabModeAsync grabModeSync none none
   return ()
@@ -34,7 +34,7 @@ accelerateButton btn = do
         let ek' = trim (now:ek)
             trim (x:(y:xs)) = if (x - y) > 0.1 then [x] else x:(trim (y:xs))
             trim q = q in
-          (st { recent = ek' }, floor $ sqrt $ fromIntegral $ length ek')
+          (st { recent = ek' }, min 10 $ floor $ sqrt $ fromIntegral $ length ek')
 
 -- the last series of scroll events
 data ScrollEvents = ScrollEvents
