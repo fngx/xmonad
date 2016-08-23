@@ -171,12 +171,12 @@ mainBindings =
      , ("v", "vol", volume)
      ])
 
+  , ("c", "prompt", shell)
 
   -- keys to adjust the stack and focus
   , ("k", "kill window", kill)
 
   -- keys to adjust the layout
-
 
   , ("p",   "focus up", R.focusPrev)
   , ("n",   "focus down", R.focusNext)
