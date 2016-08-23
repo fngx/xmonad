@@ -205,3 +205,9 @@ nextGroup = sendMessage $ Modify $ focusGroupDown
 
 nextInGroup :: X ()
 nextInGroup = sendMessage $ Modify $ focusDown
+
+prevGroup :: X ()
+prevGroup = sendMessage $ Modify $ focusGroupUp
+
+prevInGroup :: X ()
+prevInGroup = sendMessage $ Modify $ focusUp

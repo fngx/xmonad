@@ -24,7 +24,7 @@ import XMonad.Util.AccelerateScroll (accelerateButton)
 import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
 import XMonad.Util.HintedSubmap (hintSubmap)
 import XMonad.Util.NamedWindows (getName)
-import XMonad.Util.Run (safeSpawn, spawnPipe, hPutStrLn)
+import XMonad.Util.Run (safeSpawn, spawnPipe, hPutStrLn, runProcessWithInput)
 import XMonad.Util.TemporaryBar
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -105,7 +105,7 @@ config =
   , keys = const $ M.empty
   , normalBorderColor  = "#888888"
   , focusedBorderColor = borderC
-  , borderWidth = 1
+  , borderWidth = 2
 }
 
 -- there is a bug in !>, it can't combine multiple prefixes
@@ -123,6 +123,21 @@ mySearchEngine = intelligent $ searchEngineF (L.intercalate "," $ map fst se) ms
                         sel = fromMaybe ddg $ lookup p se
                     in (use sel) s
 
+resize = hintSubmap config
+  [ ("e", "taller", R.growFocusedRow >> resize)
+  , ("d", "shorter", R.shrinkFocusedRow >> resize)
+  , ("s", "narrower", R.shrinkFocusedColumn >> resize)
+  , ("f", "wider", R.growFocusedColumn >> resize)
+  , ("r", "reset", R.resetRow >> R.resetColumn)]
+
+volume = --let
+  hintSubmap config
+  [ ("x", "mixer", spawn "pavucontrol")
+  , ("m", "toggle mute", (spawn "pactl set-sink-mute 0 toggle") >> volume)
+  , ("l", "louder", (spawn "pactl -- set-sink-volume 0 +5%") >> volume)
+  , ("q", "quieter", (spawn "pactl -- set-sink-volume 0 -5%") >> volume)
+  ]
+
 mainBindings =
   [ ("<Escape>", "session",
       hintSubmap config
@@ -137,6 +152,7 @@ mainBindings =
 
   -- keys to launch programs
   , ("S-<Return>", "terminal", spawn "xterm")
+  , ("'", "terminal", spawn "xterm")
 
   , ("a", "run keys",
      hintSubmap config
@@ -149,11 +165,10 @@ mainBindings =
 
      , ("p", "passwords", passwordPrompt pconfig)
      , ("t", "htop", spawn "xterm -e htop")
---     , ("m", "check mail", spawn "notmuch new")
      , ("u", "cmus", spawn "xterm -e cmus")
 
      , ("r", "prompt", shell)
-     , ("v", "vol", spawn "pavucontrol")
+     , ("v", "vol", volume)
      ])
 
 
@@ -161,36 +176,39 @@ mainBindings =
   , ("k", "kill window", kill)
 
   -- keys to adjust the layout
-  , ("z", "sink window", withFocused $ windows . W.sink)
+
 
   , ("p",   "focus up", R.focusPrev)
   , ("n",   "focus down", R.focusNext)
+
+  , ("M1-p", "group up", R.prevGroup)
+  , ("M1-n", "group down", R.nextGroup)
+
   , ("S-p", "swap up", R.swapPrev)
   , ("S-n", "swap down", R.swapNext)
-
-  , ("j", "next in group", R.nextInGroup)
-  , ("h", "next group", R.nextGroup)
 
   , ("l", "layout keys",
      hintSubmap config
      [ ("l", "switch group layout", R.groupNextLayout)
      , ("M-l", "ditto", R.groupNextLayout)
      , ("o", "focused to new group", R.makeGroup)
-     , ("r", "reset layout", resetLayout)
+     , ("R", "reset layout", resetLayout)
      , ("f", "fullscreen col", popBar >> R.outerNextLayout)
      , ("x", "maximize window", R.toggleWindowFull)
-     , (".", "reset row", R.resetRow)
-     , (",", "reset col", R.resetColumn)
      , ("b", "balance?", sendMessage R.BalanceToggle)
-     ]
-     )
+     , ("r", "resize", resize)
+     , ("z", "sink window", withFocused $ windows . W.sink)])
 
-  , ("=", "new col", R.makeGroup)
+  -- , ("d", "up", R.prevInGroup)
+  -- , ("c", "down", R.nextInGroup)
+  -- , ("s", "left", R.prevGroup)
+  -- , ("", "right", R.nextGroup)
 
-  , (",", "small", R.shrinkFocusedColumn)
-  , (".", "big", R.growFocusedColumn)
-  , ("S-,", "- col", R.shrinkFocusedRow)
-  , ("S-.", "+ col", R.growFocusedRow)
+  , ("<Tab>", "Cycle window", R.nextInGroup)
+  , ("M1-<Tab>", "Cycle group", R.nextGroup)
+
+  , ("/", "pop", R.makeGroup)
+  , (".", "resize", resize)
 
   , ("<Return>","swap master", G.swapGroupMaster)
 
@@ -200,7 +218,7 @@ mainBindings =
 
   -- minify
   , ("m", "minify", popBar >> iconify icon)
-  , ("-", "unminify", popBar >> uniconify icon)
+  , (",", "unminify", popBar >> uniconify icon)
 
   -- cycle and unminify
   , ("<Space>", "cycle focus",
