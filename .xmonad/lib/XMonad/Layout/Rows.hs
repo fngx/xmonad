@@ -26,19 +26,23 @@ import XMonad.Layout.Renamed (renamed, Rename(Replace))
 import Control.Applicative
 import XMonad.Layout.ZoomRow
 import XMonad.Layout.LayoutCombinators
+import qualified XMonad.Util.Colours as Cs
 
-myTheme tc uc = def
-  { fontName = "xft:Monospace-8"
+myTheme = def
+  { fontName = "xft:Monospace-8:bold"
   , decoHeight = 16
-  , inactiveBorderColor = "#444444"
-  , activeBorderColor   = tc
-  , activeColor         = tc
-  , inactiveColor       = "#333333"
-  , inactiveTextColor   = "#aaaaaa"
-  , activeTextColor     = "black"
-  , urgentBorderColor   = uc
-  , urgentColor         = uc
-  , urgentTextColor     = "white"
+
+  , activeBorderColor   = Cs.border
+  , activeColor         = Cs.border
+  , activeTextColor     = Cs.borderText
+
+  , inactiveColor       = Cs.background
+  , inactiveBorderColor = Cs.dimBorder
+  , inactiveTextColor   = Cs.dimText
+
+  , urgentBorderColor   = Cs.urgent
+  , urgentColor         = Cs.urgent
+  , urgentTextColor     = Cs.urgentText
   }
 
 data GroupEQ a = GroupEQ
@@ -47,16 +51,16 @@ data GroupEQ a = GroupEQ
 instance Eq a => EQF GroupEQ (Group l a) where
     eq _ (G l1 _) (G l2 _) = sameID l1 l2
 
-rows tc uc = let theme = myTheme tc uc
-                 t = renamed [Replace "T"] $ tabbed shrinkText theme
-                 rows = (renamed [Replace "R"] $ Mirror zoomRow)
-                 inner = t ||| rows
-                 outer = (column ||| f)
-                 f = renamed [Replace "F"] Full
-                 column = renamed [Replace "C"] $ zoomRowWith GroupEQ
-             in balance $ group inner outer
+rows = let theme = myTheme
+           t = renamed [Replace "T"] $ tabbed shrinkText theme
+           rows = (renamed [Replace "R"] $ Mirror zoomRow)
+           inner = t ||| rows
+           outer = (column ||| f)
+           f = renamed [Replace "F"] Full
+           column = renamed [Replace "C"] $ zoomRowWith GroupEQ
+       in balance $ group inner outer
 
-balance x = Balanced True 0 x
+balance x = Balanced False 0 x
 
 data Balanced l a = Balanced Bool Int (l a) deriving (Read, Show)
 
@@ -98,12 +102,18 @@ rebalance :: ModifySpec
 rebalance l gs@(Just (Stack (G gl s) [] []))
   -- the shenanigans below pops out the new window into a new group, and then focuses down 1 in the existing
   -- group because otherwise the focus travels up one in the old group.
-  | multipleWindows s = focusGroupDown l $ focusDown l $ focusGroupUp l $ moveToNewGroupDown l gs
+  | multipleWindows s = pop l gs
   | otherwise = gs
   where multipleWindows (Just (Stack _ [] [])) = False
         multipleWindows (Just (Stack _ _ _)) = True
         multipleWindows _ = False
 rebalance _ gs = gs
+
+pop :: ModifySpec
+pop l g@(Just (Stack (G _ s) _ _))
+  | atFirstZ s = moveToNewGroupDown l g
+  | otherwise = focusGroupDown l $ focusDown l $ focusGroupUp l $ moveToNewGroupDown l g
+pop _ g = g
 
 alt :: ModifySpec -> (WindowSet -> WindowSet) -> X ()
 alt f g = alt2 (Modify f) $ windows g
@@ -165,7 +175,7 @@ swapNext = sendMessage $ Modify $ swapNextZ
 focusPrev = alt focusPrevZ W.focusUp
 focusNext = alt focusNextZ W.focusDown
 
-makeGroup = G.moveToNewGroupDown
+makeGroup = sendMessage $ Modify $ pop
 
 onFocused :: (Zipper Window -> Zipper Window) -> ModifySpec
 onFocused f _ gs = onFocusedZ (onZipper f) gs

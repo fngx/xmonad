@@ -9,9 +9,11 @@ import XMonad.Util.EZConfig
 import XMonad.Actions.Submap
 import qualified Data.Map as M
 import qualified Debug.Trace as D
+import qualified XMonad.Util.Colours as Cs
 
 data Theme = Theme
   { font :: String
+  , keyFont :: String
   , bg :: String
   , border :: (Int, String)
   , sep :: String
@@ -23,12 +25,13 @@ data Theme = Theme
 
 defaultTheme = Theme
   { font = "xft:Monospace-10"
-  , bg = "#333333"
-  , border = (1, "#888888")
+  , keyFont = "xft:Monospace-10:bold"
+  , bg = Cs.background
+  , border = (1, Cs.dimBorder)
   , sep = " → "
-  , sep_c = "#999999"
-  , key_c = "cyan"
-  , desc_c = "white"
+  , sep_c = Cs.dimText
+  , key_c = Cs.border
+  , desc_c = Cs.text
   , top = False
   }
 
@@ -37,7 +40,8 @@ drawHints theme stuff = do
   XConf { display = d, theRoot = rw } <- ask
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
   xmf <- initXMF (font theme)
-  widths <- mapM (\(k, t) -> do a <- textWidthXMF d xmf k
+  xmfb <- initXMF (keyFont theme)
+  widths <- mapM (\(k, t) -> do a <- textWidthXMF d xmfb k
                                 b <- textWidthXMF d xmf t
                                 return (a, b)) stuff
 
@@ -50,7 +54,6 @@ drawHints theme stuff = do
       (bwidth, bcol) = border theme
       widestk = (maximum $ map fst widths)
       widestd = (maximum $ map snd widths)
---      widest =  maximum $ map (uncurry (+)) widths
       widest' = widestk + widestd + sepw + colspc
       cols = (fi sw) `div` widest'
       rows = ceiling $ (fi (length widths)) / (fi cols)
@@ -81,7 +84,7 @@ drawHints theme stuff = do
     (\(x, y, z) ((key, lbl), (kw, lw)) -> do
         -- TODO align on arrow
         printStringXMF d pxm xmf gc (sep_c theme) (bg theme) (x + (fi widestk)) y (sep theme)
-        printStringXMF d pxm xmf gc (key_c theme) (bg theme) (x + (fi (widestk - kw))) y key
+        printStringXMF d pxm xmfb gc (key_c theme) (bg theme) (x + (fi (widestk - kw))) y key
         printStringXMF d pxm xmf gc (desc_c theme) (bg theme) (x+(fi widestk)+(fi sepw)) y lbl
         let delta = if (rows == 1) then (fi widestk) + (fi sepw) + (fi colspc) + (fi lw)
                     else (fi widest')
@@ -97,7 +100,8 @@ drawHints theme stuff = do
   return $ (\x -> do deleteWindow win
                      when x $ do io $ freeGC d gc
                                  io $ freePixmap d pxm
-                                 releaseXMF xmf)
+                                 releaseXMF xmf
+                                 releaseXMF xmfb)
 
 
   -- drawColumn dsp pxm gc fg bg aln x0 x1 text =
@@ -111,7 +115,7 @@ drawHints theme stuff = do
 hintSubmap :: XConfig l -> [(String, String, X ())] -> X ()
 hintSubmap c keys = do
   let dm = map (\(x, y, _) -> (x, y)) keys
-  cleanup <- drawHints (defaultTheme {key_c = (focusedBorderColor c)}) dm
+  cleanup <- drawHints defaultTheme dm
   let km = mkKeymap c $ fmap (\(x, y, z) -> (x, cleanup False >> z)) keys
   submap km
   cleanup True

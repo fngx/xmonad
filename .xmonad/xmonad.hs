@@ -35,10 +35,9 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.XMobar (runWithBar)
 import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
 
-urgentC = "#ff0000"
-borderC = "#00ff00"
+import qualified XMonad.Util.Colours as Cs
 
-main = runWithBar config urgentC
+main = runWithBar config
 
 popBar = tempShowBar 0.75
 
@@ -51,7 +50,7 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ (R.rows (focusedBorderColor c) urgentC) ||| Full
+  where l = desktopLayoutModifiers $ smartBorders $ (R.rows ||| Full)
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
@@ -63,7 +62,7 @@ instance UrgencyHook LibNotifyUrgencyHook where
           safeSpawn "notify-send"
             ["urgent: " ++ (show name), "-a", "urgency"]
         withDisplay $ \d -> io $ do
-          c' <- initColor d urgentC
+          c' <- initColor d Cs.urgent
           case c' of
             Just c -> setWindowBorder d w c
             _ -> return ()
@@ -103,8 +102,8 @@ config =
   { modMask = mod4Mask
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty
-  , normalBorderColor  = "#888888"
-  , focusedBorderColor = borderC
+  , normalBorderColor  = Cs.dimBorder
+  , focusedBorderColor = Cs.border
   , borderWidth = 2
 }
 
@@ -189,9 +188,9 @@ mainBindings =
 
   , ("l", "layout keys",
      hintSubmap config
-     [ ("l", "switch group layout", R.groupNextLayout)
+      [ ("l", "group layout", R.groupNextLayout)
      , ("M-l", "ditto", R.groupNextLayout)
-     , ("o", "focused to new group", R.makeGroup)
+     , ("o", "new group", R.makeGroup)
      , ("R", "reset layout", resetLayout)
      , ("f", "fullscreen col", popBar >> R.outerNextLayout)
      , ("x", "maximize window", R.toggleWindowFull)
@@ -207,8 +206,9 @@ mainBindings =
   , ("<Tab>", "Cycle window", R.nextInGroup)
   , ("M1-<Tab>", "Cycle group", R.nextGroup)
 
-  , ("/", "pop", R.makeGroup)
+  , ("o", "pop", R.makeGroup)
   , (".", "resize", resize)
+  , ("=", "balance", sendMessage R.BalanceToggle)
 
   , ("<Return>","swap master", G.swapGroupMaster)
 

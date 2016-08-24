@@ -10,12 +10,13 @@ import DBus
 import DBus.Client
 import Codec.Binary.UTF8.String ( decodeString )
 import Graphics.UI.Gtk hiding ( Signal )
+import qualified XMonad.Util.Colours as Cs
 
-runWithBar cfg uc =
+runWithBar cfg =
   do session <- connectSession
      let sendBus s = emit session (signal"/org/xmonad/Log" "org.xmonad.Log" "Update")
             {signalBody = [toVariant $ decodeString s]}
-         pp = (myPP (focusedBorderColor cfg) uc) { ppOutput = sendBus }
+         pp = myPP { ppOutput = sendBus }
          log = dynamicLogWithPP pp
      xmonad $ cfg { logHook = (logHook cfg) >> log }
 
@@ -23,15 +24,19 @@ raw = escapeMarkup
 
 taffyBold = wrap "<b>" "</b>"
 
+taffyUl = wrap "<u>" "</u>"
+
 taffyColor fg bg = wrap t "</span>"
   where
     t = concat ["<span fgcolor=\"", fg, if null bg then "" else "\" bgcolor=\"" ++ bg , "\">"]
 
-myPP c u = xmobarPP
-  { ppCurrent = taffyColor c "" . taffyBold
+myPP = xmobarPP
+  { ppCurrent = taffyColor "white" "" . taffyBold . taffyUl
   , ppVisible = taffyColor "white" ""
-  , ppHidden = taffyColor "grey" ""
-  , ppUrgent = taffyColor u ""
+  , ppHidden = \s -> case s of
+      "▼" -> taffyColor "grey" "" s
+      _ -> taffyColor "yellow" "" s
+  , ppUrgent = taffyColor Cs.urgent ""
   , ppTitle = taffyColor "white" "" . raw . shorten 120
   , ppLayout = \s -> taffyBold $
                      case words s of

@@ -5,13 +5,17 @@ import XMonad.Prompt
 import XMonad.Prompt.Shell
 import Data.Maybe (fromMaybe)
 import Data.List (isInfixOf)
+import qualified XMonad.Util.Colours as Cs
 
 pconfig = def
   { position = Bottom
   , font = "xft:Monospace-10"
   , height = 24
-  , borderColor = "#888888"
-  , fgColor = "white"
+  , borderColor = Cs.dimBorder
+  , fgColor = Cs.text
+  , bgColor = Cs.background
+  , fgHLight = Cs.borderText
+  , bgHLight = Cs.border
   , searchPredicate = \i c -> i `isInfixOf` c
   }
 
