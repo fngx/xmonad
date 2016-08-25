@@ -127,7 +127,10 @@ resize = hintSubmap config
   , ("d", "shorter", R.shrinkFocusedRow >> resize)
   , ("s", "narrower", R.shrinkFocusedColumn >> resize)
   , ("f", "wider", R.growFocusedColumn >> resize)
-  , ("r", "reset", R.resetRow >> R.resetColumn)]
+  , ("r", "reset", do R.resetRow
+                      R.resetColumn
+                      R.resetRow
+                      R.resetColumn)]
 
 volume = --let
   hintSubmap config

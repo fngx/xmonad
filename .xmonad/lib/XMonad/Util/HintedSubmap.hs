@@ -29,8 +29,8 @@ defaultTheme = Theme
   , bg = Cs.background
   , border = (1, Cs.dimBorder)
   , sep = " → "
-  , sep_c = Cs.dimText
-  , key_c = Cs.border
+  , sep_c = Cs.border
+  , key_c = Cs.text
   , desc_c = Cs.text
   , top = False
   }
