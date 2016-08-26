@@ -104,7 +104,7 @@ config =
   , keys = const $ M.empty
   , normalBorderColor  = Cs.dimBorder
   , focusedBorderColor = Cs.border
-  , borderWidth = 2
+  , borderWidth = 1
 }
 
 -- there is a bug in !>, it can't combine multiple prefixes

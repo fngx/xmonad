@@ -29,15 +29,15 @@ import XMonad.Layout.LayoutCombinators
 import qualified XMonad.Util.Colours as Cs
 
 myTheme = def
-  { fontName = "xft:Monospace-8:bold"
-  , decoHeight = 16
+  { fontName = "xft:Terminus-8"
+  , decoHeight = 12
 
   , activeBorderColor   = Cs.border
   , activeColor         = Cs.border
   , activeTextColor     = Cs.borderText
 
-  , inactiveColor       = Cs.background
-  , inactiveBorderColor = Cs.dimBorder
+  , inactiveColor       = Cs.tabBackground
+  , inactiveBorderColor = Cs.tabBackground
   , inactiveTextColor   = Cs.dimText
 
   , urgentBorderColor   = Cs.urgent
