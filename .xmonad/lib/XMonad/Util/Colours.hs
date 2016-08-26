@@ -1,4 +1,4 @@
-module XMonad.Util.Colours where
+ module XMonad.Util.Colours where
 
 -- import Graphics.X11.Xlib
 -- import XMonad
@@ -37,8 +37,8 @@ border = "#ff0000"
 borderText = "#ffffff"
 urgent = "#00ffff"
 urgentText = "#000000"
-tabBackground = "#302010"
-background = "#7b3503"
+tabBackground = "#444444"
+background = "#121212"
 dimBorder = "#888888"
 dimText = "#eeeeee"
 text = "#ffffff"
