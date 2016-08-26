@@ -35,7 +35,7 @@ myPP = xmobarPP
   , ppVisible = taffyColor "white" ""
   , ppHidden = \s -> case s of
       "▼" -> taffyColor "grey" "" s
-      _ -> taffyColor "yellow" "" s
+      _ -> taffyColor "green" "" s
   , ppUrgent = taffyColor Cs.urgent ""
   , ppTitle = taffyColor "white" "" . raw . shorten 120
   , ppLayout = \s -> taffyBold $

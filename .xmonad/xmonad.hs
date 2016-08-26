@@ -41,7 +41,7 @@ main = runWithBar config
 
 popBar = tempShowBar 0.75
 
-wsLabels = ["q", "w", "e", "r", "t"]
+wsLabels = ["1", "2", "3", "4", "5"]
 icon = "▼"
 
 resetLayout = do
@@ -259,8 +259,8 @@ bindings = (map (\(k, _, a) -> ("M-" ++ k, a)) mainBindings)
   ]
   ++
   -- workspace switching keys
-  [ (mod ++ key, action key) |
-    key <- wsLabels,
+  [ (mod ++ key, action ws) |
+    (ws, key) <- (zip wsLabels ["q", "w", "e", "r", "t"]),
     (mod, action) <- [ ("M-", \t -> (windows $ W.greedyView t) >> popBar)
                      , ("M-S-", \t -> (windows $ W.shift t) >> popBar)
                      , ("M-M1-", \t -> (windows $ lazyView t) >> popBar)
