@@ -33,7 +33,7 @@
 --   , ("unfocusedBorder", "#559955")
 --   ]
 
-border = "#ff0000"
+border = "#dd0000"
 borderText = "#ffffff"
 urgent = "#00ffff"
 urgentText = "#000000"

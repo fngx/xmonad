@@ -14,6 +14,7 @@ import XMonad.Layout.Decoration (def, fontName, decoHeight
                                 , activeColor, inactiveColor
                                 , inactiveTextColor , activeTextColor
                                 , urgentTextColor, urgentBorderColor, urgentColor
+                                , decoWidth
                                 )
 
 import qualified XMonad.Layout.Groups.Helpers as G
@@ -27,10 +28,12 @@ import Control.Applicative
 import XMonad.Layout.ZoomRow
 import XMonad.Layout.LayoutCombinators
 import qualified XMonad.Util.Colours as Cs
+import XMonad.Layout.NoFrillsDecoration (noFrillsDeco)
 
 myTheme = def
   { fontName = "xft:Terminus-8"
   , decoHeight = 12
+  , decoWidth = 8000
 
   , activeBorderColor   = Cs.border
   , activeColor         = Cs.border
@@ -53,7 +56,7 @@ instance Eq a => EQF GroupEQ (Group l a) where
 
 rows = let theme = myTheme
            t = renamed [Replace "T"] $ tabbedAlways shrinkText theme
-           rows = (renamed [Replace "R"] $ Mirror zoomRow)
+           rows = (renamed [Replace "R"] $ noFrillsDeco shrinkText theme $ Mirror zoomRow)
            inner = t ||| rows
            outer = (column ||| f)
            f = renamed [Replace "F"] Full
