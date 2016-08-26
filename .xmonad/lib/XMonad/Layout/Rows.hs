@@ -7,7 +7,7 @@ import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, wind
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
 import XMonad.Util.Stack
-import XMonad.Layout.Tabbed (tabbed, shrinkText)
+import XMonad.Layout.Tabbed (tabbedAlways, shrinkText)
 import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wrap) )
 import XMonad.Layout.Decoration (def, fontName, decoHeight
                                 , inactiveBorderColor , activeBorderColor
@@ -52,7 +52,7 @@ instance Eq a => EQF GroupEQ (Group l a) where
     eq _ (G l1 _) (G l2 _) = sameID l1 l2
 
 rows = let theme = myTheme
-           t = renamed [Replace "T"] $ tabbed shrinkText theme
+           t = renamed [Replace "T"] $ tabbedAlways shrinkText theme
            rows = (renamed [Replace "R"] $ Mirror zoomRow)
            inner = t ||| rows
            outer = (column ||| f)
