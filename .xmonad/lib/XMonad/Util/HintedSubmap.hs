@@ -24,8 +24,8 @@ data Theme = Theme
   }
 
 defaultTheme = Theme
-  { font = "xft:Monospace-10"
-  , keyFont = "xft:Monospace-10:bold"
+  { font = Cs.font
+  , keyFont = Cs.font ++ ":bold"
   , bg = Cs.background
   , border = (1, Cs.dimBorder)
   , sep = " → "

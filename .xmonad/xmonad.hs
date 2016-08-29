@@ -10,9 +10,8 @@ import XMonad.Actions.CycleWS
 import XMonad.Actions.Iconify (greedyFocusWindow, focusWindow, iconify, uniconify)
 import XMonad.Actions.Search
 import XMonad.Actions.WindowBringer (bringWindow)
-import XMonad.Config.Desktop
-import XMonad.Hooks.EwmhDesktops (fullscreenEventHook)
-import XMonad.Hooks.ManageDocks ( ToggleStruts (ToggleStruts) )
+import XMonad.Hooks.EwmhDesktops (fullscreenEventHook, ewmh)
+import XMonad.Hooks.ManageDocks ( avoidStruts, docksEventHook, docksStartupHook, manageDocks )
 import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat)
 import XMonad.Hooks.UrgencyHook
 import XMonad.Layout.Groups.Helpers as G
@@ -32,6 +31,7 @@ import qualified XMonad
 import qualified XMonad.Actions.Ring as Ring
 import qualified XMonad.Layout.Rows as R
 import qualified XMonad.StackSet as W
+import XMonad.Util.Cursor
 import XMonad.Util.XMobar (runWithBar)
 import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
 
@@ -50,7 +50,7 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = desktopLayoutModifiers $ smartBorders $ (R.rows ||| Full)
+  where l = avoidStruts $ smartBorders $ (R.rows ||| Full)
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
@@ -70,16 +70,17 @@ instance UrgencyHook LibNotifyUrgencyHook where
 hooks c =
   withUrgencyHookC LibNotifyUrgencyHook
   urgencyConfig {suppressWhen = Never}
-  $
+  $ ewmh $
   c
-  { handleEventHook =  toggleBarHook <+> (handleEventHook c) <+> fullscreenEventHook
-  , manageHook = (manageHook c) <+>
+  { handleEventHook =  toggleBarHook <+> docksEventHook <+> fullscreenEventHook <+> (handleEventHook c)
+  , manageHook = manageDocks <+>
+                 (manageHook c) <+>
                  composeAll
                  [ isDialog --> doFloat,
                    isFullscreen --> doFullFloat
                  ]
   , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
-  , startupHook = (startupHook c)
+  , startupHook = setDefaultCursor xC_left_ptr <+> docksStartupHook <+> (startupHook c)
   }
 
 config =
@@ -98,7 +99,7 @@ config =
   ]
   $
   flip additionalKeysP bindings $
-  desktopConfig
+  def
   { modMask = mod4Mask
   , workspaces = wsLabels ++ [icon]
   , keys = const $ M.empty

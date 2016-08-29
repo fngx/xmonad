@@ -42,3 +42,5 @@ background = "#121212"
 dimBorder = "#888888"
 dimText = "#eeeeee"
 text = "#ffffff"
+
+font = "xft:Monospace-11"

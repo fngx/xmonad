@@ -9,7 +9,7 @@ import qualified XMonad.Util.Colours as Cs
 
 pconfig = def
   { position = Bottom
-  , font = "xft:Monospace-10"
+  , font = Cs.font
   , height = 24
   , borderColor = Cs.dimBorder
   , fgColor = Cs.text

@@ -14,9 +14,9 @@ import XMonad.Layout.Decoration (def, fontName, decoHeight
                                 , activeColor, inactiveColor
                                 , inactiveTextColor , activeTextColor
                                 , urgentTextColor, urgentBorderColor, urgentColor
-                                , decoWidth
+                                , decoWidth, windowTitleAddons
                                 )
-
+import XMonad.Util.Font ( Align (..) )
 import qualified XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.Groups
 import Control.Monad (unless, when)
@@ -46,6 +46,8 @@ myTheme = def
   , urgentBorderColor   = Cs.urgent
   , urgentColor         = Cs.urgent
   , urgentTextColor     = Cs.urgentText
+
+  , windowTitleAddons = [("∎", AlignLeft)]
   }
 
 data GroupEQ a = GroupEQ
