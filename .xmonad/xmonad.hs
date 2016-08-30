@@ -133,13 +133,22 @@ resize = hintSubmap config
                       R.resetRow
                       R.resetColumn)]
 
-volume = --let
-  hintSubmap config
-  [ ("x", "mixer", spawn "pavucontrol")
-  , ("m", "toggle mute", (spawn "pactl set-sink-mute 0 toggle") >> volume)
-  , ("l", "louder", (spawn "pactl -- set-sink-volume 0 +5%") >> volume)
-  , ("q", "quieter", (spawn "pactl -- set-sink-volume 0 -5%") >> volume)
-  ]
+volume = let p = reverse . (drop 1) . reverse in
+           do cv <- fmap p $ runProcessWithInput "pamixer" ["--get-volume"] ""
+              cm <- fmap p $ runProcessWithInput "pamixer" ["--get-mute"] ""
+              let cmi = read cv :: Int
+                  ifl x y = if x then [y] else []
+              hintSubmap config $
+                [ ("x", "mixer", spawn "pavucontrol")
+                , ("m", if (cm == "true") then
+                      "unmute" else "mute", (spawn "pamixer -t") >> volume) ]
+                ++ (ifl (cmi > 0) ("q", "quieter [" ++ (show $ cmi - 5) ++ "%]",
+                                   (runProcessWithInput "pamixer" ["-d", "5"] "") >> volume))
+                ++ (ifl (cmi < 100) ("l", "louder [" ++ (show $ cmi + 5) ++ "%]",
+                                     (runProcessWithInput "pamixer" ["-i", "5"] "") >> volume))
+                ++ [(k, p++"%", (runProcessWithInput "pamixer" ["--set-volume", p] "") >> return ()) |
+                    (k, p) <- [("y", "0"), ("u", "25"), ("i", "50"), ("o", "75"), ("p","100")]]
+
 
 mainBindings =
   [ ("<Escape>", "session",

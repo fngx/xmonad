@@ -47,7 +47,7 @@ myTheme = def
   , urgentColor         = Cs.urgent
   , urgentTextColor     = Cs.urgentText
 
-  , windowTitleAddons = [("∎", AlignLeft)]
+  , windowTitleAddons = [(":", AlignLeft)]
   }
 
 data GroupEQ a = GroupEQ

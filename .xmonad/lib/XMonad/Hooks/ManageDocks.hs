@@ -278,14 +278,12 @@ instance LayoutModifier AvoidStruts a where
                 if nsmap /= smap
                   then do
                     wnr <- fmap ($ r) (calcGap dockWins ss)
-                    setWorkarea wnr
                     return (wnr, nsmap)
                   else do
                     return (nr, smap)
             _ -> do
                 nsset <- getRawStruts dockWins
                 nr <- fmap ($ r) (calcGap dockWins ss)
-                setWorkarea nr
                 return (nr, nsset)
         arranged <- runLayout w nr
         let newCache = Just (ss, r, nr)
@@ -313,14 +311,6 @@ instance LayoutModifier AvoidStruts a where
                         | otherwise = S.empty
             toggleOne x xs | x `S.member` xs = S.delete x xs
                            | otherwise   = x `S.insert` xs
-
-setWorkarea :: Rectangle -> X ()
-setWorkarea (Rectangle x y w h) = withDisplay $ \dpy -> do
-    a <- getAtom "_NET_WORKAREA"
-    c <- getAtom "CARDINAL"
-    r <- asks theRoot
-    io $ changeProperty32 dpy r a c propModeReplace [fi x, fi y, fi w, fi h]
-
 
 -- | (Direction, height\/width, initial pixel, final pixel).
 
