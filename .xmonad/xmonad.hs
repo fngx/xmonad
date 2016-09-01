@@ -12,7 +12,7 @@ import XMonad.Actions.Search
 import XMonad.Actions.WindowBringer (bringWindow)
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook, ewmh)
 import XMonad.Hooks.ManageDocks ( avoidStruts, docksEventHook, docksStartupHook, manageDocks )
-import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat)
+import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat, doSideFloat, Side(..))
 import XMonad.Hooks.UrgencyHook
 import XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.NoBorders (smartBorders)
@@ -34,6 +34,7 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.Cursor
 import XMonad.Util.XMobar (runWithBar)
 import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
+import XMonad.Actions.WindowGo (runOrRaiseAndDo)
 
 import qualified XMonad.Util.Colours as Cs
 
@@ -76,8 +77,9 @@ hooks c =
   , manageHook = manageDocks <+>
                  (manageHook c) <+>
                  composeAll
-                 [ isDialog --> doFloat,
-                   isFullscreen --> doFullFloat
+                 [ isDialog --> doFloat
+                 , isFullscreen --> doFullFloat
+                 , title =? "xclock" --> doSideFloat NE
                  ]
   , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
   , startupHook = setDefaultCursor xC_left_ptr <+> docksStartupHook <+> (startupHook c)
@@ -147,7 +149,7 @@ volume = let p = reverse . (drop 1) . reverse in
                 ++ (ifl (cmi < 100) ("l", "louder [" ++ (show $ cmi + 5) ++ "%]",
                                      (runProcessWithInput "pamixer" ["-i", "5"] "") >> volume))
                 ++ [(k, p++"%", (runProcessWithInput "pamixer" ["--set-volume", p] "") >> return ()) |
-                    (k, p) <- [("y", "0"), ("u", "25"), ("i", "50"), ("o", "75"), ("p","100")]]
+                    (k, p) <- [("y", "10"), ("u", "20"), ("i", "30"), ("o", "40"), ("p","50")]]
 
 
 mainBindings =
@@ -181,6 +183,7 @@ mainBindings =
 
      , ("r", "prompt", shell)
      , ("v", "vol", volume)
+     , ("c", "clock", runOrRaiseAndDo "xclock" (title =? "xclock") killWindow)
      ])
 
   , ("c", "prompt", shell)
