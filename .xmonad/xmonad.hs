@@ -35,6 +35,8 @@ import XMonad.Util.Cursor
 import XMonad.Util.XMobar (runWithBar)
 import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
 import XMonad.Actions.WindowGo (runOrRaiseAndDo)
+import XMonad.Hooks.FadeInactive (setOpacity)
+import XMonad.Actions.CopyWindow
 
 import qualified XMonad.Util.Colours as Cs
 
@@ -79,7 +81,9 @@ hooks c =
                  composeAll
                  [ isDialog --> doFloat
                  , isFullscreen --> doFullFloat
-                 , title =? "xclock" --> doSideFloat NE
+                 , title =? "xclock" --> (doSideFloat NE) <+>
+                   (ask >>= \w -> liftX (setOpacity w 0.5) >> idHook)
+
                  ]
   , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
   , startupHook = setDefaultCursor xC_left_ptr <+> docksStartupHook <+> (startupHook c)
@@ -186,6 +190,7 @@ mainBindings =
      , ("c", "clock", runOrRaiseAndDo "xclock" (title =? "xclock") killWindow)
      ])
 
+  , ("v", "volume", volume)
   , ("c", "prompt", shell)
 
   -- keys to adjust the stack and focus
@@ -212,7 +217,9 @@ mainBindings =
      , ("x", "maximize window", R.toggleWindowFull)
      , ("b", "balance?", sendMessage R.BalanceToggle)
      , ("r", "resize", resize)
-     , ("z", "sink window", withFocused $ windows . W.sink)])
+     , ("z", "sink window", withFocused $ windows . W.sink)
+     , ("s", "sticky window", windows copyToAll)
+     ])
 
   -- , ("d", "up", R.prevInGroup)
   -- , ("c", "down", R.nextInGroup)
