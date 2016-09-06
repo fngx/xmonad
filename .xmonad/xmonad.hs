@@ -12,7 +12,7 @@ import XMonad.Actions.Search
 import XMonad.Actions.WindowBringer (bringWindow)
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook, ewmh)
 import XMonad.Hooks.ManageDocks ( avoidStruts, docksEventHook, docksStartupHook, manageDocks )
-import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat, doSideFloat, Side(..))
+import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat, doSideFloat, Side(..), transience')
 import XMonad.Hooks.UrgencyHook
 import XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.NoBorders (smartBorders)
@@ -83,7 +83,7 @@ hooks c =
                  , isFullscreen --> doFullFloat
                  , title =? "xclock" --> (doSideFloat NE) <+>
                    (ask >>= \w -> liftX (setOpacity w 0.5) >> idHook)
-
+                 , transience'
                  ]
   , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
   , startupHook = setDefaultCursor xC_left_ptr <+> docksStartupHook <+> (startupHook c)

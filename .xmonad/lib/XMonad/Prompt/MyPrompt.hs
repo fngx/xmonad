@@ -14,8 +14,8 @@ pconfig = def
   , borderColor = Cs.dimBorder
   , fgColor = Cs.text
   , bgColor = Cs.background
-  , fgHLight = Cs.urgentText
-  , bgHLight = Cs.urgent
+  , fgHLight = Cs.borderText
+  , bgHLight = Cs.border
   , searchPredicate = \i c -> i `isInfixOf` c
   }
 
