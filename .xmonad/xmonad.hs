@@ -40,6 +40,8 @@ import XMonad.Actions.CopyWindow
 
 import qualified XMonad.Util.Colours as Cs
 
+term = "urxvt"
+
 main = runWithBar config
 
 popBar = tempShowBar 0.75
@@ -112,6 +114,7 @@ config =
   , normalBorderColor  = Cs.dimBorder
   , focusedBorderColor = Cs.border
   , borderWidth = 1
+  , terminal = term
 }
 
 -- there is a bug in !>, it can't combine multiple prefixes
@@ -169,8 +172,7 @@ mainBindings =
       ])
 
   -- keys to launch programs
-  , ("S-<Return>", "terminal", spawn "xterm")
-  , ("'", "terminal", spawn "xterm")
+  , ("S-<Return>", "terminal", spawn term)
 
   , ("a", "run keys",
      hintSubmap config
@@ -182,8 +184,8 @@ mainBindings =
      , ("w c", "chromium", spawn "chromium")
 
      , ("p", "passwords", passwordPrompt pconfig)
-     , ("t", "htop", spawn "xterm -e htop")
-     , ("u", "cmus", spawn "xterm -e cmus")
+     , ("t", "htop", spawn $ term ++ " -e htop")
+     , ("u", "cmus", spawn $ term ++ " -e cmus")
 
      , ("r", "prompt", shell)
      , ("v", "vol", volume)
@@ -220,6 +222,8 @@ mainBindings =
      , ("z", "sink window", withFocused $ windows . W.sink)
      , ("s", "sticky window", windows copyToAll)
      ])
+
+  , ("'", "next layout", R.groupNextLayout)
 
   -- , ("d", "up", R.prevInGroup)
   -- , ("c", "down", R.nextInGroup)

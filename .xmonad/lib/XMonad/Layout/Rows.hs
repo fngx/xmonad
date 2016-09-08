@@ -47,7 +47,7 @@ myTheme = def
   , urgentColor         = Cs.urgent
   , urgentTextColor     = Cs.urgentText
 
-  , windowTitleAddons = [(":", AlignLeft)]
+  , windowTitleAddons = [("[", AlignLeft), ("]", AlignRight)]
   }
 
 data GroupEQ a = GroupEQ
@@ -59,7 +59,8 @@ instance Eq a => EQF GroupEQ (Group l a) where
 rows = let theme = myTheme
            t = renamed [Replace "T"] $ tabbedAlways shrinkText theme
            rows = (renamed [Replace "R"] $ noFrillsDeco shrinkText theme $ Mirror zoomRow)
-           inner = t ||| rows
+           simRows = (renamed [Replace "r"] $ Mirror zoomRow)
+           inner = t ||| rows ||| simRows
            outer = (column ||| f)
            f = renamed [Replace "F"] Full
            column = renamed [Replace "C"] $ zoomRowWith GroupEQ
