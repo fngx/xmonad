@@ -180,7 +180,8 @@ mainBindings =
      , ("q", "web search", promptSearchBrowser pconfig "/home/hinton/bin/qb" mySearchEngine)
      , ("M-q", "search sel", selectSearchBrowser "/home/hinton/bin/qb" mySearchEngine)
 
-     , ("w w", "qutebrowser", spawn "qb")
+     , ("w w", "w3m", spawn "emacsclient -c -n -e '(w3m)'")
+     , ("w q", "qutebrowser", spawn "qb")
      , ("w c", "chromium", spawn "chromium")
 
      , ("p", "passwords", passwordPrompt pconfig)
