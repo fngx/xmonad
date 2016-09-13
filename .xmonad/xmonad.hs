@@ -17,8 +17,6 @@ import XMonad.Hooks.UrgencyHook
 import XMonad.Layout.Groups.Helpers as G
 import XMonad.Layout.NoBorders (smartBorders)
 import XMonad.Prompt.MyPrompt
-import XMonad.Prompt.Pass
---import XMonad.Prompt.NetworkManager (nmPrompt)
 import XMonad.Util.AccelerateScroll (accelerateButton)
 import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
 import XMonad.Util.HintedSubmap (hintSubmap)
@@ -37,6 +35,7 @@ import XMonad.Prompt.WindowPrompt2 (windowPrompt, WindowPrompt (..))
 import XMonad.Actions.WindowGo (runOrRaiseAndDo)
 import XMonad.Hooks.FadeInactive (setOpacity)
 import XMonad.Actions.CopyWindow
+import XMonad.Layout.TrackFloating (trackFloating)
 
 import qualified XMonad.Util.Colours as Cs
 
@@ -55,7 +54,7 @@ resetLayout = do
 
 layout c = c
   { layoutHook = l }
-  where l = avoidStruts $ smartBorders $ (R.rows ||| Full)
+  where l = trackFloating $ avoidStruts $ smartBorders $ (R.rows ||| Full)
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 
