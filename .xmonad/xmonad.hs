@@ -183,7 +183,6 @@ mainBindings =
      , ("w q", "qutebrowser", spawn "qb")
      , ("w c", "chromium", spawn "chromium")
 
-     , ("p", "passwords", passwordPrompt pconfig)
      , ("t", "htop", spawn $ term ++ " -e htop")
      , ("u", "cmus", spawn $ term ++ " -e cmus")
 
