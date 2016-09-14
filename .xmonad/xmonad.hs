@@ -73,7 +73,7 @@ instance UrgencyHook LibNotifyUrgencyHook where
 
 hooks c =
   withUrgencyHookC LibNotifyUrgencyHook
-  urgencyConfig {suppressWhen = Never}
+  urgencyConfig {suppressWhen = Focused}
   $ ewmh $
   c
   { handleEventHook =  toggleBarHook <+> docksEventHook <+> fullscreenEventHook <+> (handleEventHook c)
