@@ -171,7 +171,7 @@ mainBindings =
       ])
 
   -- keys to launch programs
-  , ("S-<Return>", "terminal", spawn term)
+  , ("<Return>", "terminal", spawn term)
 
   , ("a", "run keys",
      hintSubmap config
@@ -235,8 +235,6 @@ mainBindings =
   , ("o", "pop", R.makeGroup)
   , (".", "resize", resize)
   , ("=", "balance", sendMessage R.BalanceToggle)
-
-  , ("<Return>","swap master", G.swapGroupMaster)
 
   -- this makes the outerlayout fullscreen
 
