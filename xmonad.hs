@@ -277,6 +277,7 @@ bindings = (map (\(k, _, a) -> ("M-" ++ k, a)) mainBindings)
    --laptop keys
   [ ("<XF86MonBrightnessUp>", spawn "xbacklight -inc 5")
   , ("<XF86MonBrightnessDown>", spawn "xbacklight -dec 5")
+  , ("<XF86ScreenSaver>", spawn "systemctl hibernate")
   ]
   ++
   -- workspace switching keys
