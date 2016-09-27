@@ -47,7 +47,7 @@ myTheme = def
   , urgentColor         = Cs.urgent
   , urgentTextColor     = Cs.urgentText
 
-  , windowTitleAddons = [("[", AlignLeft), ("]", AlignRight)]
+  , windowTitleAddons = [(":", AlignRight)]
   }
 
 data GroupEQ a = GroupEQ
@@ -57,8 +57,9 @@ instance Eq a => EQF GroupEQ (Group l a) where
     eq _ (G l1 _) (G l2 _) = sameID l1 l2
 
 rows = let theme = myTheme
+           theme' = theme {windowTitleAddons=[]}
            t = renamed [Replace "T"] $ tabbedAlways shrinkText theme
-           rows = (renamed [Replace "R"] $ noFrillsDeco shrinkText theme $ Mirror zoomRow)
+           rows = (renamed [Replace "R"] $ noFrillsDeco shrinkText theme' $ Mirror zoomRow)
            simRows = (renamed [Replace "r"] $ Mirror zoomRow)
            inner = t ||| rows ||| simRows
            outer = (column ||| f)
@@ -177,6 +178,10 @@ swapNextZ l gs = let f = getFocusZ gs in
 
 swapPrev = sendMessage $ Modify $ swapPrevZ
 swapNext = sendMessage $ Modify $ swapNextZ
+
+swapGNext = sendMessage $ Modify $ swapGroupDown
+swapGPrev = sendMessage $ Modify $ swapGroupUp
+swapGMaster = sendMessage $ Modify $ swapGroupMaster
 
 focusPrev = alt focusPrevZ W.focusUp
 focusNext = alt focusNextZ W.focusDown

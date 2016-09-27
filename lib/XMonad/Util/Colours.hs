@@ -35,7 +35,7 @@ module XMonad.Util.Colours where
 
 border = "#dd0000"
 borderText = "#ffffff"
-urgent = "#00dddd"
+urgent = "#ffffaa"
 urgentText = "#000000"
 tabBackground = "#444444"
 background = "#121212"

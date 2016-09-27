@@ -37,6 +37,8 @@ import XMonad.Hooks.FadeInactive (setOpacity)
 import XMonad.Actions.CopyWindow
 import XMonad.Layout.TrackFloating (trackFloating)
 
+import Control.Monad (when)
+
 import qualified XMonad.Util.Colours as Cs
 
 term = "urxvt"
@@ -62,9 +64,11 @@ instance UrgencyHook LibNotifyUrgencyHook where
     urgencyHook LibNotifyUrgencyHook w = do
         whenX (fmap not $ runQuery (className =? "qutebrowser") w) $ do
           name     <- getName w
-          Just idx <- fmap (W.findTag w) $ gets windowset
-          safeSpawn "notify-send"
-            ["urgent: " ++ (show name), "-a", "urgency"]
+          wset <- gets windowset
+          let Just idx = W.findTag w wset
+          when (not $ idx `elem` (map (W.tag . W.workspace) $ (W.current wset):(W.visible wset))) $
+            safeSpawn "notify-send" ["urgent: " ++ (show name), "-a", "urgency"]
+
         withDisplay $ \d -> io $ do
           c' <- initColor d Cs.urgent
           case c' of
@@ -172,6 +176,7 @@ mainBindings =
 
   -- keys to launch programs
   , ("<Return>", "terminal", spawn term)
+  , ("S-<Return>", "swap master", R.swapGPrev)
 
   , ("a", "run keys",
      hintSubmap config
@@ -202,8 +207,11 @@ mainBindings =
   , ("p",   "focus up", R.focusPrev)
   , ("n",   "focus down", R.focusNext)
 
-  , ("M1-p", "group up", R.prevGroup)
-  , ("M1-n", "group down", R.nextGroup)
+  , ("C-p", "group up", R.prevGroup)
+  , ("C-n", "group down", R.nextGroup)
+
+  , ("M1-p", "swap group up", R.swapGPrev)
+  , ("M1-n", "swap group down", R.swapGNext)
 
   , ("S-p", "swap up", R.swapPrev)
   , ("S-n", "swap down", R.swapNext)
