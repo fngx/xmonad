@@ -181,11 +181,11 @@ mainBindings =
   , ("a", "run keys",
      hintSubmap config
      [ ("e", "emacs", spawn "emacsclient -c -n")
-     , ("q", "web search", promptSearchBrowser pconfig "/home/hinton/bin/qb" mySearchEngine)
-     , ("M-q", "search sel", selectSearchBrowser "/home/hinton/bin/qb" mySearchEngine)
+     , ("q", "web search", promptSearchBrowser pconfig "dwb" mySearchEngine)
+     , ("M-q", "search sel", selectSearchBrowser "dwb" mySearchEngine)
 
-     , ("w w", "w3m", spawn "emacsclient -c -n -e '(w3m)'")
-     , ("w q", "qutebrowser", spawn "qb")
+     , ("w w", "dwb", spawn "dwb")
+     , ("w 3", "w3m", spawn "emacsclient -c -n -e '(w3m)'")
      , ("w c", "chromium", spawn "chromium")
 
      , ("t", "htop", spawn $ term ++ " -e htop")
@@ -198,6 +198,7 @@ mainBindings =
 
   , ("v", "volume", volume)
   , ("c", "prompt", shell)
+  , ("S-c", "prompt (term)", shellTerm)
 
   -- keys to adjust the stack and focus
   , ("k", "kill window", kill)

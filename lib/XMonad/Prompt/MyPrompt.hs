@@ -25,3 +25,4 @@ qconfig = pconfig
   }
 
 shell = shellPrompt pconfig
+shellTerm = prompt "urxvt -e" pconfig

@@ -36,7 +36,7 @@ myPP = xmobarPP
   , ppHidden = \s -> case s of
       "▼" -> taffyColor "grey" "" s
       _ -> taffyColor "green" "" s
-  , ppUrgent = taffyColor Cs.urgent ""
+  , ppUrgent = taffyBold . taffyColor Cs.urgentText Cs.urgent
   , ppTitle = taffyColor "white" "" . raw . shorten 120
   , ppLayout = \s -> taffyBold $
                      case words s of
