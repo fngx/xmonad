@@ -11,7 +11,7 @@ import XMonad.Actions.Iconify (greedyFocusWindow, focusWindow, iconify, uniconif
 import XMonad.Actions.Search
 import XMonad.Actions.WindowBringer (bringWindow)
 import XMonad.Hooks.EwmhDesktops (fullscreenEventHook, ewmh)
-import XMonad.Hooks.ManageDocks ( avoidStruts, docksEventHook, docksStartupHook, manageDocks )
+import XMonad.Hooks.ManageDocks ( ToggleStruts(..), avoidStruts, docksEventHook, docksStartupHook, manageDocks )
 import XMonad.Hooks.ManageHelpers (isDialog, isFullscreen, doFullFloat, doSideFloat, Side(..), transience')
 import XMonad.Hooks.UrgencyHook
 import XMonad.Layout.Groups.Helpers as G
@@ -22,7 +22,6 @@ import XMonad.Util.EZConfig (additionalKeysP, additionalMouseBindings)
 import XMonad.Util.HintedSubmap (hintSubmap)
 import XMonad.Util.NamedWindows (getName)
 import XMonad.Util.Run (safeSpawn, spawnPipe, hPutStrLn, runProcessWithInput)
-import XMonad.Util.TemporaryBar
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified XMonad
@@ -45,14 +44,14 @@ term = "urxvt"
 
 main = runWithBar config
 
-popBar = tempShowBar 0.75
-
 wsLabels = ["1", "2", "3", "4", "5"]
 icon = "▼"
 
 resetLayout = do
+  spawn "pkill taffybar"
   layout <- asks (layoutHook . XMonad.config)
   setLayout layout
+  spawn "taffybar"
 
 layout c = c
   { layoutHook = l }
@@ -63,7 +62,7 @@ data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 instance UrgencyHook LibNotifyUrgencyHook where
     urgencyHook LibNotifyUrgencyHook w = do
         whenX (fmap not $ runQuery (className =? "qutebrowser") w) $ do
-          name     <- getName w
+          name <- getName w
           wset <- gets windowset
           let Just idx = W.findTag w wset
           when (not $ idx `elem` (map (W.tag . W.workspace) $ (W.current wset):(W.visible wset))) $
@@ -80,7 +79,7 @@ hooks c =
   urgencyConfig {suppressWhen = Focused}
   $ ewmh $
   c
-  { handleEventHook =  toggleBarHook <+> docksEventHook <+> fullscreenEventHook <+> (handleEventHook c)
+  { handleEventHook =  docksEventHook <+> fullscreenEventHook <+> (handleEventHook c)
   , manageHook = manageDocks <+>
                  (manageHook c) <+>
                  composeAll
@@ -91,7 +90,10 @@ hooks c =
                  , transience'
                  ]
   , logHook = (logHook c) >> (Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
-  , startupHook = setDefaultCursor xC_left_ptr <+> docksStartupHook <+> (startupHook c)
+  , startupHook = setDefaultCursor xC_left_ptr <+>
+                  docksStartupHook <+>
+--                  spawn "taffybar" <+>
+                  (startupHook c)
   }
 
 config =
@@ -151,17 +153,13 @@ volume = let p = reverse . (drop 1) . reverse in
               let cmi = read cv :: Int
                   ifl x y = if x then [y] else []
               hintSubmap config $
-                [ ("x", "mixer", spawn "pavucontrol")
+                [ ("v", "mixer", spawn "pavucontrol")
                 , ("m", if (cm == "true") then
                       "unmute" else "mute", (spawn "pamixer -t") >> volume) ]
-                ++ (ifl (cmi > 0) ("q", "quieter [" ++ (show $ cmi - 5) ++ "%]",
+                ++ (ifl (cmi > 0) ("j", "down [" ++ (show $ cmi - 5) ++ "%]",
                                    (runProcessWithInput "pamixer" ["-d", "5"] "") >> volume))
-                ++ (ifl (cmi < 100) ("l", "louder [" ++ (show $ cmi + 5) ++ "%]",
+                ++ (ifl (cmi < 100) ("k", "up [" ++ (show $ cmi + 5) ++ "%]",
                                      (runProcessWithInput "pamixer" ["-i", "5"] "") >> volume))
-                ++ [(k, p++"%", (runProcessWithInput "pamixer" ["--set-volume", p] "") >> return ()) |
-                    (k, p) <- [("y", "10"), ("u", "20"), ("i", "30"), ("o", "40"), ("p","50")]]
-
-
 mainBindings =
   [ ("<Escape>", "session",
       hintSubmap config
@@ -223,7 +221,7 @@ mainBindings =
      , ("M-l", "ditto", R.groupNextLayout)
      , ("o", "new group", R.makeGroup)
      , ("R", "reset layout", resetLayout)
-     , ("f", "fullscreen col", popBar >> R.outerNextLayout)
+     , ("f", "fullscreen col", R.outerNextLayout)
      , ("x", "maximize window", R.toggleWindowFull)
      , ("b", "balance?", sendMessage R.BalanceToggle)
      , ("r", "resize", resize)
@@ -232,11 +230,6 @@ mainBindings =
      ])
 
   , ("'", "next layout", R.groupNextLayout)
-
-  -- , ("d", "up", R.prevInGroup)
-  -- , ("c", "down", R.nextInGroup)
-  -- , ("s", "left", R.prevGroup)
-  -- , ("", "right", R.nextGroup)
 
   , ("<Tab>", "Cycle window", R.nextInGroup)
   , ("M1-<Tab>", "Cycle group", R.nextGroup)
@@ -250,18 +243,15 @@ mainBindings =
   , ("f", "fullscreen", sendMessage NextLayout)
 
   -- minify
-  , ("m", "minify", popBar >> iconify icon)
-  , (",", "unminify", popBar >> uniconify icon)
+  , ("m", "minify", iconify icon)
+  , (",", "unminify", uniconify icon)
 
   -- cycle and unminify
   , ("<Space>", "cycle focus",
      do us <- readUrgents
         case us of
           (h:_) -> windows $ focusWindow icon h
-          [] -> Ring.rotate [xK_Super_L] xK_space (windows . (focusWindow icon))
-        resetBar)
-
-    -- one day I shall replace dmenu perhaps
+          [] -> Ring.rotate [xK_Super_L] xK_space (windows . (focusWindow icon)))
 
   , ("b", "bring window",
      windowPrompt (WindowPrompt "bring window: ") qconfig >>=
@@ -271,13 +261,12 @@ mainBindings =
      windowPrompt (WindowPrompt "find window: ") qconfig >>=
      \w -> maybe (return ()) (windows . (focusWindow icon)) w)
 
-  , (";", "toggle bar", toggleBar)
-  , ("S-;", "show bar", tempShowBar 2)
+  , (";", "toggle bar", sendMessage ToggleStruts)
 
-  , ("s", "swap screen", popBar >> swapNextScreen)
-  , ("S-s", "shift screen", popBar >> shiftNextScreen)
-  , ("M1-s", "focus screen", popBar >> nextScreen)
-  , ("x", "focus screen", popBar >> nextScreen)
+  , ("s", "swap screen", swapNextScreen)
+  , ("S-s", "shift screen", shiftNextScreen)
+  , ("M1-s", "focus screen", nextScreen)
+  , ("x", "focus screen", nextScreen)
 
   , ("S-/", "this page", hintSubmap config mainBindings)]
 
@@ -292,9 +281,9 @@ bindings = (map (\(k, _, a) -> ("M-" ++ k, a)) mainBindings)
   -- workspace switching keys
   [ (mod ++ key, action ws) |
     (ws, key) <- (zip wsLabels ["q", "w", "e", "r", "t"]),
-    (mod, action) <- [ ("M-", \t -> (windows $ W.greedyView t) >> popBar)
-                     , ("M-S-", \t -> (windows $ W.shift t) >> popBar)
-                     , ("M-M1-", \t -> (windows $ lazyView t) >> popBar)
+    (mod, action) <- [ ("M-", \t -> (windows $ W.greedyView t))
+                     , ("M-S-", \t -> (windows $ W.shift t))
+                     , ("M-M1-", \t -> (windows $ lazyView t))
                      ] ]
 
 lazyView :: (Eq s, Eq i) => i -> W.StackSet i l a s sd -> W.StackSet i l a s sd

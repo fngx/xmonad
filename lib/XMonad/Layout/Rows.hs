@@ -7,7 +7,7 @@ import XMonad (sendMessage, Window, ChangeLayout(NextLayout), X, WindowSet, wind
 import XMonad.StackSet (Stack (Stack))
 import qualified XMonad.StackSet as W
 import XMonad.Util.Stack
-import XMonad.Layout.Tabbed (tabbedAlways, shrinkText)
+import XMonad.Layout.Tabbed
 import XMonad.Layout.LayoutCombinators ( (|||) , JumpToLayout (JumpToLayout, Wrap) )
 import XMonad.Layout.Decoration (def, fontName, decoHeight
                                 , inactiveBorderColor , activeBorderColor
@@ -31,23 +31,22 @@ import qualified XMonad.Util.Colours as Cs
 import XMonad.Layout.NoFrillsDecoration (noFrillsDeco)
 
 myTheme = def
-  { fontName = "xft:Terminus-8"
+  { fontName = "xft:Fixed-8" --"xft:Terminus-8"
   , decoHeight = 12
   , decoWidth = 8000
 
   , activeBorderColor   = Cs.border
-  , activeColor         = Cs.border
+  , activeColor         = "darkred"
   , activeTextColor     = Cs.borderText
 
   , inactiveColor       = Cs.tabBackground
-  , inactiveBorderColor = Cs.tabBackground
+  , inactiveBorderColor = Cs.dimBorder
   , inactiveTextColor   = Cs.dimText
 
   , urgentBorderColor   = Cs.urgent
   , urgentColor         = Cs.urgent
   , urgentTextColor     = Cs.urgentText
 
-  , windowTitleAddons = [(":", AlignRight)]
   }
 
 data GroupEQ a = GroupEQ
