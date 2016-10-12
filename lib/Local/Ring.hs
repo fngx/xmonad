@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, GADTs, BangPatterns #-}
 
-module XMonad.Actions.Ring where
+module Local.Ring where
 
 import XMonad
 import qualified XMonad.Util.ExtensibleState as XS
 import qualified Data.Sequence as S
 import qualified Data.Set as Set
 import Control.Monad
+import Data.Foldable (toList)
 
 import qualified Debug.Trace as DT
 import System.IO (hPutStrLn, stderr)
@@ -26,6 +27,11 @@ update g = do
         let !newHist = (S.filter (flip Set.member cands') $ e <|? h) in
           Ring cur newHist
   XS.modify $ update'
+
+contents :: forall a. (Read a, Show a, Ord a, Typeable a) => X (Maybe a, [a])
+contents = do
+  (Ring c h) <- XS.get :: X (Ring a)
+  return $ (c, toList h)
 
 remove :: Int -> S.Seq a -> S.Seq a
 remove k s = S.take (k - 1) s S.>< S.drop k s
