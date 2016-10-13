@@ -11,6 +11,9 @@ import XMonad.Hooks.UrgencyHook (focusUrgent)
 fixedWorkspaces = ["one", "two"]
 
 workspaceKeys = [ ("M-a", toggleWS)
+                , ("M-z", swapNextScreen)
+                , ("M-S-z", shiftNextScreen)
+                , ("M-x", nextScreen)
                 , ("M-h", nextWS)
                 , ("M-l", prevWS)
 

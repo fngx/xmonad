@@ -11,14 +11,14 @@ normalBorderColor = "#888888"
 urgentBorderColor = "#ffffaa"
 
 decorations = def
-  { fontName = "xft:Fixed-8"
-  , decoHeight = 12
+  { fontName = "xft:Fixed-10"
+  , decoHeight = 14
 
-  , activeBorderColor = focusedBorderColor
+  , activeBorderColor = "darkred"
   , activeTextColor = "white"
-  , activeColor = "red"
+  , activeColor = "darkred"
 
-  , inactiveBorderColor = normalBorderColor
+  , inactiveBorderColor = "#666666"
   , inactiveTextColor = "white"
   , inactiveColor = normalBorderColor
 

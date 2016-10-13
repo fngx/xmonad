@@ -19,9 +19,9 @@ import Control.Monad (liftM2)
 
 myConfig = Config
            { normal = ("white", "#333")
-           , highlight = ("white", "red")
-           , border = (1, "darkred")
-           , font = "xft:Liberation Sans-12:bold"
+           , highlight = ("white", "darkgreen")
+           , border = (1, "darkgreen")
+           , font = "xft:Monospace-12"
            , prompt = ":"
            , keymap = [ ("<Escape>", promptClose)
                       , ("C-g", promptClose)
@@ -90,15 +90,26 @@ swap2 x = x
 workspacePrompt =
   let generate :: String -> X [(String, [(String, X ())])]
       generate s = do ws <- gets windowset
-                      let tags = map W.tag $ W.workspaces ws
-                          existing = map (actions (length tags)) $ filter (isInfixOf s) $ tags
+                      let hid = map W.tag $ W.hidden ws
+                          vis = map (W.tag . W.workspace) $ W.visible ws
+                          cur = W.tag $ W.workspace $ W.current ws
+                          tags = cur:(hid++vis)
+                          existing = map (actions (length tags)) $ filter (isInfixOf s) tags
+
+                          lbl t
+                            | t == cur = t
+                            | t `elem` vis = t
+                            | otherwise = t++"*"
+
+                          existing' = map (\(l, a) -> (lbl l, a)) existing
+
                           new = (s, [("create", addWorkspace s)
                                     ,("ren", renameWorkspaceByName s)
                                     ,("shift", withFocused $
                                        \w -> do addHiddenWorkspace s
                                                 windows $ W.shiftWin s w)])
-                      return $ if (null s) || (s `elem` tags) then existing
-                               else existing ++ [new]
+                      return $ if (null s) || (s `elem` tags) then existing'
+                               else existing' ++ [new]
 
       actions c t = (t, [ ("gview", windows $ W.greedyView t)
                       , ("view", windows $ W.view t)

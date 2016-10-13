@@ -33,7 +33,7 @@ layoutKeys =
   , ("M-S-k", sendMessage $ G.Modify $ swapZ True)
 
   , ("M-o", H.moveToNewGroupDown)
-  , ("M-S-o", H.splitGroup)
+  , ("M-S-o", H.moveToNewGroupUp)
 
   , ("M-<Space>", sendMessage NextLayout)
   , ("M-;", groupToNextLayout)
