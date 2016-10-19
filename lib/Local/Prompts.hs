@@ -19,8 +19,8 @@ import Control.Monad (liftM2)
 
 myConfig = Config
            { normal = ("white", "#333")
-           , highlight = ("white", "darkgreen")
-           , border = (1, "darkgreen")
+           , highlight = ("white", "#5f9ea0")
+           , border = (2, "#5f9ea0")
            , font = "xft:Monospace-12"
            , prompt = ":"
            , keymap = [ ("<Escape>", promptClose)

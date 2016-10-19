@@ -6,7 +6,7 @@ spawnKeys :: [ (String, X ()) ]
 spawnKeys =
   [ ("M-<Return>", spawn "urxvt")
   , ("M-S-<Return>", spawn "emacsclient -c -n")
-  , ("M-i", spawn "echo $(date '+%R %a %b %d') '     ' $(acpi) | dzen2 -p 4")
+  , ("M-i", spawn "notify-send \"$(date '+%R %a %b %d')\" \"$(acpi)\"")
 
   , ("<XF86MonBrightnessUp>", spawn "xbacklight -steps 0 -5")
   , ("<XF86MonBrightnessDown>", spawn "xbacklight -steps 0 +5")

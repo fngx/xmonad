@@ -1,6 +1,7 @@
 module Local.Theme (decorations,
                     focusedBorderColor,
                     Local.Theme.urgentBorderColor,
+                    hasUrgentBorderColor,
                     normalBorderColor) where
 
 import XMonad.Layout.Decoration
@@ -8,7 +9,8 @@ import XMonad.Layout.Decoration
 focusedBorderColor = "red"
 normalBorderColor = "#888888"
 
-urgentBorderColor = "#ffffaa"
+urgentBorderColor = "green"
+hasUrgentBorderColor = "cyan"
 
 decorations = def
   { fontName = "xft:Fixed-10"
