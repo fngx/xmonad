@@ -1,9 +1,9 @@
-module Local.Prompts (promptKeys, promptsLogHook) where
+module Local.Prompts (promptKeys, promptsLogHook, rotWindow, Local.Ring.RingDirection (..)) where
 
 import qualified Local.Theme as Theme
 import qualified Local.Ring
 import Local.Prompt
-import Local.Workspaces
+--import Local.Workspaces
 import XMonad.Prompt.Shell (getCommands)
 import Data.List
 import XMonad (spawn, io, windows, gets, windowset, X, Window, withFocused, whenJust, runQuery,
@@ -140,11 +140,10 @@ workspacePrompt =
 promptKeys = [ ("M-p", runPrompt)
              , ("M-e", updateWindowRing >> windowPrompt)
              , ("M-w", workspacePrompt)
-             , ("M-l", rotWindow Local.Ring.Next)
-             , ("M-h", rotWindow Local.Ring.Prev)
              ]
-             where rotWindow dir = do w <- Local.Ring.rotate dir :: X (Maybe Window)
-                                      whenJust w $ (windows . W.focusWindow)
+
+rotWindow dir = do w <- Local.Ring.rotate dir :: X (Maybe Window)
+                   whenJust w $ (windows . W.focusWindow)
 
 promptsLogHook = updateWindowRing
 

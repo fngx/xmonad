@@ -50,6 +50,12 @@ layoutKeys =
   , ("M-S-j", alt (swapZ False) W.swapDown)
   , ("M-S-k", alt (swapZ True) W.swapUp)
 
+  , ("M-S-M1-j", alt (G.swapGroupDown) W.swapDown)
+  , ("M-S-M1-k", alt (G.swapGroupUp) W.swapUp)
+
+  , ("M-M1-j", alt (G.focusGroupDown) W.focusDown)
+  , ("M-M1-k", alt (G.focusGroupUp) W.focusUp)
+
   , ("M--", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (3/5))
   , ("M-=", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (1/(3/5)))
   , ("M-S--", sendMessage $ G.ToFocused $ SomeMessage $ Zoom (3/5))
