@@ -17,7 +17,7 @@ secondaryColor = "#4477bb"
 secondaryText = "white"
 
 urgentBorderColor = "#ffff00"
-urgentText = "white"
+urgentText = "black"
 
 hasUrgentBorderColor = "#ff8c00"
 
