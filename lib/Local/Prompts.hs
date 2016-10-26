@@ -18,6 +18,7 @@ import XMonad.Actions.DynamicWorkspaces
 import Control.Monad (liftM2)
 import XMonad.Actions.WithAll (killAll)
 import Data.Ratio ((%))
+import Data.Maybe (fromMaybe)
 
 -- uses my prompt utility to provide a few prompts
 
@@ -143,7 +144,11 @@ promptKeys = [ ("M-p", runPrompt)
              ]
 
 rotWindow dir = do w <- Local.Ring.rotate dir :: X (Maybe Window)
-                   whenJust w $ (windows . W.focusWindow)
+                   whenJust w $ (windows . greedyFocusWindow)
+                     where greedyFocusWindow w s | Just w == W.peek s = s
+                                                 | otherwise = fromMaybe s $ do
+                                                     n <- W.findTag w s
+                                                     return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
 promptsLogHook = updateWindowRing
 
