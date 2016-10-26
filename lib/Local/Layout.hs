@@ -4,45 +4,77 @@ module Local.Layout (layout, layoutKeys) where
 
 import qualified Local.Theme as Theme
 
-import XMonad hiding ((|||))
+import XMonad
 import qualified XMonad.Layout.Groups as G
 import qualified XMonad.Layout.Groups.Helpers as H
+import qualified XMonad.StackSet as W
+import XMonad.Layout.Groups.Examples
+import XMonad.Layout.ZoomRow
+import XMonad.Layout.Tabbed
 import XMonad.StackSet (Workspace (Workspace), Stack (..))
 import XMonad.Util.Stack
 import XMonad.Layout.TrackFloating
 import XMonad.Layout.NoBorders
 import XMonad.Layout.ShowWName
 import XMonad.Layout.Tabbed
-import XMonad.Layout.LayoutCombinators
-import XMonad.Layout.Groups.Wmii
-import XMonad.Layout.Magnifier
-import XMonad.Layout.Maximize
+import XMonad.Layout
+import XMonad.Layout.MultiToggle
+import XMonad.Layout.MultiToggle.Instances
+import XMonad.Actions.MessageFeedback
+import qualified XMonad.Layout.Magnifier as Mag
+import Control.Monad (unless, when)
 
-layout = showWName $
+wmii s t = G.group inner outer
+  where inner = column ||| tabs
+        outer = zoomRowG ||| Mirror zoomRowG
+        column = Mirror zoomRow
+        tabs = tabbed s t
+
+layout = showWName' SWNC
+         { swn_font = "xft:Liberation Sans-24"
+         , swn_fade = 2
+         , swn_bgcolor = Theme.secondaryColor
+         , swn_color = Theme.secondaryText
+         }
+         $
          trackFloating $
          smartBorders $
-         magnifierOff $
-         maximize $
-         ((Patch $ wmii shrinkText Theme.decorations) ||| Full)
+         mkToggle (single FULL) $
+         Mag.magnifierOff $
+         (Patch $ wmii shrinkText Theme.decorations)
 
 layoutKeys =
-  [ ("M-j", sendMessage $ G.Modify $ focusZ False)
-  , ("M-k", sendMessage $ G.Modify $ focusZ True)
+  [ ("M-j", alt (focusZ False) W.focusDown)
+  , ("M-k", alt (focusZ True) W.focusUp)
 
-  , ("M-S-j", sendMessage $ G.Modify $ swapZ False)
-  , ("M-S-k", sendMessage $ G.Modify $ swapZ True)
+  , ("M-S-j", alt (swapZ False) W.swapDown)
+  , ("M-S-k", alt (swapZ True) W.swapUp)
+
+  , ("M--", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (3/5))
+  , ("M-=", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (1/(3/5)))
+  , ("M-S--", sendMessage $ G.ToFocused $ SomeMessage $ Zoom (3/5))
+  , ("M-S-=", sendMessage $ G.ToFocused $ SomeMessage $ Zoom (1/(3/5)))
+  , ("M-'", sendMessage $ G.ToFocused $ SomeMessage $ zoomReset)
 
   , ("M-o", H.moveToNewGroupDown)
   , ("M-S-o", H.moveToNewGroupUp)
 
-  , ("M-<Space>", sendMessage NextLayout)
-  , ("M-;", groupToNextLayout)
+  , ("M-<Space>", sendMessage $ G.ToEnclosing $ SomeMessage $ NextLayout)
+  , ("M-;", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout)
 
-  , ("M-S-m", sendMessage Toggle)
-  , ("M-m", withFocused (sendMessage . maximizeRestore))
+  , ("M-f", sendMessage $ Toggle FULL)
+  , ("M-m", sendMessage Mag.Toggle) -- magnifier
   ]
 
 -- movement operators
+
+alt :: G.ModifySpec -> (WindowSet -> WindowSet) -> X ()
+alt f g = alt2 (G.Modify f) $ windows g
+
+alt2 :: G.GroupsMessage -> X () -> X ()
+alt2 m x = do b <- sendSM $ SomeMessage m
+              unless b x
+              when b $ refresh
 
 atEnd _ Nothing = True
 atEnd b (Just (Stack f u d)) = null $ if b then u else d

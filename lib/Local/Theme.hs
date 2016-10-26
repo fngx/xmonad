@@ -1,30 +1,39 @@
 module Local.Theme (decorations,
-                    focusedBorderColor,
-                    Local.Theme.urgentBorderColor,
+                    focusedBorderColor, focusedText,
+                    Local.Theme.urgentBorderColor, urgentText,
                     hasUrgentBorderColor,
-                    normalBorderColor) where
+                    secondaryColor, secondaryText,
+                    normalBorderColor, normalText) where
 
 import XMonad.Layout.Decoration
 
-focusedBorderColor = "red"
-normalBorderColor = "#888888"
+focusedBorderColor = "#ff0000"
+focusedText = "white"
 
-urgentBorderColor = "green"
-hasUrgentBorderColor = "cyan"
+normalBorderColor = "#777777"
+normalText = "white"
+
+secondaryColor = "#4477bb"
+secondaryText = "white"
+
+urgentBorderColor = "#ffff00"
+urgentText = "white"
+
+hasUrgentBorderColor = "#ff8c00"
 
 decorations = def
-  { fontName = "xft:Fixed-10"
+  { fontName = "xft:Sans:pixelsize=10:bold"
   , decoHeight = 14
 
-  , activeBorderColor = "darkred"
-  , activeTextColor = "white"
-  , activeColor = "darkred"
+  , activeBorderColor = focusedBorderColor
+  , activeTextColor = focusedText
+  , activeColor = focusedBorderColor
 
   , inactiveBorderColor = "#666666"
-  , inactiveTextColor = "white"
+  , inactiveTextColor = normalText
   , inactiveColor = normalBorderColor
 
   , XMonad.Layout.Decoration.urgentBorderColor = Local.Theme.urgentBorderColor
-  , urgentTextColor = "black"
+  , urgentTextColor = urgentText
   , urgentColor = Local.Theme.urgentBorderColor
   }

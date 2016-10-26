@@ -1,11 +1,13 @@
 module Local.Prompts (promptKeys, promptsLogHook) where
 
+import qualified Local.Theme as Theme
 import qualified Local.Ring
 import Local.Prompt
 import Local.Workspaces
 import XMonad.Prompt.Shell (getCommands)
 import Data.List
-import XMonad (spawn, io, windows, gets, windowset, X, Window, withFocused)
+import XMonad (spawn, io, windows, gets, windowset, X, Window, withFocused, whenJust, runQuery,
+               className)
 import XMonad.Operations (killWindow)
 import XMonad.Util.Run
 import XMonad.Util.NamedWindows (getName, unName, NamedWindow)
@@ -14,14 +16,17 @@ import XMonad.Actions.WindowBringer (bringWindow)
 import Data.Char (toLower)
 import XMonad.Actions.DynamicWorkspaces
 import Control.Monad (liftM2)
+import XMonad.Actions.WithAll (killAll)
+import Data.Ratio ((%))
 
 -- uses my prompt utility to provide a few prompts
 
 myConfig = Config
-           { normal = ("white", "#333")
-           , highlight = ("white", "#5f9ea0")
-           , border = (2, "#5f9ea0")
-           , font = "xft:Monospace-12"
+           { normal = ("white", "#222")
+           , item = (Theme.normalText, "#444")
+           , highlight = (Theme.secondaryText, Theme.secondaryColor)
+           , border = (1, Theme.secondaryColor)
+           , font = "xft:Liberation Sans-12:bold"
            , prompt = ":"
            , keymap = [ ("<Escape>", promptClose)
                       , ("C-g", promptClose)
@@ -63,22 +68,32 @@ runPrompt =
 -- TODO trim window names
 -- TODO maybe indicate ws for windows
 windowPrompt =
-  let actions :: NamedWindow -> (String, [(String, X ())])
-      actions nw = let w = unName nw in (shorten $ show nw, [ ("go", windows $ W.focusWindow w)
-                                                            , ("bring", windows $ bringWindow w)
-                                                            , ("close", killWindow w)] )
+  let actions :: (NamedWindow, String) -> (String, [(String, X ())])
+      actions (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]",
+                                              [ ("go", windows $ W.focusWindow w)
+                                              , ("bring", windows $ bringWindow w)
+                                              , ("close", killWindow w)] )
 
-      shorten s
-        | length s > 40 = (take 37 s) ++ "..."
+      shorten n s
+        | len > n = start ++ elip ++ end
         | otherwise = s
+        where
+          len = length s
+          n' = fromIntegral $ ceiling (n % 2)
+          start = take n' s
+          end = drop (len - n') s
+          elip = "…"
+
 
       getWindows :: X [Window]
       getWindows = do (f, rc) <- Local.Ring.contents
                       ws <- (fmap W.allWindows (gets windowset))
 
                       return $ rc ++ (ws \\ rc)
-      generate s = do named <- getWindows >>= mapM getName
-                      return $ map actions $ filter ((isInfixOf s) . (map toLower) . show) named
+      generate s = do named <- getWindows >>= mapM (\x -> do n <- getName x
+                                                             c <- runQuery className x
+                                                             return (n, c))
+                      return $ map (\(n, a) -> (shorten 38 n, a)) $ filter ((isInfixOf s) . (map toLower) . fst) $ map actions named
   in
     select myConfig { prompt = "win: "
                     , keymap = ("M-e", promptNextOption):(keymap myConfig)
@@ -117,14 +132,20 @@ workspacePrompt =
                       ++
                       if c <= 2 -- t `elem` fixedWorkspaces
                       then []
-                      else [("del", (windows $ W.view t) >> removeWorkspace)])
+                      else [("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
 
   in
     select myConfig {prompt = "ws: ", keymap = ("M-w", promptNextOption):(keymap myConfig)} generate
 
 promptKeys = [ ("M-p", runPrompt)
-             , ("M-e", windowPrompt)
+             , ("M-e", updateWindowRing >> windowPrompt)
              , ("M-w", workspacePrompt)
+             , ("M-l", rotWindow Local.Ring.Next)
+             , ("M-h", rotWindow Local.Ring.Prev)
              ]
+             where rotWindow dir = do w <- Local.Ring.rotate dir :: X (Maybe Window)
+                                      whenJust w $ (windows . W.focusWindow)
 
-promptsLogHook = (Local.Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))
+promptsLogHook = updateWindowRing
+
+updateWindowRing = (Local.Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))

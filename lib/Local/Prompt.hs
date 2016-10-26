@@ -35,6 +35,7 @@ import qualified Debug.Trace as D
 data Config = Config
   { normal :: (String, String)
   , highlight :: (String, String)
+  , item :: (String, String)
   , border :: (Int, String)
   , font :: String
   , keymap :: [(String, Prompt ())] -- ezconfig style but no submaps
@@ -229,6 +230,7 @@ render = do
       bw = fst $ border $ config state
       (fgString, bgString) = normal $ config state
       (hfgString, hbgString) = highlight $ config state
+      (fgItem, bgItem) = item $ config state
       prompt' = prompt $ config state
 
   Just bc <- io $ initColor d $ snd $ border $ config state
@@ -243,6 +245,7 @@ render = do
 
     let str = printStringXMF d p ft gc
         normStr = str fgString bgString
+        optionStr = str fgItem bgItem
         hiStr = str hfgString hbgString
 
         leftX = fi $ bw + padding
@@ -288,9 +291,9 @@ render = do
     -- TODO render < and > for left and right indicators
 --    whenJust () $ \opts ->
     case getFocusZ $ pages $ pager state of
-      Just (Just (W.Stack f l r)) -> do x1 <- foldM (printOption normStr) optionsX $ reverse l
+      Just (Just (W.Stack f l r)) -> do x1 <- foldM (printOption optionStr) optionsX $ reverse l
                                         x2 <- printOption hiStr x1 f
-                                        foldM_ (printOption normStr) x2 r
+                                        foldM_ (printOption optionStr) x2 r
       _ -> do printItem bw optionsX 0 (+) normStr "no match"
               return ()
 

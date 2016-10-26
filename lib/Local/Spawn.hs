@@ -14,8 +14,7 @@ spawnKeys =
   , ("<XF86AudioLowerVolume>", spawn "pamixer -d 5")
   , ("<XF86AudioMute>", spawn "pamixer -t")
 
-  -- TODO key/script to reset xrandr
-
-
   , ("M-s h", spawn "systemctl hibernate")
+  , ("M-a c", spawn "chromium")
+  , ("M-a w", spawn "dwb")
   ]
