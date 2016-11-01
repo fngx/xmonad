@@ -7,6 +7,7 @@ import Local.Prompts
 import Local.Workspaces
 import Local.Manage
 import Local.Randr
+import qualified Local.Windows as Windows
 
 import qualified Local.Theme as Theme
 
@@ -28,7 +29,7 @@ conf = def
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
-  , logHook = promptsLogHook
+  , logHook = Windows.updateHistory
   }
   `additionalKeysP` keys
   `additionalMouseBindings`
@@ -38,4 +39,5 @@ conf = def
                        spawnKeys,
                        promptKeys,
                        workspaceKeys,
-                       randrKeys]
+                       randrKeys,
+                       Windows.windowKeys]

@@ -29,7 +29,7 @@ decorations = def
   , activeTextColor = focusedText
   , activeColor = focusedBorderColor
 
-  , inactiveBorderColor = "#666666"
+  , inactiveBorderColor = "#aaa"
   , inactiveTextColor = normalText
   , inactiveColor = normalBorderColor
 

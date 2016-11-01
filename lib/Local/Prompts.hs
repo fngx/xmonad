@@ -1,7 +1,7 @@
-module Local.Prompts (promptKeys, promptsLogHook, rotWindow, Local.Ring.RingDirection (..)) where
+module Local.Prompts (promptKeys) where
 
 import qualified Local.Theme as Theme
-import qualified Local.Ring
+import qualified Local.Windows as Windows
 import Local.Prompt
 --import Local.Workspaces
 import XMonad.Prompt.Shell (getCommands)
@@ -17,8 +17,8 @@ import Data.Char (toLower)
 import XMonad.Actions.DynamicWorkspaces
 import Control.Monad (liftM2)
 import XMonad.Actions.WithAll (killAll)
-import Data.Ratio ((%))
 import Data.Maybe (fromMaybe)
+import Local.Util
 
 -- uses my prompt utility to provide a few prompts
 
@@ -71,30 +71,16 @@ runPrompt =
 windowPrompt =
   let actions :: (NamedWindow, String) -> (String, [(String, X ())])
       actions (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]",
-                                              [ ("go", windows $ W.focusWindow w)
+                                              [ ("view", windows $ W.focusWindow w)
+                                              , ("greedy", windows $ Windows.greedyFocusWindow w)
                                               , ("bring", windows $ bringWindow w)
                                               , ("close", killWindow w)] )
 
-      shorten n s
-        | len > n = start ++ elip ++ end
-        | otherwise = s
-        where
-          len = length s
-          n' = fromIntegral $ ceiling (n % 2)
-          start = take n' s
-          end = drop (len - n') s
-          elip = "…"
-
-
-      getWindows :: X [Window]
-      getWindows = do (f, rc) <- Local.Ring.contents
-                      ws <- (fmap W.allWindows (gets windowset))
-
-                      return $ rc ++ (ws \\ rc)
-      generate s = do named <- getWindows >>= mapM (\x -> do n <- getName x
-                                                             c <- runQuery className x
-                                                             return (n, c))
-                      return $ map (\(n, a) -> (shorten 38 n, a)) $ filter ((isInfixOf s) . (map toLower) . fst) $ map actions named
+      generate s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
+                                                                        c <- wclass x
+                                                                        t <- fmap (W.findTag x) $ gets windowset
+                                                                        return (n, maybe c (\t -> t ++", " ++ c) t))
+                      return $ map (\(n, a) -> (trim 38 n, a)) $ filter ((isInfixOf s) . (map toLower) . fst) $ map actions named
   in
     select myConfig { prompt = "win: "
                     , keymap = ("M-e", promptNextOption):(keymap myConfig)
@@ -128,28 +114,14 @@ workspacePrompt =
                                else existing' ++ [new]
 
       actions c t = (t, [ ("gview", windows $ W.greedyView t)
-                      , ("view", windows $ W.view t)
-                      , ("shift", windows $ W.shift t) ]
-                      ++
-                      if c <= 2 -- t `elem` fixedWorkspaces
-                      then []
-                      else [("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
+                        , ("view", windows $ W.view t)
+                        , ("shift", windows $ W.shift t)
+                        , ("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
 
   in
     select myConfig {prompt = "ws: ", keymap = ("M-w", promptNextOption):(keymap myConfig)} generate
 
 promptKeys = [ ("M-p", runPrompt)
-             , ("M-e", updateWindowRing >> windowPrompt)
+             , ("M-e", windowPrompt)
              , ("M-w", workspacePrompt)
              ]
-
-rotWindow dir = do w <- Local.Ring.rotate dir :: X (Maybe Window)
-                   whenJust w $ (windows . greedyFocusWindow)
-                     where greedyFocusWindow w s | Just w == W.peek s = s
-                                                 | otherwise = fromMaybe s $ do
-                                                     n <- W.findTag w s
-                                                     return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
-
-promptsLogHook = updateWindowRing
-
-updateWindowRing = (Local.Ring.update $ fmap (liftM2 (,) W.peek W.allWindows) (gets windowset))

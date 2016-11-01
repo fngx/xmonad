@@ -59,7 +59,7 @@ parseDisplay = do
   con <- string "connected" <|> string "disconnected"
 
   offset <- if con == "connected"
-            then spaces >> many digit >> char 'x' >> many digit >> char '+' >> many digit
+            then spaces >> ((many digit >> char 'x' >> many digit >> char '+' >> many digit) <|> (return "0"))
             else return "0"
 
   ignoreLine
