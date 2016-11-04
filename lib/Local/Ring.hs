@@ -15,6 +15,7 @@ import Data.Foldable (toList)
 import XMonad.Util.XUtils
 import XMonad.Util.Font
 import Local.Util
+import Graphics.X11.Xlib.Window (moveResizeWindow)
 
 import qualified Debug.Trace as D
 
@@ -31,7 +32,8 @@ instance (Read a, Show a, Typeable a) => ExtensionClass (Ring a) where
   initialValue = Ring Nothing S.empty S.empty
   extensionType = PersistentExtension
 
-select :: forall a. (Read a, Show a, Ord a, Typeable a) => (a -> X String) -> (a -> X ()) -> X (Maybe a)
+select :: forall a. (Read a, Show a, Ord a, Typeable a) =>
+          (a -> X String) -> (Maybe a -> X (Position, Position, String, String)) -> X (Maybe a)
 select lbl op = do
   -- there is some code in Prompt which could be reused for this :/
   f <- initXMF "xft:Sans-16"
@@ -40,11 +42,10 @@ select lbl op = do
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
 
   (as, ds) <- textExtentsXMF f "asdf"
+  (x, y, _, _) <- op Nothing
 
   let th = 4 + as + ds
-      tw = sw -- tw' + 4
-      y = sy --fi sy + (fi sh - th + 2) `div` 4
-      x = sx --fi sx + (fi sw - tw + 2)
+      tw = 200
       rect = Rectangle (fi x) (fi y) (fi tw) (fi th)
 
   window <- createNewWindow rect Nothing "" True
@@ -52,14 +53,19 @@ select lbl op = do
   let eventLoop :: Ring a -> X (Ring a)
       eventLoop state@(Ring f' _ _) = do
         n <- maybe (return "???") lbl f'
-        --        tw' <- textWidthXMF d f $ n
-        -- trim n to fit in some way
-        whenJust f' op
+        tw' <- textWidthXMF d f $ n
+        (as, ds) <- textExtentsXMF f n
+
+        (wx, wy, fg, bg) <- op f'
+
+        let ww = tw' + 4
+            wh = as+ds+4
+
         -- paintAndWrite cannot do an offset, so for now we can only show 1
         -- thing
-        paintAndWrite window f (fi tw) (fi th) 2
-          "#333" Theme.secondaryColor Theme.normalText "#333"
-          [AlignCenter] [n]
+        io $ moveResizeWindow d window (fi wx) (fi wy) (fi ww) (fi wh)
+        paintAndWrite window f (fi ww) (fi wh) 2
+          "#333" fg fg bg [AlignCenter] [n]
         io getKey >>= (processEvent state)
 
       getKey :: IO (EventType, KeySym)
@@ -150,3 +156,4 @@ sFromMaybe (Just x) = S.singleton x
 
 toMaybe :: S.Seq a -> Maybe a
 toMaybe s = if S.null s then Nothing else Just $ S.index s 0
+

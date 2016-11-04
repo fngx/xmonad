@@ -26,6 +26,7 @@ conf = def
   { modMask = mod4Mask
   , terminal = "urxvt"
   , layoutHook = layout
+  , borderWidth = 2
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces

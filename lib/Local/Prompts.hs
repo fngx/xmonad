@@ -77,9 +77,8 @@ windowPrompt =
                                               , ("close", killWindow w)] )
 
       generate s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
-                                                                        c <- wclass x
                                                                         t <- fmap (W.findTag x) $ gets windowset
-                                                                        return (n, maybe c (\t -> t ++", " ++ c) t))
+                                                                        return (n, fromMaybe "?" t))
                       return $ map (\(n, a) -> (trim 38 n, a)) $ filter ((isInfixOf s) . (map toLower) . fst) $ map actions named
   in
     select myConfig { prompt = "win: "
