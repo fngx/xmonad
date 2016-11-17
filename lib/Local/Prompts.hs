@@ -81,9 +81,14 @@ windowPrompt =
                                                                         return (n, fromMaybe "?" t))
                       return $ map (\(n, a) -> (trim 38 n, a)) $ filter ((isInfixOf s) . (map toLower) . fst) $ map actions named
   in
-    select myConfig { prompt = "win: "
-                    , keymap = ("M-e", promptNextOption):(keymap myConfig)
-                    } generate
+    do ws <- gets windowset
+       let hid = map W.tag $ W.hidden ws
+           vis = map (W.tag . W.workspace) $ W.visible ws
+           cur = W.tag $ W.workspace $ W.current ws
+           tags = cur:(vis++hid)
+       select myConfig { prompt = cur ++ ": "
+                       , keymap = ("M-e", promptNextOption):("M-w", promptCycleInput tags):(keymap myConfig)
+                       } generate
 
 swap2 (a:(b:cs)) = b:(a:cs)
 swap2 x = x

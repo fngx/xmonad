@@ -7,8 +7,8 @@ module Local.Theme (decorations,
 
 import XMonad.Layout.Decoration
 
-focusedBorderColor = "#ff0000"
-focusedText = "white"
+focusedBorderColor = "#ffff00"
+focusedText = "black"
 
 normalBorderColor = "#777777"
 normalText = "white"
@@ -16,8 +16,8 @@ normalText = "white"
 secondaryColor = "#4477bb"
 secondaryText = "white"
 
-urgentBorderColor = "#ffff00"
-urgentText = "black"
+urgentBorderColor = "#ff0000"
+urgentText = "white"
 
 hasUrgentBorderColor = "#ff8c00"
 

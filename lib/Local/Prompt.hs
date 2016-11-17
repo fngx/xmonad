@@ -8,7 +8,7 @@ import XMonad.Util.Types
 import XMonad.Util.Stack -- for zipper
 import qualified XMonad.StackSet as W
 import qualified Data.Map.Strict as M
-import Data.List (foldl', elemIndex, (\\), isPrefixOf)
+import Data.List (foldl', elemIndex, (\\), isPrefixOf, findIndex)
 
 import Control.Arrow (first, (&&&), (***))
 import Control.Monad.State
@@ -389,6 +389,21 @@ promptNextOption = modifyPager rightP
 
 promptPrevOption :: Prompt ()
 promptPrevOption = modifyPager leftP
+
+promptCycleInput :: [String] -> Prompt ()
+promptCycleInput ns = do
+  modifyCursor $ \(l, r) ->
+    let l' = let ns' = map reverse ns
+                 nc = length ns
+                 w = words l in
+               if null w then head ns'
+               else let w' = head w
+                        mi = findIndex (== w') ns'
+                    in case mi of
+                         Nothing -> unwords $ (head ns'):w
+                         Just i -> unwords $ (ns' !! ((i+1) `mod` nc)):tail w
+    in (l', r)
+  promptUpdateOptions
 
 promptNextAction :: Prompt ()
 promptNextAction = modifyPager na
