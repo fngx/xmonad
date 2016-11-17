@@ -7,7 +7,7 @@ module Local.Theme (decorations,
 
 import XMonad.Layout.Decoration
 
-focusedBorderColor = "#ffff00"
+focusedBorderColor = "#7fffd4"
 focusedText = "black"
 
 normalBorderColor = "#777777"
