@@ -7,10 +7,10 @@ module Local.Theme (decorations,
 
 import XMonad.Layout.Decoration
 
-focusedBorderColor = "#7fffd4"
+focusedBorderColor = "#00ff7f"
 focusedText = "black"
 
-normalBorderColor = "#777777"
+normalBorderColor = "#000000"
 normalText = "white"
 
 secondaryColor = "#4477bb"
@@ -19,7 +19,7 @@ secondaryText = "white"
 urgentBorderColor = "#ff0000"
 urgentText = "white"
 
-hasUrgentBorderColor = "#ff8c00"
+hasUrgentBorderColor = "#ff00ff"
 
 decorations = def
   { fontName = "xft:Sans:pixelsize=10:bold"
