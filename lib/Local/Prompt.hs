@@ -47,7 +47,11 @@ type Prompt = StateT PromptState X
 
 -- a choice has a name, and then a list of named actions
 -- that you can take on it
-type Choice = (String, [(String, X ())])
+type Choice = (String, String, [(String, X ())])
+
+cName (a, _, _) = a
+cColor (_, a, _) = a
+cActions (_, _, a) = a
 
 data Pager = Pager
   { pages :: Zipper (Zipper Choice) -- slightly annoying; inner zipper can never be empty
@@ -81,7 +85,7 @@ fixAction p@(Pager { pages = ps, action = a })
   | a `elem` actions = p
   | not $ null actions = p { action = head actions }
   | otherwise = p { action = "" }
-  where actions = maybe [""] (\c -> map fst $ snd $ fromJust $ getFocusZ c) (getFocusZ ps)
+  where actions = maybe [""] (\c -> map fst $ cActions $ fromJust $ getFocusZ c) (getFocusZ ps)
 
 leftP :: Pager -> Pager
 leftP p@(Pager {pages = Nothing}) = p
@@ -245,7 +249,6 @@ render = do
 
     let str = printStringXMF d p ft gc
         normStr = str fgString bgString
-        optionStr = str fgItem bgItem
         hiStr = str hfgString hbgString
 
         leftX = fi $ bw + padding
@@ -254,7 +257,7 @@ render = do
 
         actions = map fst $
                   maybe []
-                  (\x -> maybe [] snd $ getFocusZ x) $
+                  (\x -> maybe [] cActions $ getFocusZ x) $
                   getFocusZ $ pages $ pager state
 
         selAction = action $ pager state
@@ -272,7 +275,11 @@ render = do
           (if text == selAction then hiStr else normStr)
           text
 
-        printOption prn x (text, _) = printItem (fi bw) (fi x) spaceBetweenChoice (+) prn text
+        printOption fg bg x choice = let nam = cName choice
+                                         fg' = cColor choice
+                                         str' = str (if null fg' then fg else fg') bg in
+                                       printItem (fi bw) (fi x) spaceBetweenChoice (+) str' nam
+
 
     foldM_ printAction (optionsX - 2*spaceBetweenChoice) $ reverse actions
 
@@ -291,11 +298,13 @@ render = do
     -- TODO render < and > for left and right indicators
 --    whenJust () $ \opts ->
     case getFocusZ $ pages $ pager state of
-      Just (Just (W.Stack f l r)) -> do x1 <- foldM (printOption optionStr) optionsX $ reverse l
-                                        x2 <- printOption hiStr x1 f
-                                        foldM_ (printOption optionStr) x2 r
+      Just (Just (W.Stack f l r)) -> do x1 <- foldM (printOption fgItem bgItem) optionsX $ reverse l
+                                        x2 <- printOption hfgString hbgString x1 f
+                                        foldM_ (printOption fgItem bgItem) x2 r
       _ -> do printItem bw optionsX 0 (+) normStr "no match"
               return ()
+
+    whenJust (pages $ pager state) $ \(W.Stack _ l r) -> when (not $ null l && null r) $ printItem bw rightX 0 (-) normStr "…" >> return ()
 
     copyArea d p w gc 0 0 wh ht 0 0
     io $ freePixmap d p
@@ -339,7 +348,7 @@ handleKeys = do
                     do p <- gets pager
                        let action = do pg <- getFocusZ (pages p) -- maybe monad
                                        sel <- getFocusZ pg
-                                       lookup (head str) (map (\(n, a) -> (head n, a)) $ snd sel)
+                                       lookup (head str) (map (\(n, a) -> (head n, a)) $ cActions sel)
                        fromMaybe promptNothing $ fmap (\x -> lift x >> promptClose) action
                 | otherwise = promptNothing
 
@@ -411,7 +420,7 @@ promptNextAction = modifyPager na
     na :: Pager -> Pager
     na p@(Pager {pages = ps, action = ac}) =
           case ps of
-            Just (W.Stack (Just (W.Stack (_, acs) _ _)) _ _) ->
+            Just (W.Stack (Just (W.Stack (_, _, acs) _ _)) _ _) ->
               let acs' = map fst acs
                   idx = elemIndex ac acs'
                   idx' = fmap (+ 1) idx
@@ -430,7 +439,7 @@ promptPerformAction :: Prompt ()
 promptPerformAction = do
   Pager {pages = pg, action = ac} <- gets pager
   lift $ whenJust (getFocusZ pg) $ \p -> do
-    whenJust (getFocusZ p) $ \(c, acs) -> do
+    whenJust (getFocusZ p) $ \(c, t, acs) -> do
       whenJust (lookup ac acs) id
 
 promptClose :: Prompt ()
@@ -440,6 +449,11 @@ promptDone :: Prompt ()
 promptDone = do
   promptPerformAction
   promptClose
+
+promptClear :: Prompt ()
+promptClear = do
+  modifyCursor $ const ("", "")
+  promptUpdateOptions
 
 promptInsertStr :: String -> Prompt ()
 promptInsertStr str = do
@@ -463,7 +477,7 @@ promptAppendSpace = do
   let inp' = iintegrate inp
   when (not $ ' ' `elem` inp') $ do
     whenJust (getFocusZ pg) $ \p -> do
-      whenJust (getFocusZ p) $ \(c, _) -> do
+      whenJust (getFocusZ p) $ \(c, _, _) -> do
         when (inp' `isPrefixOf` c) $
           promptInsertStr $ drop (length inp') c
   promptInsertStr " "
@@ -498,7 +512,7 @@ promptUpdateOptions = do
   -- this might be a bit wasteful - not sure.
   (win, (dis, font)) <- gets (window &&& _display &&& xfont)
   (wwidth, swidths) <- io $ do wa <- getWindowAttributes dis win
-                               ws <- mapM (textWidthXMF dis font) (map fst choices)
+                               ws <- mapM (textWidthXMF dis font) (map cName choices)
                                return $ (wa_width wa, map fi ws)
 
   -- now pack the pager and update it
@@ -506,7 +520,7 @@ promptUpdateOptions = do
                              (pager s)
                              (zip choices $ map (\w -> fi $ (fi w) + spaceBetweenChoice) swidths)
                              (floor $ (fi wwidth) * optionAreaRatio)
-                   , pagerNames = map fst choices }
+                   , pagerNames = map cName choices }
 
 -- | Creates a window with the attribute override_redirect set to True.
 -- Windows Managers should not touch this kind of windows.
