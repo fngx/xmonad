@@ -15,6 +15,7 @@ spawnKeys =
   , ("<XF86AudioMute>", spawn "pamixer -t")
 
   , ("M-s h", spawn "systemctl hibernate")
+  , ("M-s s", spawn "systemctl suspend")
   , ("M-a c", spawn "chromium")
   , ("M-a w", spawn "xdg-open http://lrkry.com")
   ]
