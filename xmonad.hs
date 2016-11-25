@@ -30,7 +30,6 @@ conf = def
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
-  , logHook = Windows.updateHistory
   }
   `additionalKeysP` keys
   `additionalMouseBindings`

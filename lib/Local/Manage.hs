@@ -21,10 +21,10 @@ addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
                                  , remindWhen = Every 120 }
                    $ c { manageHook = (manageHook c) <+> windowRules
-                       , logHook = (logHook c) <+>
-                         (withFocused $ \w -> do
-                           us <- fmap null readUrgents
-                           when (not us) $ setBorder Local.Theme.hasUrgentBorderColor w)
+                       , logHook = (logHook c) >>
+                                   (withFocused $ \w -> do
+                                       us <- fmap null readUrgents
+                                       when (not us) $ setBorder Local.Theme.hasUrgentBorderColor w)
                        }
 
 windowRules = composeAll
