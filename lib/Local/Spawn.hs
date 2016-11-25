@@ -4,7 +4,7 @@ import XMonad
 
 spawnKeys :: [ (String, X ()) ]
 spawnKeys =
-  [ ("M-<Return>", spawn "urxvt")
+  [ ("M-<Return>", spawn "emacsclient -c -n -e '(multi-term-quick-frame)'")
   , ("M-S-<Return>", spawn "emacsclient -c -n")
   , ("M-i", spawn "notify-send \"$(date '+%R %a %b %d')\" \"$(acpi)\"")
 
@@ -16,6 +16,8 @@ spawnKeys =
 
   , ("M-s h", spawn "systemctl hibernate")
   , ("M-s s", spawn "systemctl suspend")
+
   , ("M-a c", spawn "chromium")
-  , ("M-a w", spawn "xdg-open http://lrkry.com")
+  , ("M-a t", spawn "urxvt")
+  , ("M-a w", spawn "dwb")
   ]
