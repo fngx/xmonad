@@ -19,5 +19,5 @@ spawnKeys =
 
   , ("M-a c", spawn "chromium")
   , ("M-a t", spawn "urxvt")
-  , ("M-a w", spawn "dwb")
+  , ("M-a w", spawn "conkeror")
   ]
