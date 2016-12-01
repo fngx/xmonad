@@ -38,7 +38,7 @@ layout = showWName' SWNC
          }
          $
          trackFloating $
-         smartBorders $
+         lessBorders OnlyFloat $
          mkToggle (single FULL) $
          Mag.magnifierOff $
          (Patch $ wmii shrinkText Theme.decorations)
