@@ -19,7 +19,8 @@ import qualified XMonad.Actions.ConstrainedResize as CR
 main = xmonad $
   ewmh $
   addManageRules $
-  enableFullscreen
+  enableFullscreen $
+  Windows.addHistory $
   conf
 
 conf = def

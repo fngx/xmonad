@@ -26,7 +26,7 @@ import Control.Monad (unless, when)
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
-        outer = zoomRowG ||| Mirror zoomRowG
+        outer = zoomRowG
         column = Mirror zoomRow
         tabs = tabbed s t
 
@@ -44,17 +44,20 @@ layout = showWName' SWNC
          (Patch $ wmii shrinkText Theme.decorations)
 
 layoutKeys =
-  [ ("M-j", alt (focusZ False) W.focusDown)
-  , ("M-k", alt (focusZ True) W.focusUp)
+  [ ("M-n", alt (focusZ False) W.focusDown)
+  , ("M-p", alt (focusZ True) W.focusUp)
 
-  , ("M-S-j", alt (swapZ False) W.swapDown)
-  , ("M-S-k", alt (swapZ True) W.swapUp)
+  , ("M-S-n", alt (swapZ False) W.swapDown)
+  , ("M-S-p", alt (swapZ True) W.swapUp)
 
-  , ("M-S-M1-j", alt (G.swapGroupDown) W.swapDown)
-  , ("M-S-M1-k", alt (G.swapGroupUp) W.swapUp)
+  , ("M-M1-n", alt (G.swapGroupDown) W.swapDown)
+  , ("M-M1-p", alt (G.swapGroupUp) W.swapUp)
 
-  , ("M-M1-j", alt (G.focusGroupDown) W.focusDown)
-  , ("M-M1-k", alt (G.focusGroupUp) W.focusUp)
+  , ("M-<Tab>", alt (G.focusGroupDown) W.focusDown)
+  , ("M-S-<Tab>", alt (G.focusGroupUp) W.focusUp)
+
+  , ("M-C-p", H.moveToGroupUp False)
+  , ("M-C-n", H.moveToGroupDown False)
 
   , ("M--", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (3/5))
   , ("M-=", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (1/(3/5)))
@@ -65,7 +68,6 @@ layoutKeys =
   , ("M-o", H.moveToNewGroupDown)
   , ("M-S-o", H.moveToNewGroupUp)
 
-  , ("M-<Space>", sendMessage $ G.ToEnclosing $ SomeMessage $ NextLayout)
   , ("M-;", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout)
 
   , ("M-f", sendMessage $ Toggle FULL)

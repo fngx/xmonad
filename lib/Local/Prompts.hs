@@ -51,7 +51,7 @@ myConfig = Config
            , rawKeymap = [ ((1, 65056), promptPrevOption)] -- shift tab?
            }
 
-runPrompt =
+runPrompt key =
   let actions c = (c, "", [("run", io $ spawn c),
                            ("term", io $ safeSpawn "urxvt" ["-e", c]),
                            ("man", io $ safeSpawn "xterm" ["-e", "man " ++ c]),
@@ -72,13 +72,13 @@ shiftWindowToNew ws w = do addHiddenWorkspace ws
 
 -- TODO trim window names
 -- TODO maybe indicate ws for windows
-windowPrompt =
+windowPrompt key =
   let actions :: (M.Map String String) -> (NamedWindow, String) -> (String, String, [(String, X ())])
       actions cm (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]", M.findWithDefault "" c cm,
                                                   [ ("view", windows $ W.focusWindow w)
                                                   , ("greedy", windows $ Windows.greedyFocusWindow w)
                                                   , ("bring", windows $ bringWindow w)
-                                                  , ("shift", shiftPrompt w)] )
+                                                  , ("shift", shiftPrompt "M-s" w)] )
 
       generate cm s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
                                                                            t <- fmap (W.findTag x) $ gets windowset
@@ -100,13 +100,13 @@ windowPrompt =
            colrMap = M.fromList $ zip (sort tags) colrs
 
        select myConfig { prompt = "win: "
-                       , keymap = ("M-e", promptNextOption):("M-w", promptCycleInput tags):(keymap myConfig)
+                       , keymap = (key, promptNextOption):("M-w", promptCycleInput tags):(keymap myConfig)
                        } (generate colrMap)
 
 swap2 (a:(b:cs)) = b:(a:cs)
 swap2 x = x
 
-shiftPrompt w =
+shiftPrompt key w =
   let generate :: String -> X [(String, String, [(String, X ())])]
       generate s = do ws <- gets windowset
                       let hid = map W.tag $ W.hidden ws
@@ -130,10 +130,10 @@ shiftPrompt w =
         let hid = map W.tag $ W.hidden ws
             vis = map (W.tag . W.workspace) $ W.visible ws
 
-        select myConfig {prompt = "shift: ", keymap = ("M-w", promptNextOption):("M-s", promptNextOption):("M-h", promptCycleInput hid):("M-v", promptCycleInput vis):(keymap myConfig)} generate
+        select myConfig {prompt = "shift: ", keymap = (key, promptNextOption):("M-h", promptCycleInput hid):("M-v", promptCycleInput vis):(keymap myConfig)} generate
 
 
-workspacePrompt =
+workspacePrompt key =
   let generate :: String -> X [(String, String, [(String, X ())])]
       generate s = do ws <- gets windowset
                       let hid = map W.tag $ W.hidden ws
@@ -161,10 +161,10 @@ workspacePrompt =
                             , ("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
 
   in
-    select myConfig {prompt = "ws: ", keymap = ("M-w", promptNextOption):(keymap myConfig)} generate
+    select myConfig {prompt = "ws: ", keymap = (key, promptNextOption):(keymap myConfig)} generate
 
-promptKeys = [ ("M-p", runPrompt)
-             , ("M-e", windowPrompt)
-             , ("M-w", workspacePrompt)
-             , ("M-S-w", withFocused shiftPrompt)
+promptKeys = [ ("M-r", runPrompt "M-r")
+             , ("M-<Space>", windowPrompt "M-<Space>")
+             , ("M-j", workspacePrompt "M-j")
+             , ("M-S-J", withFocused (shiftPrompt "M-j"))
              ]

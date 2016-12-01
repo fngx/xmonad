@@ -25,6 +25,7 @@ addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                                    (withFocused $ \w -> do
                                        us <- fmap null readUrgents
                                        when (not us) $ setBorder Local.Theme.hasUrgentBorderColor w)
+                                   -- it would be nice to have a fullscreen border color
                        }
 
 windowRules = composeAll
