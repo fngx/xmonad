@@ -3,11 +3,15 @@ module Local.Theme (decorations,
                     Local.Theme.urgentBorderColor, urgentText,
                     hasUrgentBorderColor,
                     secondaryColor, secondaryText,
-                    normalBorderColor, normalText) where
+                    normalBorderColor, normalText,
+                    singletonBorderColor
+                   ) where
 
 import XMonad.Layout.Decoration
 
-focusedBorderColor = "#00ff7f"
+singletonBorderColor = "magenta"
+
+focusedBorderColor = "green"
 focusedText = "black"
 
 normalBorderColor = "#000000"
@@ -16,10 +20,10 @@ normalText = "white"
 secondaryColor = "#4477bb"
 secondaryText = "white"
 
-urgentBorderColor = "#ff0000"
+urgentBorderColor = "red"
 urgentText = "white"
 
-hasUrgentBorderColor = "#ff00ff"
+hasUrgentBorderColor = "yellow"
 
 decorations = def
   { fontName = "xft:Sans:pixelsize=10:bold"

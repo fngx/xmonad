@@ -43,7 +43,7 @@ setBorderHook =
   -- what I want is to know if there are other windows that are invisible?
 
   if us then setBorder Local.Theme.hasUrgentBorderColor w
-    else if (not others) then setBorder "blue" w
+    else if (not others) then setBorder Local.Theme.singletonBorderColor w
     else return ()
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
