@@ -1,5 +1,6 @@
 import XMonad hiding ( (|||) )
 
+import qualified Data.Map.Strict as M (empty)
 import Local.Layout
 import Local.Spawn
 import Local.Fullscreen
@@ -31,6 +32,7 @@ conf = def
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
+--  , keys = M.empty
   }
   `additionalKeysP` keys
   `additionalMouseBindings`

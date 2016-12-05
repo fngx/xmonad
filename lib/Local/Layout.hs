@@ -65,10 +65,10 @@ layoutKeys =
   , ("M-S-=", sendMessage $ G.ToFocused $ SomeMessage $ Zoom (1/(3/5)))
   , ("M-'", sendMessage $ G.ToFocused $ SomeMessage $ zoomReset)
 
-  , ("M-o", H.moveToNewGroupDown)
-  , ("M-S-o", H.moveToNewGroupUp)
+  , ("M-s", H.moveToNewGroupDown)
+  , ("M-S-s", H.moveToNewGroupUp)
 
-  , ("M-;", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout)
+  , ("M-l", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout)
 
   , ("M-f", sendMessage $ Toggle FULL)
   , ("M-m", sendMessage Mag.Toggle) -- magnifier

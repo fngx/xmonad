@@ -56,7 +56,7 @@ windowRules = composeAll
   [ isDialog --> doFloat
   , transience'
   , isFullscreen --> doFullFloat
-  , className =? "conky" --> (doF copyToAll) <+> (doSideFloat CE) ]
+  , className =? "Xmessage" --> doFloat ]
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
 

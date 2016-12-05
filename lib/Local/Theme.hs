@@ -11,10 +11,10 @@ import XMonad.Layout.Decoration
 
 singletonBorderColor = "magenta"
 
-focusedBorderColor = "green"
+focusedBorderColor = "greenyellow"
 focusedText = "black"
 
-normalBorderColor = "#000000"
+normalBorderColor = "#33333"
 normalText = "white"
 
 secondaryColor = "#4477bb"

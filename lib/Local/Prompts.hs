@@ -25,10 +25,10 @@ import qualified Data.Map.Strict as M
 
 myConfig = Config
            { normal = ("white", "#222")
-           , item = (Theme.normalText, "#444")
-           , highlight = (Theme.secondaryText, Theme.secondaryColor)
-           , border = (1, Theme.secondaryColor)
-           , font = "xft:Liberation Sans-12:bold"
+           , item = (Theme.normalText, "#333")
+           , highlight = ("white", "#666")
+           , border = (2, "#777")
+           , font = "xft:Sans-13"
            , prompt = ":"
            , keymap = [ ("<Escape>", promptClose)
                       , ("C-g", promptClose)
@@ -163,8 +163,8 @@ workspacePrompt key =
   in
     select myConfig {prompt = "ws: ", keymap = (key, promptNextOption):(keymap myConfig)} generate
 
-promptKeys = [ ("M-r", runPrompt "M-r")
+promptKeys = [ ("M-x", runPrompt "M-x")
              , ("M-<Space>", windowPrompt "M-<Space>")
-             , ("M-j", workspacePrompt "M-j")
-             , ("M-S-J", withFocused (shiftPrompt "M-j"))
+             , ("M-b", workspacePrompt "M-b")
+             , ("M-S-b", withFocused (shiftPrompt "M-b"))
              ]

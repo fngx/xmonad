@@ -145,8 +145,8 @@ applyLayout ds l =
         safeSpawn "xrandr" command
 
 randrKeys =
-  [ ("M-d M-d", updateLayout enableConnected)
-  , ("M-d r", updateLayout $ reverseExisting)
+  [ ("M-q M-d", updateLayout enableConnected)
+  , ("M-q M-S-D", updateLayout $ reverseExisting)
   ]
 
 -- grammar

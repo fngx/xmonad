@@ -10,12 +10,9 @@ import XMonad.Actions.Warp
 
 fixedWorkspaces = ["one", "two"]
 
-workspaceKeys = [ ("M-h", swapNextScreen)
-                , ("M-S-h", shiftNextScreen)
-                , ("M-y", nextScreen >> warp)
-                , ("M-l", nextWS)
-                , ("M-S-l", prevWS)
-                , ("M-.", warp)
+workspaceKeys = [ ("M-d M-d", swapNextScreen >> nextScreen >> warp)
+                , ("M-d M-s", shiftNextScreen)
+                , ("M-d M-f", nextScreen >> warp)
                 ]
 warp :: X ()
 warp = do sid <- gets (W.screen . W.current . windowset)
