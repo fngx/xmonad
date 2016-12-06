@@ -14,7 +14,7 @@ singletonBorderColor = "magenta"
 focusedBorderColor = "greenyellow"
 focusedText = "black"
 
-normalBorderColor = "#33333"
+normalBorderColor = "#111"
 normalText = "white"
 
 secondaryColor = "#4477bb"
