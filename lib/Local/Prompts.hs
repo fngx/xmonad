@@ -28,8 +28,9 @@ myConfig = Config
            , item = (Theme.normalText, "#333")
            , highlight = ("white", "#666")
            , border = (2, "#777")
-           , font = "xft:Sans-13"
+           , font = "xft:Sans-12"
            , prompt = ":"
+           , top = False
            , keymap = [ ("<Escape>", promptClose)
                       , ("C-g", promptClose)
 
@@ -55,7 +56,7 @@ runPrompt key =
   let actions c = (c, "", [("run", io $ spawn c),
                            ("term", io $ safeSpawn "urxvt" ["-e", c]),
                            ("man", io $ safeSpawn "xterm" ["-e", "man " ++ c]),
-                           ("dzn", io $ spawn $ c ++ "|dzen2 -p 3")
+                           ("pop", io $ spawn $ "notify-send \"" ++ c ++ "\" \"$(" ++ c ++ ")\"")
                           ])
       generate s = do commands <- io $ getCommands
                       let matches = if null s then commands
@@ -75,10 +76,10 @@ shiftWindowToNew ws w = do addHiddenWorkspace ws
 windowPrompt key =
   let actions :: (M.Map String String) -> (NamedWindow, String) -> (String, String, [(String, X ())])
       actions cm (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]", M.findWithDefault "" c cm,
-                                                  [ ("view", windows $ W.focusWindow w)
-                                                  , ("greedy", windows $ Windows.greedyFocusWindow w)
-                                                  , ("bring", windows $ bringWindow w)
-                                                  , ("shift", shiftPrompt "M-s" w)] )
+                                                  [ ("f", windows $ W.focusWindow w)
+                                                  , ("v", windows $ Windows.greedyFocusWindow w)
+                                                  , ("b:←", windows $ bringWindow w)
+                                                  , ("s:→", shiftPrompt "M-s" w)] )
 
       generate cm s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
                                                                            t <- fmap (W.findTag x) $ gets windowset

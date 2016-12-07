@@ -32,7 +32,6 @@ conf = def
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
---  , keys = M.empty
   }
   `additionalKeysP` keys
   `additionalMouseBindings`

@@ -41,6 +41,7 @@ data Config = Config
   , keymap :: [(String, Prompt ())] -- ezconfig style but no submaps
   , rawKeymap :: [((KeyMask, KeySym), Prompt ())]
   , prompt :: String
+  , top :: Bool
   }
 
 type Prompt = StateT PromptState X
@@ -169,7 +170,7 @@ select config generator = do
   let wh = 2*(fi (fst $ border config)) + (fi $ fst extent) + (fi $ snd extent)
 
   -- allocation
-  win <- io $ mkUnmanagedWindow d (defaultScreenOfDisplay d) rw sx sy sw (fi wh)
+  win <- io $ mkUnmanagedWindow d (defaultScreenOfDisplay d) rw sx (if (top config) then sy else (fi $ sy + (fi sh) - (fi wh))) sw (fi wh)
   gc <- io $ createGC d win
 
   io $ mapWindow d win
