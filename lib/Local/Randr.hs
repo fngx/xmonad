@@ -146,7 +146,7 @@ applyLayout ds l =
 
 randrKeys =
   [ ("M-q M-d", updateLayout enableConnected)
-  , ("M-q M-S-D", updateLayout $ reverseExisting)
+  , ("M-q d", updateLayout $ reverseExisting)
   ]
 
 -- grammar

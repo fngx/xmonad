@@ -23,11 +23,12 @@ import XMonad.Layout.MultiToggle.Instances
 import XMonad.Actions.MessageFeedback
 import qualified XMonad.Layout.Magnifier as Mag
 import Control.Monad (unless, when)
+import qualified Local.Row as Row
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
-        outer = zoomRowG
-        column = Mirror zoomRow
+        outer = Row.orderRow Row.H
+        column = Row.row Row.V
         tabs = tabbed s t
 
 layout = showWName' SWNC
@@ -59,11 +60,12 @@ layoutKeys =
   , ("M-C-p", H.moveToGroupUp False)
   , ("M-C-n", H.moveToGroupDown False)
 
-  , ("M--", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (3/5))
-  , ("M-=", sendMessage $ G.ToEnclosing $ SomeMessage $ Zoom (1/(3/5)))
-  , ("M-S--", sendMessage $ G.ToFocused $ SomeMessage $ Zoom (3/5))
-  , ("M-S-=", sendMessage $ G.ToFocused $ SomeMessage $ Zoom (1/(3/5)))
-  , ("M-'", sendMessage $ G.ToFocused $ SomeMessage $ zoomReset)
+  , ("M--", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Grow :: Row.Msg Int))
+  , ("M-=", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Shrink :: Row.Msg Int))
+  , ("M-S--", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window))
+  , ("M-S-=", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Shrink :: Row.Msg Window))
+  , ("M-'", do sendMessage $ G.ToAll $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
+               sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Equalize :: Row.Msg Int))
 
   , ("M-s", H.moveToNewGroupDown)
   , ("M-S-s", H.moveToNewGroupUp)
