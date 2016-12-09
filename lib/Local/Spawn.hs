@@ -18,6 +18,7 @@ spawnKeys =
   , ("M-q M-q", spawn "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi")
 
   , ("M-a c", spawn "chromium 2>&1 > /dev/null")
-  , ("M-a t", spawn "urxvt 2>&1 > /dev/null")
+  -- is st good?
+  , ("M-a t", spawn "st tmux new-session -t main \\; set-option destroy-unattached \\; new-window")
   , ("M-a w", spawn "conkeror 2>&1 > /dev/null")
   ]

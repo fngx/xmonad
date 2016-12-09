@@ -160,7 +160,6 @@ workspacePrompt key =
                             , ("view", windows $ W.view t)
                             , ("shift", windows $ W.shift t)
                             , ("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
-
   in
     select myConfig {prompt = "ws: ", keymap = (key, promptNextOption):(keymap myConfig)} generate
 
