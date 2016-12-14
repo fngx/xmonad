@@ -10,8 +10,8 @@ import XMonad.Actions.Warp
 
 fixedWorkspaces = ["one", "two"]
 
-workspaceKeys = [ ("M-d M-d", swapNextScreen >> nextScreen >> warp)
-                , ("M-d M-s", shiftNextScreen)
+workspaceKeys = [ ("M-d M-d", swapNextScreen >> warp)
+                , ("M-d M-s", shiftNextScreen >> nextScreen >> warp)
                 , ("M-d M-f", nextScreen >> warp)
                 ]
 warp :: X ()

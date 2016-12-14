@@ -4,7 +4,8 @@ import XMonad
 
 spawnKeys :: [ (String, X ()) ]
 spawnKeys =
-  [ ("M-<Return>", spawn "emacsclient -c -n -e '(multi-term-quick-frame)' 2>&1 > /dev/null")
+  [ ("M-<Return>", spawn "urxvt"-- "emacsclient -c -n -e '(multi-term-quick-frame)' 2>&1 > /dev/null"
+    )
   , ("M-S-<Return>", spawn "emacsclient -c -n 2>&1 > /dev/null")
 
   , ("<XF86MonBrightnessUp>", spawn "xbacklight -steps 0 -5")
@@ -19,6 +20,7 @@ spawnKeys =
 
   , ("M-a c", spawn "chromium 2>&1 > /dev/null")
   -- is st good?
-  , ("M-a t", spawn "st tmux new-session -t main \\; set-option destroy-unattached \\; new-window")
+  , ("M-a t", spawn "urxvt"-- "st tmux new-session -t main \\; set-option destroy-unattached \\; new-window"
+    )
   , ("M-a w", spawn "conkeror 2>&1 > /dev/null")
   ]

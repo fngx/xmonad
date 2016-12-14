@@ -15,7 +15,7 @@ trim n s
     n' = fromIntegral $ ceiling (n % 2)
     start = take n' s
     end = drop (len - n') s
-    elip = "…"
+    elip = " ⋯ "
 
 wclass :: Window -> X String
 wclass w = fmap ren (runQuery className w)

@@ -155,9 +155,8 @@ readKey m = listToMaybe . parses
                                   _ <- char '-'
                                   return $ indexMod (read [n] - 1)
 
-padding = 4
+padding = 8
 spaceBetweenChoice = 16
-optionAreaRatio = 2 % 3
 
 select :: Config -> (String -> X [Choice]) -> X ()
 select config generator = do
@@ -167,7 +166,7 @@ select config generator = do
   font <- initXMF $ font config
   extent <- textExtentsXMF font "ASDKFH"
   -- (fi padding) +
-  let wh = 2*(fi (fst $ border config)) + (fi $ fst extent) + (fi $ snd extent)
+  let wh = 2 * (fi (fst $ border config)) + 2 * ((fi $ fst extent) + (fi $ snd extent))
 
   -- allocation
   win <- io $ mkUnmanagedWindow d (defaultScreenOfDisplay d) rw sx (if (top config) then sy else (fi $ sy + (fi sh) - (fi wh))) sw (fi wh)
@@ -253,8 +252,8 @@ render = do
         hiStr = str hfgString hbgString
 
         leftX = fi $ bw + padding
-        rightX = (fi wh) - (fi leftX)
-        optionsX = leftX + (floor $ (fi wh) * (1 - optionAreaRatio))
+        rightX = (fi wh) - bw
+        top2 = (floor $ (fi ht) / 2)
 
         actions = map fst $
                   maybe []
@@ -267,9 +266,9 @@ render = do
         printItem y0 x0 spc dir prn text = do
           width <- textWidthXMF d ft text
           (rising, _) <- textExtentsXMF ft text
-          let x1 = dir x0 (spc+width)
+          let x1 = dir x0 width
           prn (fi (min x0 x1)) (fi (y0 + (fi rising))) text
-          return x1
+          return $ dir x1 spc
 
         -- we want to render the actions from the right to the left
         printAction x text = printItem (fi bw) (fi x) (2*padding) (-)
@@ -279,14 +278,14 @@ render = do
         printOption fg bg x choice = let nam = cName choice
                                          fg' = cColor choice
                                          str' = str (if null fg' then fg else fg') bg in
-                                       printItem (fi bw) (fi x) spaceBetweenChoice (+) str' nam
+                                       printItem (fi $ top2) (fi x) spaceBetweenChoice (+) str' nam
 
 
-    foldM_ printAction (optionsX - 2*spaceBetweenChoice) $ reverse actions
+    foldM_ printAction (rightX) $ reverse actions
 
     setForeground d gc bc
 
-    fillRectangle d p gc (fi $ optionsX - (padding+spaceBetweenChoice)) 0 (fi bw) ht
+--    fillRectangle d p gc (fi $ (padding+spaceBetweenChoice)) 0 (fi bw) ht
 
     -- todo shrink input if too long
     inx0 <- printItem bw leftX 0 (+) normStr $ prompt'
@@ -299,13 +298,13 @@ render = do
     -- TODO render < and > for left and right indicators
 --    whenJust () $ \opts ->
     case getFocusZ $ pages $ pager state of
-      Just (Just (W.Stack f l r)) -> do x1 <- foldM (printOption fgItem bgItem) optionsX $ reverse l
+      Just (Just (W.Stack f l r)) -> do x1 <- foldM (printOption fgItem bgItem) inx0 $ reverse l
                                         x2 <- printOption hfgString hbgString x1 f
                                         foldM_ (printOption fgItem bgItem) x2 r
-      _ -> do printItem bw optionsX 0 (+) normStr "no match"
+      _ -> do printItem (fi top2) inx0 0 (+) normStr "no match"
               return ()
 
-    whenJust (pages $ pager state) $ \(W.Stack _ l r) -> when (not $ null l && null r) $ printItem bw rightX 0 (-) normStr "…" >> return ()
+    whenJust (pages $ pager state) $ \(W.Stack _ l r) -> when (not $ null l && null r) $ printItem (fi top2) rightX 0 (-) normStr "…" >> return ()
 
     copyArea d p w gc 0 0 wh ht 0 0
     io $ freePixmap d p
@@ -511,16 +510,16 @@ promptUpdateOptions = do
 
   -- find out the window width and string widths, so we can pack into the pager
   -- this might be a bit wasteful - not sure.
-  (win, (dis, font)) <- gets (window &&& _display &&& xfont)
+  (win, (dis, (font, ptext))) <- gets (window &&& _display &&& xfont &&& (prompt . config))
   (wwidth, swidths) <- io $ do wa <- getWindowAttributes dis win
                                ws <- mapM (textWidthXMF dis font) (map cName choices)
                                return $ (wa_width wa, map fi ws)
-
+  pwidth <- io $ textWidthXMF dis font ptext
   -- now pack the pager and update it
   modify $ \s -> s { pager = fillPager
                              (pager s)
                              (zip choices $ map (\w -> fi $ (fi w) + spaceBetweenChoice) swidths)
-                             (floor $ (fi wwidth) * optionAreaRatio)
+                             (floor $ (fi wwidth) - (fi pwidth))
                    , pagerNames = map cName choices }
 
 -- | Creates a window with the attribute override_redirect set to True.

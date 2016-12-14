@@ -20,6 +20,8 @@ import XMonad.Actions.WithAll (killAll)
 import Data.Maybe (fromMaybe)
 import Local.Util
 import qualified Data.Map.Strict as M
+import System.Directory (getHomeDirectory)
+import System.FilePath (takeExtension, dropExtension, combine)
 
 -- uses my prompt utility to provide a few prompts
 
@@ -28,7 +30,7 @@ myConfig = Config
            , item = (Theme.normalText, "#333")
            , highlight = ("white", "#666")
            , border = (2, "#777")
-           , font = "xft:Sans-12"
+           , font = "xft:Monospace-12"
            , prompt = ":"
            , top = False
            , keymap = [ ("<Escape>", promptClose)
@@ -76,15 +78,15 @@ shiftWindowToNew ws w = do addHiddenWorkspace ws
 windowPrompt key =
   let actions :: (M.Map String String) -> (NamedWindow, String) -> (String, String, [(String, X ())])
       actions cm (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]", M.findWithDefault "" c cm,
-                                                  [ ("f", windows $ W.focusWindow w)
-                                                  , ("v", windows $ Windows.greedyFocusWindow w)
-                                                  , ("b:←", windows $ bringWindow w)
-                                                  , ("s:→", shiftPrompt "M-s" w)] )
+                                                  [ ("focus", windows $ W.focusWindow w)
+                                                  , ("view", windows $ Windows.greedyFocusWindow w)
+                                                  , ("bring", windows $ bringWindow w)
+                                                  , ("shift", shiftPrompt "M-s" w)] )
 
       generate cm s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
                                                                            t <- fmap (W.findTag x) $ gets windowset
                                                                            return (n, fromMaybe "?" t))
-                         return $ map (\(n,c,a) -> (trim 38 n,c,a)) $ filter ((isInfixOf s) . (map toLower) . cName) $ map (actions cm) named
+                         return $ map (\(n,c,a) -> (trim 45 n,c,a)) $ filter ((isInfixOf s) . (map toLower) . cName) $ map (actions cm) named
   in
     do ws <- gets windowset
        let hid = map W.tag $ W.hidden ws
@@ -156,15 +158,41 @@ workspacePrompt key =
                       return $ if (null s) || (s `elem` tags) then existing'
                                else existing' ++ [new]
 
-      actions c t = (t, "", [ ("gview", windows $ W.greedyView t)
+      actions c t = (t, "", [ ("greedy view", windows $ W.greedyView t)
                             , ("view", windows $ W.view t)
                             , ("shift", windows $ W.shift t)
                             , ("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
   in
     select myConfig {prompt = "ws: ", keymap = (key, promptNextOption):(keymap myConfig)} generate
 
+
+passwordPrompt :: X ()
+passwordPrompt =
+  do h <- io $ getHomeDirectory
+     passwordFiles <- io $ runProcessWithInput "find" [ combine h ".password-store"
+                                                   ,  "-type" , "f"
+                                                   , "-name", "*.gpg"
+                                                   , "-printf", "%P\n"] []
+     let unsuffix :: String -> String -> String
+         unsuffix s i
+           | takeExtension i == s = dropExtension i
+           | otherwise = i
+
+         passwords = map (unsuffix ".gpg") $ lines passwordFiles
+
+         actions x =
+           [ ("pass", spawn$ "passm -c -p " ++ x)
+           , ("user + pass", spawn$ "passm -f user -p -c "++x)
+           , ("browse", spawn$ "xdg-open $(passm -f url " ++ x++")") ]
+
+         generate :: String -> X [(String, String, [(String, X ())])]
+         generate s = return $ map (\x -> (x, "", actions x)) $ filter (isInfixOf s) passwords
+
+     select myConfig {prompt = "pass: "} generate
+
 promptKeys = [ ("M-x", runPrompt "M-x")
              , ("M-<Space>", windowPrompt "M-<Space>")
-             , ("M-b", workspacePrompt "M-b")
-             , ("M-S-b", withFocused (shiftPrompt "M-b"))
+             , ("M-w", workspacePrompt "M-b")
+             , ("M-S-w", withFocused (shiftPrompt "M-b"))
+             , ("M-a p", passwordPrompt)
              ]
