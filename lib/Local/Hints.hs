@@ -1,6 +1,13 @@
 module Local.Hints () where
 
+import Data.List
 import qualified Data.Map.Strict as M
+import XMonad hiding (config)
+import qualified XMonad (config)
+import XMonad.Util.Font
+import XMonad.Util.Types
+import XMonad.Util.XUtils
+import Local.Prompt (readKey, nextKeyEvent)
 
 -- an alternative to normal submaps which displays hints as you type
 
@@ -21,10 +28,11 @@ hintedKeysP conf ks =
      -- now we make a map from first key to chains of subsequent keys and actions
       byFirstKey = M.fromListWith (++) [ (head k), [(tail k, v)] | (k, v) <- bks ]
      -- now we want to produce bindings for each of the first keys
-
   in conf
 
-hintedKeyMap :: String -> ([KeyBinding], String, X ()) -> X ()
+-- given a series of keys we already pressed, and a bunch of things we could press and what they do
+-- handle keys until we get there
+hintedKeyMap :: [KeyBinding] -> [([KeyBinding], (String, X ()))] -> X ()
 hintedKeyMap pfx acs = do
   -- make a window
   XConf {display = d, theRoot = rw, XMonad.config} <- ask
@@ -39,11 +47,37 @@ hintedKeyMap pfx acs = do
   gc <- io $ createGC d win
 
   io $ mapWindow d win
+
   -- event mask for window
   io $ selectInput d win $ exposureMask .|. keyPressMask
 
-  -- a loop where we read keys and look for appropriate subsets of the input string
+  let hintedKeyMap' :: [KeyBinding] -> [([KeyBinding], (String, X()))] -> X ()
+      hintedKeyMap' prefix actions' =
+        let actions = filter (\(p, _) -> pfx `isPrefixOf` p) actions'
+            prefixs = concatMap printBinding prefix
+        in
+        do paintWindow win sw wh 1 "#444" "#888"
+           -- write the prefix we have typed
+           printStringXMF d win font gc "white" "" 1 1 prefixs
+           -- write next keys you could press
+
+           -- read the next key and act on it
+           keym <- nextKeyEvent d
+           -- think about key
+           return ()
+
+  status <- io $ grabKeyboard d w True grabModeAsync grabModeAsync currentTime
+  when (status == grabSuccess) $ do
+    hintedKeyMap' pfx acs
+    io $ ungrabKeyboard d currentTime
+
+  io $ sync d False
 
   releaseXMF font
   io $ freeGC d gc
   io $ destroyWindow d win
+
+hintedKeyMap' :: XMonadFont -> Window -> [KeyBinding] -> ([KeyBinding], (String, X())) -> X()
+hintedKeyMap' font win pfx acs' =
+  let acs' = filter (\(p, _) -> pfx `isPrefixOf` p) acs' in
+    do fillRectangle dpy

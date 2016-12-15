@@ -311,22 +311,25 @@ render = do
 
   return ()
 
+nextKeyEvent :: Display -> X (Maybe (KeyMask, KeySym, String))
+nextKeyEvent d = do
+  io $ do allocaXEvent $ \e -> do
+            maskEvent d (exposureMask .|. keyPressMask) e
+            ev <- getEvent e
+            if ev_event_type ev == keyPress then
+              do x <- lookupString $ asKeyEvent e
+                 return $ case x of (Just ks, str) -> Just (ev_state ev, ks, str)
+                                    _ -> Nothing
+              else return $ if ev_event_type ev == expose &&
+                               ev_count ev == 0 then Just (0, xK_VoidSymbol, "")
+                            else Nothing
+
 handleKeys :: Prompt ()
 handleKeys = do
   (d, h) <- gets (_display &&& handler)
   XConf { XMonad.config = XConfig {modMask = mod} } <- lift ask
 
-  -- something weird happening to my events :(
-  keym <- io $ do allocaXEvent $ \e -> do
-                    maskEvent d (exposureMask .|. keyPressMask) e
-                    ev <- getEvent e
-                    if ev_event_type ev == keyPress then
-                      do x <- lookupString $ asKeyEvent e
-                         return $ case x of (Just ks, str) -> Just (ev_state ev, ks, str)
-                                            _ -> Nothing
-                      else return $ if ev_event_type ev == expose &&
-                                       ev_count ev == 0 then Just (0, xK_VoidSymbol, "")
-                                    else Nothing
+  keym <- lift $ nextKeyEvent d
 
   whenJust keym $ keyAction mod h
   when (isJust keym) render
