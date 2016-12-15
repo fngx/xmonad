@@ -15,6 +15,9 @@ import XMonad.Actions.CopyWindow (copyToAll)
 
 import qualified Debug.Trace as D
 
+import Local.Windows (recentWindows)
+import Data.Maybe (listToMaybe)
+
 setBorder c w = withDisplay $ \d -> io $ do
   g <- initColor d c
   whenJust g $ \g' -> setWindowBorder d w g'
@@ -34,23 +37,31 @@ setBorderHook =
   let twoOrMore :: [a] -> Bool
       twoOrMore (_:(_:_)) = True
       twoOrMore _ = False in
-  withFocused $ \w -> do
-  us <- fmap (not . null) readUrgents
+    do us <- fmap (not . null) readUrgents
+       withFocused $ \w -> do
 --  rect <- getWindowRect w
 --  scr <- gets $ screenRect . W.screenDetail . W.current . windowset
-  others <- gets $ twoOrMore . W.integrate' . W.stack . W.workspace . W.current . windowset
+         others <- gets $ twoOrMore . W.integrate' . W.stack . W.workspace . W.current . windowset
   -- this is no good as scr and rect are not right
   -- what I want is to know if there are other windows that are invisible?
 
-  if us then setBorder Local.Theme.hasUrgentBorderColor w
-    else if (not others) then setBorder Local.Theme.singletonBorderColor w
-    else return ()
+         if us then setBorder Local.Theme.hasUrgentBorderColor w
+           else if (not others) then setBorder Local.Theme.singletonBorderColor w
+           else return ()
+
+       let mc c mw = whenJust mw (setBorder c)
+       when (not us) $
+         (drop 1 <$> recentWindows) >>=
+         \ws -> do mc Local.Theme.normalBorderColor (listToMaybe $ drop 1 ws)
+                   mc Local.Theme.otherWindow (listToMaybe ws)
+
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
                                  , remindWhen = Every 120 }
                    $ c { manageHook = (manageHook c) <+> windowRules
-                       , logHook = (logHook c) >> setBorderHook }
+                       , logHook = (logHook c) >> setBorderHook
+                       }
 
 windowRules = composeAll
   [ isDialog --> doFloat

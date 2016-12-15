@@ -31,18 +31,12 @@ wmii s t = G.group inner outer
         column = Row.row Row.V
         tabs = tabbed s t
 
-layout = showWName' SWNC
-         { swn_font = "xft:Liberation Sans-24"
-         , swn_fade = 2
-         , swn_bgcolor = Theme.secondaryColor
-         , swn_color = Theme.secondaryText
-         }
-         $
-         trackFloating $
+layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
          Mag.magnifierOff $
-         (Patch $ wmii shrinkText Theme.decorations)
+         Patch $
+         wmii shrinkText Theme.decorations
 
 layoutKeys =
   [ ("M-n", alt (focusZ False) W.focusDown)

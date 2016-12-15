@@ -192,7 +192,7 @@ passwordPrompt =
 
 promptKeys = [ ("M-x", runPrompt "M-x")
              , ("M-<Space>", windowPrompt "M-<Space>")
-             , ("M-w", workspacePrompt "M-b")
-             , ("M-S-w", withFocused (shiftPrompt "M-b"))
+             , ("M-w", workspacePrompt "M-w")
+             , ("M-S-w", withFocused (shiftPrompt "M-w"))
              , ("M-a p", passwordPrompt)
              ]

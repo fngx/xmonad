@@ -1,6 +1,6 @@
  {-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
 
-module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow) where
+module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow, lastFocus) where
 
 import Control.Monad
 import Data.List
@@ -12,7 +12,6 @@ import XMonad.Hooks.UrgencyHook
 import XMonad.Util.NamedWindows (getName, unName, NamedWindow)
 import qualified Local.Theme as Theme
 import qualified XMonad.StackSet as W
---import XMonad.Actions.GroupNavigation
 import qualified XMonad.Util.ExtensibleState as XS
 import Data.Time.Clock.POSIX (getPOSIXTime, POSIXTime)
 import Data.Ratio
@@ -22,31 +21,39 @@ import qualified Debug.Trace as D
 timeInSeconds :: IO Integer
 timeInSeconds = round <$> getPOSIXTime
 
-data RecentWindows = RW [(Integer, Window)]
+type FTime = Integer
+
+data RecentWindows = RW { _lastFocus :: FTime, _lastWindow :: Window, _history :: [Window] }
   deriving (Typeable, Read, Show)
 
 instance ExtensionClass RecentWindows where
-  initialValue = RW []
+  initialValue = RW 0 0 []
   extensionType = PersistentExtension
 
-debounce :: (Integer, Window) -> [(Integer, Window)] -> [(Integer, Window)]
-debounce a [] = [a]
-debounce (t, w) r@((t1, w1):tws)
-  | w == w1 = (t, w):tws
-  | t == t1 = (t, w):tws
-  | otherwise = nubBy (\a b -> snd a == snd b) $ (t, w):r
+updateFocus :: FTime -> Window -> RecentWindows -> RecentWindows
+updateFocus t w r@(RW {_lastFocus = t1, _lastWindow = w1, _history = h})
+  | w == w1 = r { _lastFocus = t }
+  | t == t1 && w `elem` h = r { _lastFocus = t1, _lastWindow = w }
+  | t == t1 = r { _lastFocus = t1, _lastWindow = w, _history = w1:h }
+  | otherwise = r { _lastFocus = t1, _lastWindow = w, _history = nub $ w1:h }
+
+cleanup :: [Window] -> RecentWindows -> RecentWindows
+cleanup ws r@(RW {_history = h}) = let good = flip elem ws in r { _history = filter good h }
 
 recentWindows :: X [Window]
 recentWindows = do
-  RW hist <- XS.get
-  -- we need to make sure that dead windows don't go in the list
+  (RW {_lastWindow = w, _history = h}) <- XS.get
   all <- (fmap W.allWindows (gets windowset))
-  return $ nub $ (map snd hist) ++ all
+  let clean = filter (flip elem all)
+  return $ nub $ (clean $ w:(delete w h))++all
 
 lastFocus = do
-  RW hist <- XS.get
-  return $ case hist of
-             _:((_, w):_) -> Just w
+  rws' <- recentWindows
+  all <- (fmap W.allWindows (gets windowset))
+  let clean = filter (flip elem all)
+      rws = clean rws'
+  return $ case rws of
+             (h:t) -> listToMaybe $ delete h t
              _ -> Nothing
 
 greedyFocusWindow w s | Just w == W.peek s = s
@@ -57,7 +64,7 @@ greedyFocusWindow w s | Just w == W.peek s = s
 windowKeys = [ ("M-o", do
                    us <- readUrgents
                    l <- lastFocus
-                   if null us then whenJust l $ (\l -> windows (greedyFocusWindow l))
+                   if null us then whenJust l $ (windows . W.focusWindow)
                    else focusUrgent
                    warp)
              , ("M-k", kill)
@@ -67,14 +74,12 @@ addHistory c = c { logHook = updateHistory >> (logHook c) }
 
 updateHistory :: X ()
 updateHistory = do
-  RW hist <- XS.get
   all <- (fmap W.allWindows (gets windowset))
-  let clean = filter ((flip elem all) . snd)
   now <- io timeInSeconds
   focus <- gets (W.peek . windowset)
-  whenJust focus $ \f'->
-    let !newState = debounce (now, f') hist in
-      XS.put $ RW $ clean $ newState
+
+  whenJust focus $ \focus -> XS.modify (updateFocus now focus)
+  XS.modify (cleanup all)
 
 -- it would be nice to have my own history hook which somehow ignores the bogus focus events
 -- produced by X.L.Groups

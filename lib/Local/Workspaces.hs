@@ -15,6 +15,8 @@ workspaceKeys = [ ("M-d M-d", swapNextScreen >> warp)
                 , ("M-d M-f", nextScreen >> warp)
                 ]
 warp :: X ()
-warp = do sid <- gets (W.screen . W.current . windowset)
-          warpToScreen sid 0.1 0.1
-          warpToWindow 0.1 0.1
+warp = do mf <- gets (W.peek . windowset)
+          case mf of
+            (Just _) -> warpToWindow 0.1 0.1
+            _ -> do sid <- gets (W.screen . W.current . windowset)
+                    warpToScreen sid 0.1 0.1

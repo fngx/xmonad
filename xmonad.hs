@@ -17,6 +17,8 @@ import XMonad.Hooks.EwmhDesktops (ewmh)
 import qualified XMonad.Actions.FlexibleResize as Flex
 import qualified XMonad.Actions.ConstrainedResize as CR
 
+import Control.Concurrent (threadDelay)
+
 main = xmonad $
   ewmh $
   addManageRules $
@@ -32,6 +34,7 @@ conf = def
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
+--  , logHook = io (threadDelay 500000)
   }
   `additionalKeysP` keys
   `additionalMouseBindings`
