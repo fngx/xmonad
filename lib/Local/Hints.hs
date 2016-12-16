@@ -115,7 +115,7 @@ runKeyTree pfx kt = do
         let prefixs = intercalate " " $ map showKey prefix
         case kt of
           Leaf n a -> do render prefixs (n, "green") "#fff"
-                         io $ threadDelay 400000
+                         io $ threadDelay 100000
                          a
           Sub m -> do let nexts = show kt
                       render prefixs (nexts, "#999") "#999"
