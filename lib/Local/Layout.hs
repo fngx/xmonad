@@ -24,6 +24,7 @@ import XMonad.Actions.MessageFeedback
 import qualified XMonad.Layout.Magnifier as Mag
 import Control.Monad (unless, when)
 import qualified Local.Row as Row
+import XMonad.Layout.Maximize as Max
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
@@ -34,40 +35,41 @@ wmii s t = G.group inner outer
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         Mag.magnifierOff $
+         Max.maximize $
          Patch $
-         wmii shrinkText Theme.decorations
+         (wmii shrinkText Theme.decorations)
 
 layoutKeys =
-  [ ("M-n", alt (focusZ False) W.focusDown)
-  , ("M-p", alt (focusZ True) W.focusUp)
+  [ ("M-n", ("down", alt (focusZ False) W.focusDown))
+  , ("M-p", ("up", alt (focusZ True) W.focusUp))
 
-  , ("M-S-n", alt (swapZ False) W.swapDown)
-  , ("M-S-p", alt (swapZ True) W.swapUp)
+  , ("M-S-n", ("swap down", alt (swapZ False) W.swapDown))
+  , ("M-S-p", ("swap up", alt (swapZ True) W.swapUp))
 
-  , ("M-M1-n", alt (G.swapGroupDown) W.swapDown)
-  , ("M-M1-p", alt (G.swapGroupUp) W.swapUp)
+  , ("M-M1-n", ("swap group right", alt (G.swapGroupDown) W.swapDown))
+  , ("M-M1-p", ("swap group left", alt (G.swapGroupUp) W.swapUp))
 
-  , ("M-<Tab>", alt (G.focusGroupDown) W.focusDown)
-  , ("M-S-<Tab>", alt (G.focusGroupUp) W.focusUp)
+  , ("M-<Tab>", ("group left", alt (G.focusGroupDown) W.focusDown))
+  , ("M-S-<Tab>", ("group right", alt (G.focusGroupUp) W.focusUp))
 
-  , ("M-C-p", H.moveToGroupUp False)
-  , ("M-C-n", H.moveToGroupDown False)
+  , ("M-C-p", ("move left", H.moveToGroupUp False))
+  , ("M-C-n", ("move right", H.moveToGroupDown False))
 
-  , ("M--", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Grow :: Row.Msg Int))
-  , ("M-=", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Shrink :: Row.Msg Int))
-  , ("M-S--", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window))
-  , ("M-S-=", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Shrink :: Row.Msg Window))
-  , ("M-'", do sendMessage $ G.ToAll $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
-               sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Equalize :: Row.Msg Int))
+  , ("M--", ("shrink H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Grow :: Row.Msg Int)))
+  , ("M-=", ("grow H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Shrink :: Row.Msg Int)))
+  , ("M-S--", ("shrink V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window)))
+  , ("M-S-=", ("grow V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Shrink :: Row.Msg Window)))
+  , ("M-'", ("reset", do sendMessage $ G.ToAll $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
+                         sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Equalize :: Row.Msg Int)))
+  , ("M-s", ("col right", H.moveToNewGroupDown))
+  , ("M-S-s", ("col left", H.moveToNewGroupUp))
+  , ("M-v", ("split col", H.splitGroup))
 
-  , ("M-s", H.moveToNewGroupDown)
-  , ("M-S-s", H.moveToNewGroupUp)
+  , ("M-l", ("next layout", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout))
 
-  , ("M-l", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout)
+  , ("M-f", ("full", sendMessage $ Toggle FULL))
 
-  , ("M-f", sendMessage $ Toggle FULL)
-  , ("M-m", sendMessage Mag.Toggle) -- magnifier
+  , ("M-m", ("max", withFocused (sendMessage . maximizeRestore))) -- magnifier
   ]
 
 -- movement operators

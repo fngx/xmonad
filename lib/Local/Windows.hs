@@ -61,14 +61,15 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o", do
-                   us <- readUrgents
-                   l <- lastFocus
-                   if null us then whenJust l $ (windows . W.focusWindow)
-                   else focusUrgent
-                   warp)
-             , ("M-k", kill)
+windowKeys = [ ("M-o", ("last focus", lastWindow))
+             , ("M-k", ("kill", kill))
              ]
+
+lastWindow = do us <- readUrgents
+                l <- lastFocus
+                if null us then whenJust l $ (windows . W.focusWindow)
+                  else focusUrgent
+                warp
 
 addHistory c = c { logHook = updateHistory >> (logHook c) }
 

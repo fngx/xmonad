@@ -1,41 +1,88 @@
-module Local.Hints () where
+module Local.Hints (hintedKeysP) where
 
+import Data.Bits
+import Control.Monad
 import Data.List
 import qualified Data.Map.Strict as M
 import XMonad hiding (config)
 import qualified XMonad (config)
+import qualified XMonad.StackSet as W
 import XMonad.Util.Font
 import XMonad.Util.Types
 import XMonad.Util.XUtils
-import Local.Prompt (readKey, nextKeyEvent)
+import Local.Prompt (readKey, nextKeyEvent, mkUnmanagedWindow)
+import Data.Maybe (mapMaybe, fromMaybe, fromJust, isJust)
+import Graphics.X11.Xlib.Misc (keysymToString)
+import qualified Debug.Trace as D
+
+import Control.Concurrent (threadDelay)
 
 -- an alternative to normal submaps which displays hints as you type
 
-type KeyBinding = (KeyMask, KeySym)
+type Key = (KeyMask, KeySym)
+data KeyTree = Leaf String (X ()) | Sub (M.Map Key KeyTree)
 
-toKeySequence :: String -> [String]
-toKeySequence = words
+instance Show KeyTree where
+  show (Leaf d _) = d
+  show (Sub m) = intercalate " | " $ map show1 $ M.toList m
+    where show1 (k, a) = (showKey k) ++": "++(show2 a)
+          show2 l@(Leaf _ _) = show l
+          show2 (Sub m) = "{" ++ (intercalate ", " $ map (show2 . snd) $ M.toList m) ++ "}"
 
-toKeyBinding :: String -> KeyBinding
-toKeyBinding = undefined
+emptyKT = Sub M.empty
 
-toBindingSequence :: String -> [KeyBinding]
-toBindingSequence s = map toKeyBinding $ toKeySequence s
-
-hintedKeysP :: conf -> [(String, (String, X ()))] -> conf
+hintedKeysP :: XConfig a -> [(String, (String, X()))] -> XConfig a
 hintedKeysP conf ks =
-  let ks' = map (\(s, a) -> toBindingSequence s, a) ks -- does this need an X
-     -- now we make a map from first key to chains of subsequent keys and actions
-      byFirstKey = M.fromListWith (++) [ (head k), [(tail k, v)] | (k, v) <- bks ]
-     -- now we want to produce bindings for each of the first keys
-  in conf
+  conf
+  { keys = \cnf ->
+             let kt = toKeyTree (modMask cnf) ks
+                 binds = toBindings kt
+             in M.union (M.fromList binds) (keys conf cnf)
+  }
+  where
+    toBindings (Leaf _ _) = []
+    toBindings (Sub m) = flip map (M.toList m) $ \(a, b) -> (a, toBindings1 a b)
+    toBindings1 _ (Leaf _ a) = a
+    toBindings1 p t = runKeyTree p t
 
--- given a series of keys we already pressed, and a bunch of things we could press and what they do
--- handle keys until we get there
-hintedKeyMap :: [KeyBinding] -> [([KeyBinding], (String, X ()))] -> X ()
-hintedKeyMap pfx acs = do
+toKeyTree :: KeyMask -> [(String, (String, X ()))] -> KeyTree
+toKeyTree mask keys = foldl insertKey emptyKT $
+  flip map keys $ \(a, (b, c)) -> (mapMaybe (readKey mask) $ words a, Leaf b c)
+
+insertKey :: KeyTree -> ([Key], KeyTree) -> KeyTree
+insertKey t (keys, subtree)
+  -- if there are no more keys then we just do the action
+  -- and who cares about the input because there are no keys!
+  | null keys = subtree
+  -- if there are keys, we want to update t
+  | otherwise =
+      let (k1:ks) = keys
+          rhs = insertKey emptyKT (ks, subtree)
+          merge Nothing = Just rhs
+          merge (Just t') = Just $ insertKey t' (ks, subtree)
+      in
+      case t of
+        Leaf _ _ -> rhs
+        Sub m -> Sub $ M.alter merge k1 m
+
+-- blaa this is in xlib.misc or something equally stupid
+showKey :: Key -> String
+showKey (masks, sym) =
+  intercalate "-" $ reverse $ (keysymToString sym):
+     [modName | (modName, modMask) <-
+                [ ("M1", mod1Mask) ,
+                  ("M2", mod2Mask) ,
+                  ("M3", mod3Mask) ,
+                  ("M", mod4Mask) ,
+                  ("M5", mod5Mask) ,
+                  ("C", controlMask) ,
+                  ("S", shiftMask) ]
+              , (modMask .&. masks) /= zeroBits ]
+
+runKeyTree :: Key -> KeyTree -> X ()
+runKeyTree pfx kt = do
   -- make a window
-  XConf {display = d, theRoot = rw, XMonad.config} <- ask
+  XConf {display = d, theRoot = rw} <- ask
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
 
   font <- initXMF $ "xft:Monospace-10"
@@ -51,24 +98,41 @@ hintedKeyMap pfx acs = do
   -- event mask for window
   io $ selectInput d win $ exposureMask .|. keyPressMask
 
-  let hintedKeyMap' :: [KeyBinding] -> [([KeyBinding], (String, X()))] -> X ()
-      hintedKeyMap' prefix actions' =
-        let actions = filter (\(p, _) -> pfx `isPrefixOf` p) actions'
-            prefixs = concatMap printBinding prefix
-        in
-        do paintWindow win sw wh 1 "#444" "#888"
-           -- write the prefix we have typed
-           printStringXMF d win font gc "white" "" 1 1 prefixs
-           -- write next keys you could press
+  let y0 = 1 + fst extent
+  let x0 = 2
 
-           -- read the next key and act on it
-           keym <- nextKeyEvent d
-           -- think about key
-           return ()
+  let render :: String -> (String, String) -> String -> X ()
+      render prefix (message, colr) border = do
+        paintWindow win sw wh 1 "#444" border
+        printStringXMF d win font gc "white" "#444" x0 (1 + (fst extent)) prefix
+        plength <- textWidthXMF d font prefix
+        let x1 = fi plength + fi x0
+        printStringXMF d win font gc colr "#444444" (8 + fi x1) y0 message
+        io $ sync d False
 
-  status <- io $ grabKeyboard d w True grabModeAsync grabModeAsync currentTime
+      runKT :: [Key] -> KeyTree -> X ()
+      runKT prefix kt = do
+        let prefixs = intercalate " " $ map showKey prefix
+        case kt of
+          Leaf n a -> do render prefixs (n, "green") "#fff"
+                         io $ threadDelay 400000
+                         a
+          Sub m -> do let nexts = show kt
+                      render prefixs (nexts, "#999") "#999"
+                      keym <- nextKeyEvent d
+                      let handle (km, k, s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
+                          cont = runKT prefix kt
+                          noMatch km k s
+                            | km == controlMask && k == xK_g = return ()
+                            | km == 0 && k == xK_Escape = return ()
+                            | not $ null s = (render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "#f66") "#fff") >> (io $ threadDelay 800000)
+                            | otherwise = cont
+                      maybe cont handle keym
+
+  status <- io $ grabKeyboard d win True grabModeAsync grabModeAsync currentTime
+
   when (status == grabSuccess) $ do
-    hintedKeyMap' pfx acs
+    runKT [pfx] kt
     io $ ungrabKeyboard d currentTime
 
   io $ sync d False
@@ -76,8 +140,3 @@ hintedKeyMap pfx acs = do
   releaseXMF font
   io $ freeGC d gc
   io $ destroyWindow d win
-
-hintedKeyMap' :: XMonadFont -> Window -> [KeyBinding] -> ([KeyBinding], (String, X())) -> X()
-hintedKeyMap' font win pfx acs' =
-  let acs' = filter (\(p, _) -> pfx `isPrefixOf` p) acs' in
-    do fillRectangle dpy
