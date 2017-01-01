@@ -118,7 +118,7 @@ runKeyTree pfx kt = do
                          io $ threadDelay 100000
                          a
           Sub m -> do let nexts = show kt
-                      render prefixs (nexts, "#999") "#999"
+                      render prefixs (nexts, "#ccc") "#999"
                       keym <- nextKeyEvent d
                       let handle (km, k, s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
                           cont = runKT prefix kt

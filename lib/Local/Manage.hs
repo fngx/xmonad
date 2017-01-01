@@ -44,7 +44,7 @@ setBorderHook =
          others <- gets $ twoOrMore . W.integrate' . W.stack . W.workspace . W.current . windowset
   -- this is no good as scr and rect are not right
   -- what I want is to know if there are other windows that are invisible?
-
+  -- set border if low batt?
          if us then setBorder Local.Theme.hasUrgentBorderColor w
            else if (not others) then setBorder Local.Theme.singletonBorderColor w
            else return ()

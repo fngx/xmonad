@@ -2,6 +2,8 @@ module Local.Spawn where
 
 import XMonad
 
+reloadCommand = "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi"
+
 spawnKeys :: [ (String, (String, X ())) ]
 spawnKeys =
   [ ("M-<Return>", ("term", spawn "urxvt"-- "emacsclient -c -n -e '(multi-term-quick-frame)' 2>&1 > /dev/null"
@@ -15,12 +17,11 @@ spawnKeys =
   , ("<XF86AudioMute>", ("mute", spawn "pamixer -t"))
   , ("M-q h", ("hibernate", spawn "systemctl hibernate"))
   , ("M-q s", ("suspend", spawn "systemctl suspend"))
-  , ("M-q M-q", ("reload", spawn "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi"))
+  , ("M-q M-q", ("reload", spawn reloadCommand))
 
   , ("M-a c", ("chrome", spawn "chromium 2>&1 > /dev/null"))
-  -- is st good?
-  , ("M-a t", ("term", spawn "urxvt"-- "st tmux new-session -t main \\; set-option destroy-unattached \\; new-window"
-    ))
+  , ("M-a t", ("term", spawn "urxvt"))
   , ("M-a w", ("web", spawn "conkeror 2>&1 > /dev/null"))
   , ("M-a x", ("clock", spawn "xclock"))
+  , ("M-a m", ("mail check", spawn "notmuch new"))
   ]

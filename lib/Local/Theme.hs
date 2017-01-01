@@ -12,7 +12,7 @@ import XMonad.Layout.Decoration
 
 singletonBorderColor = "magenta"
 
-focusedBorderColor = "orange1"
+focusedBorderColor = "white"
 focusedText = "black"
 
 normalBorderColor = "#111"
@@ -29,8 +29,8 @@ urgentText = "white"
 hasUrgentBorderColor = "yellow"
 
 decorations = def
-  { fontName = "xft:Sans:pixelsize=10:bold"
-  , decoHeight = 14
+  { fontName = "xft:Liberation Mono-7"
+  , decoHeight = 13
 
   , activeBorderColor = focusedBorderColor
   , activeTextColor = focusedText
