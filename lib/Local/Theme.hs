@@ -29,8 +29,8 @@ urgentText = "white"
 hasUrgentBorderColor = "yellow"
 
 decorations = def
-  { fontName = "xft:Liberation Mono-7"
-  , decoHeight = 13
+  { fontName = "xft:Liberation Mono-8"
+  , decoHeight = 14
 
   , activeBorderColor = focusedBorderColor
   , activeTextColor = focusedText
