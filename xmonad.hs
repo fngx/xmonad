@@ -32,12 +32,11 @@ conf = def
   { modMask = mod4Mask
   , terminal = "urxvt"
   , layoutHook = layout
-  , borderWidth = 2
+  , borderWidth = 1
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
   , focusFollowsMouse = False
---  , logHook = io (threadDelay 500000)
   }
   `additionalMouseBindings`
   [((mod4Mask, 3), \w -> focus w >> (Flex.mouseResizeWindow w)),
