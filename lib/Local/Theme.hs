@@ -12,13 +12,13 @@ import XMonad.Layout.Decoration
 
 singletonBorderColor = "lightgreen"
 
-focusedBorderColor = "deepskyblue"
+focusedBorderColor = "cyan"
 focusedText = "black"
 
 normalBorderColor = "#111"
 normalText = "white"
 
-otherWindow = "peru"
+otherWindow = "maroon1"
 
 secondaryColor = "#4477bb"
 secondaryText = "white"
