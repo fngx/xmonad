@@ -17,7 +17,7 @@ import Data.Char (toLower)
 import XMonad.Actions.DynamicWorkspaces
 import Control.Monad (liftM2)
 import XMonad.Actions.WithAll (killAll)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Local.Util
 import qualified Data.Map.Strict as M
 import System.Directory (getHomeDirectory)
@@ -139,15 +139,19 @@ shiftPrompt key w =
 workspacePrompt key =
   let generate :: String -> X [(String, String, [(String, X ())])]
       generate s = do ws <- gets windowset
-                      let hid = map W.tag $ W.hidden ws
+                      let (hf, he) = partition (isJust . W.stack) $ W.hidden ws
+                          hide = map W.tag he
+                          hidf = map W.tag hf
+
                           vis = map (W.tag . W.workspace) $ W.visible ws
                           cur = W.tag $ W.workspace $ W.current ws
-                          tags = cur:(vis ++ hid)
+                          tags = cur:(vis ++ hidf ++ hide)
                           existing = map (actions (length tags)) $ filter (isInfixOf s) tags
 
                           colr t
                             | t == cur = ""
                             | t `elem` vis = "#00ff00"
+                            | t `elem` hide = "grey"
                             | otherwise = "#ffff00"
 
                           existing' = map (\(l, _, a) -> (l, colr l, a)) existing

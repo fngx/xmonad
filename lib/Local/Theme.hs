@@ -10,20 +10,20 @@ module Local.Theme (decorations,
 
 import XMonad.Layout.Decoration
 
-singletonBorderColor = "magenta"
+singletonBorderColor = "lightgreen"
 
-focusedBorderColor = "white"
+focusedBorderColor = "deepskyblue"
 focusedText = "black"
 
 normalBorderColor = "#111"
 normalText = "white"
 
-otherWindow = "darkcyan"
+otherWindow = "peru"
 
 secondaryColor = "#4477bb"
 secondaryText = "white"
 
-urgentBorderColor = "red"
+urgentBorderColor = "darkred"
 urgentText = "white"
 
 hasUrgentBorderColor = "yellow"

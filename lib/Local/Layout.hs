@@ -21,10 +21,9 @@ import XMonad.Layout
 import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
 import XMonad.Actions.MessageFeedback
-import qualified XMonad.Layout.Magnifier as Mag
 import Control.Monad (unless, when)
 import qualified Local.Row as Row
-import XMonad.Layout.Maximize as Max
+import qualified XMonad.Layout.Maximize as Max
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
@@ -55,10 +54,10 @@ layoutKeys =
   , ("M-C-p", ("move left", H.moveToGroupUp False))
   , ("M-C-n", ("move right", H.moveToGroupDown False))
 
-  , ("M--", ("shrink H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Grow :: Row.Msg Int)))
-  , ("M-=", ("grow H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Shrink :: Row.Msg Int)))
-  , ("M-S--", ("shrink V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window)))
-  , ("M-S-=", ("grow V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Shrink :: Row.Msg Window)))
+  , ("M--", ("shrink H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Shrink :: Row.Msg Int)))
+  , ("M-=", ("grow H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Grow :: Row.Msg Int)))
+  , ("M-S--", ("shrink V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Shrink :: Row.Msg Window)))
+  , ("M-S-=", ("grow V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window)))
   , ("M-'", ("reset", do sendMessage $ G.ToAll $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
                          sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Equalize :: Row.Msg Int)))
   , ("M-s", ("col right", H.moveToNewGroupDown))
@@ -69,7 +68,15 @@ layoutKeys =
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
 
-  , ("M-m", ("max", withFocused (sendMessage . maximizeRestore))) -- magnifier
+  , ("M-m", ("mag", withFocused (sendMessage . Max.maximizeRestore))) -- magnifier
+
+  , ("M-i M-o", ("flip outer", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Flip :: Row.Msg Int)))
+  , ("M-i M-i", ("flip inner", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Flip :: Row.Msg Window)))
+  , ("M-i r", ("rows in cols", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Int)
+                                  sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Window)))
+  , ("M-i c", ("cols in rows", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Int)
+                                  sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Window)))
+
   ]
 
 -- movement operators

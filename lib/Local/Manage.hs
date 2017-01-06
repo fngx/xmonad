@@ -12,7 +12,7 @@ import XMonad.Hooks.ManageHelpers
 import XMonad.Util.NamedWindows (getName)
 import qualified XMonad.StackSet as W
 import XMonad.Actions.CopyWindow (copyToAll)
-
+import qualified Data.Map as M
 import qualified Debug.Trace as D
 
 import Local.Windows (recentWindows)
@@ -36,12 +36,16 @@ setBorder c w = withDisplay $ \d -> io $ do
 setBorderHook =
   let twoOrMore :: [a] -> Bool
       twoOrMore (_:(_:_)) = True
-      twoOrMore _ = False in
+      twoOrMore _ = False
+      tiledWindows st =
+        let isTiled x = not $ M.member x $ W.floating st in
+          filter isTiled $ W.integrate' $ W.stack $ W.workspace $ W.current st
+  in
     do us <- fmap (not . null) readUrgents
        withFocused $ \w -> do
 --  rect <- getWindowRect w
 --  scr <- gets $ screenRect . W.screenDetail . W.current . windowset
-         others <- gets $ twoOrMore . W.integrate' . W.stack . W.workspace . W.current . windowset
+         others <- gets $ twoOrMore . tiledWindows . windowset
   -- this is no good as scr and rect are not right
   -- what I want is to know if there are other windows that are invisible?
   -- set border if low batt?

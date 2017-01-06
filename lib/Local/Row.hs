@@ -18,6 +18,10 @@ import qualified XMonad.Util.ExtensibleState as XS
 
 data Axis = V | H deriving (Read, Show, Eq)
 
+flipax :: Axis -> Axis
+flipax H = V
+flipax V = H
+
 -- todo: maybe change groups to give access to the IDs since I need Ord rather than Eq
 -- or I could stop using Map and use [()] instead.
 data OrderLayout a = OrderLayout (Pile Int) deriving (Read, Show)
@@ -53,7 +57,9 @@ data Pile a = Pile
 data Msg a = Drag (Handle a) Position Rational |
              Grow |
              Shrink |
-             Equalize
+             Equalize |
+             Flip |
+             SetAxis Axis
   deriving (Read, Show, Typeable)
 
 instance (Typeable a) => Message (Msg a)
@@ -121,6 +127,8 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
         return $ maybe (Nothing) (\w -> Just $ resz st minSize w) (lastFocus st)
     | (Just (Local.Row.Shrink)) <- fromMessage msg :: Maybe (Msg a) =
         return $ maybe (Nothing) (\w -> Just $ resz st (- minSize) w) (lastFocus st)
+    | (Just Flip) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ st { axis = flipax $ axis st }
+    | (Just (SetAxis a)) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ st { axis = a }
     | (Just e) <- fromMessage msg :: Maybe Event = resize e (handles st) >> return Nothing
     | otherwise = return Nothing
     where equalize st = let sz = sizes st
