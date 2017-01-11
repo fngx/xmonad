@@ -22,16 +22,7 @@ setBorder c w = withDisplay $ \d -> io $ do
   g <- initColor d c
   whenJust g $ \g' -> setWindowBorder d w g'
 
-
--- getWindowRect :: Window -> X Rectangle
--- getWindowRect w = do d <- asks display
---                      bw <- getWindowBorderWidth d w
---                      atts <- io $ getWindowAttributes d w
---                      return $ Rectangle
---                        (fromIntegral $ wa_x atts)
---                        (fromIntegral $ wa_y atts)
---                        (fromIntegral $ bw + wa_width atts)
---                        (fromIntegral $ bw + wa_height atts)
+setBorderWidth b w = withDisplay $ \d -> io $ do setWindowBorderWidth d w b
 
 setBorderHook =
   let twoOrMore :: [a] -> Bool
@@ -43,22 +34,15 @@ setBorderHook =
   in
     do us <- fmap (not . null) readUrgents
        withFocused $ \w -> do
---  rect <- getWindowRect w
---  scr <- gets $ screenRect . W.screenDetail . W.current . windowset
-         others <- gets $ twoOrMore . tiledWindows . windowset
-  -- this is no good as scr and rect are not right
-  -- what I want is to know if there are other windows that are invisible?
-  -- set border if low batt?
-         if us then setBorder Local.Theme.hasUrgentBorderColor w
-           else if (not others) then setBorder Local.Theme.singletonBorderColor w
-           else return ()
+         -- others <- gets $ twoOrMore . tiledWindows . windowset
+         -- setBorderWidth (if not others then 1 else 3) w
+         when us $ setBorder Local.Theme.hasUrgentBorderColor w
 
        let mc c mw = whenJust mw (setBorder c)
        when (not us) $
          (drop 1 <$> recentWindows) >>=
          \ws -> do mc Local.Theme.normalBorderColor (listToMaybe $ drop 1 ws)
                    mc Local.Theme.otherWindow (listToMaybe ws)
-
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
@@ -70,7 +54,6 @@ addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
 windowRules = composeAll
   [ isDialog --> doFloat
   , transience'
-  , isFullscreen --> doFullFloat
   , className =? "Xmessage" --> doFloat
   , className =? "XClock" --> doFloat ]
 

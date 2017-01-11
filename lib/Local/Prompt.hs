@@ -155,8 +155,8 @@ readKey m = listToMaybe . parses
                                   _ <- char '-'
                                   return $ indexMod (read [n] - 1)
 
-padding = 8
-spaceBetweenChoice = 16
+padding = 4
+spaceBetweenChoice = 2*padding
 
 select :: Config -> (String -> X [Choice]) -> X ()
 select config generator = do
@@ -304,12 +304,14 @@ render = do
       _ -> do printItem (fi top2) inx0 0 (+) normStr "no match"
               return ()
 
-    whenJust (pages $ pager state) $ \(W.Stack _ l r) -> when (not $ null l && null r) $ printItem (fi top2) rightX 0 (-) normStr "…" >> return ()
+    whenJust (pages $ pager state) $ \(W.Stack _ l r) -> when (not $ null l && null r) $ printItem (fi top2) rightX 0 (-) normStr ellipsis >> return ()
 
     copyArea d p w gc 0 0 wh ht 0 0
     io $ freePixmap d p
 
   return ()
+
+ellipsis = "..." --"…"
 
 nextKeyEvent :: Display -> X (Maybe (KeyMask, KeySym, String))
 nextKeyEvent d = do

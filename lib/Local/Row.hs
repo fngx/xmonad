@@ -95,8 +95,9 @@ destroyAllHandles = do
 minSize = 0.05
 
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
-  description p = show $ axis p
-
+  description p = case axis p of
+                    H -> "||"
+                    V -> "="
   runLayout (W.Workspace _ state ms) screen = do
     deleteHandles state
     (rects, statem) <- maybe (emptyLayout state screen) (doLayout state screen) ms

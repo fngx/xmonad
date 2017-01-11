@@ -1,37 +1,31 @@
 import XMonad hiding ( (|||) )
-
-import qualified Data.Map.Strict as M (empty)
+import Local.Hints
 import Local.Layout
-import Local.Spawn
-import Local.Fullscreen
-import Local.Prompts
-import Local.Workspaces
 import Local.Manage
+import Local.Prompts
 import Local.Randr
 import Local.SloppyFocus
-import Local.Hints
-import qualified Local.Windows as Windows
-
-import qualified Local.Theme as Theme
-
+import Local.Spawn
+import Local.Workspaces
+import Local.XMobar (xmobar)
+import XMonad.Config.Desktop (desktopConfig)
 import XMonad.Util.EZConfig
-import XMonad.Hooks.EwmhDesktops (ewmh)
-import qualified XMonad.Actions.FlexibleResize as Flex
+import qualified Data.Map.Strict as M (empty)
+import qualified Local.Theme as Theme
+import qualified Local.Windows as Windows
 import qualified XMonad.Actions.ConstrainedResize as CR
+import qualified XMonad.Actions.FlexibleResize as Flex
 
+main = xmonad =<< xmobar conf
 
-main = xmonad $
-  ewmh $
-  addManageRules $
-  enableFullscreen $
+conf =
   Windows.addHistory $
   sloppyFocus $
-  conf
-
-conf = def
+  addManageRules $
+  addLayout $
+  desktopConfig
   { modMask = mod4Mask
   , terminal = "urxvt"
-  , layoutHook = layout
   , borderWidth = 1
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor

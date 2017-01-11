@@ -1,5 +1,7 @@
 module Local.Hints (hintedKeysP) where
 
+import Local.Theme (smallFont)
+
 import Data.Bits
 import Control.Monad
 import Data.List
@@ -85,7 +87,7 @@ runKeyTree pfx kt = do
   XConf {display = d, theRoot = rw} <- ask
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
 
-  font <- initXMF $ "xft:Monospace-10"
+  font <- initXMF $ smallFont
   extent <- textExtentsXMF font "ASDKFH"
 
   let wh = (fi $ fst extent) + (fi $ snd extent) + 2

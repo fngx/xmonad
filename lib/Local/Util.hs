@@ -15,7 +15,7 @@ trim n s
     n' = fromIntegral $ ceiling (n % 2)
     start = take n' s
     end = drop (len - n') s
-    elip = " ⋯ "
+    elip = " .. "--" ⋯ "
 
 wclass :: Window -> X String
 wclass w = fmap ren (runQuery className w)
@@ -24,7 +24,6 @@ wclass w = fmap ren (runQuery className w)
           | n == "Emacs" = "E"
           | n == "URxvt" = "T"
           | otherwise = n
-
 
 getPointer :: Window -> X (Position, Position)
 getPointer window = do d <- asks display

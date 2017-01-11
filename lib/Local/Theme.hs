@@ -3,32 +3,32 @@ module Local.Theme (decorations,
                     Local.Theme.urgentBorderColor, urgentText,
                     hasUrgentBorderColor,
                     normalBorderColor, normalText,
-                    singletonBorderColor,
-                    otherWindow
+                    otherWindow, smallFont
                    ) where
 
 import XMonad.Layout.Decoration
 
-focusedBorderColor   = "orange"
-singletonBorderColor = "white"
-normalBorderColor    = "grey30"
-otherWindow          = "deepskyblue"
-hasUrgentBorderColor = "magenta1"
-urgentBorderColor    = "darkred"
+focusedBorderColor   = "white"
+normalBorderColor    = "black"
+otherWindow          = "grey50"
+hasUrgentBorderColor = "darkred"
+urgentBorderColor    = "red"
 
 focusedText = "black"
 normalText = "white"
 urgentText = "white"
 
+smallFont = "xft:Terminus-9" --"xft:Liberation Mono-8"
+
 decorations = def
-  { fontName = "xft:Liberation Mono-8"
+  { fontName = smallFont
   , decoHeight = 14
 
   , activeBorderColor = focusedBorderColor
   , activeTextColor = focusedText
   , activeColor = focusedBorderColor
 
-  , inactiveBorderColor = "#aaa"
+  , inactiveBorderColor = otherWindow
   , inactiveTextColor = normalText
   , inactiveColor = normalBorderColor
 

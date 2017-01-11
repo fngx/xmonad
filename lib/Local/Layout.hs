@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, Rank2Types #-}
 
-module Local.Layout (layout, layoutKeys) where
+module Local.Layout (addLayout, layoutKeys, preserveFocusOrder) where
 
+import Local.Windows (recentWindows)
 import qualified Local.Theme as Theme
 
 import XMonad
@@ -24,19 +25,26 @@ import XMonad.Actions.MessageFeedback
 import Control.Monad (unless, when)
 import qualified Local.Row as Row
 import qualified XMonad.Layout.Maximize as Max
+import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
+import XMonad.Layout.Renamed
+import Data.List (find)
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
         outer = Row.orderRow Row.H
         column = Row.row Row.V
-        tabs = tabbed s t
+        tabs = renamed [Replace "T"] $ tabbed s t
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
+         renamed [CutWordsLeft 1] $
          Max.maximize $
          Patch $
          (wmii shrinkText Theme.decorations)
+
+addLayout c =
+  c { layoutHook = layout }
 
 layoutKeys =
   [ ("M-n", ("down", alt (focusZ False) W.focusDown))
@@ -60,9 +68,9 @@ layoutKeys =
   , ("M-S-=", ("grow V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window)))
   , ("M-'", ("reset", do sendMessage $ G.ToAll $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
                          sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Equalize :: Row.Msg Int)))
-  , ("M-s", ("col right", H.moveToNewGroupDown))
-  , ("M-S-s", ("col left", H.moveToNewGroupUp))
-  , ("M-v", ("split col", H.splitGroup))
+  , ("M-s", ("col right", H.moveToNewGroupDown >> preserveFocusOrder))
+  , ("M-S-s", ("col left", H.moveToNewGroupUp >> preserveFocusOrder))
+  , ("M-v", ("split col", H.splitGroup >> preserveFocusOrder))
 
   , ("M-l", ("next layout", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout))
 
@@ -70,13 +78,23 @@ layoutKeys =
 
   , ("M-m", ("mag", withFocused (sendMessage . Max.maximizeRestore))) -- magnifier
 
-  , ("M-i M-o", ("flip outer", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Flip :: Row.Msg Int)))
-  , ("M-i M-i", ("flip inner", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Flip :: Row.Msg Window)))
-  , ("M-i r", ("rows in cols", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Int)
-                                  sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Window)))
-  , ("M-i c", ("cols in rows", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Int)
-                                  sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Window)))
+  , ("M-c M-c", ("rows in cols", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Int)
+                                    sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Window)))
+  , ("M-c M-r", ("cols in rows", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Int)
+                                    sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Window)))
 
+  , ("M-c c", ("flip cols", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Flip :: Row.Msg Int)))
+  , ("M-c r", ("flip rows", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Flip :: Row.Msg Window)))
+
+  -- just incase I want a dock?
+  -- could show me the ws I am on and window title and whether fullscreen?
+  -- and the date and battery and VPN
+
+  , ("M-b", ("dock", (broadcastMessage ToggleStruts) >> refresh))
+  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))
+  , ("M-M1-b", ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
+
+  , ("M-k", ("kill", kill >> preserveFocusOrder))
   ]
 
 -- movement operators
@@ -105,7 +123,6 @@ focusZ b l gs = let f = getFocusZ gs in
     moveGroup = if b then G.focusGroupUp else G.focusGroupDown
     moveInGroup = if b then G.focusUp else G.focusDown
 
-
 swapZ :: Bool -> G.ModifySpec
 swapZ b l gs = let f = getFocusZ gs in
   case f of
@@ -124,6 +141,19 @@ swapZ b l gs = let f = getFocusZ gs in
 
 onFocused f _ gs = onFocusedZ (G.onZipper f) gs
 
+focusWithOrder :: [Window] -> G.ModifySpec
+focusWithOrder rws l gs = mapZ (G.onZipper . refocus) gs
+  where
+    refocus True st = st
+    refocus False st =
+      let (items, focus) = toIndex st
+          mostRecent = find (flip elem items) rws in
+        maybe st (\f -> until ((==) (Just f) . getFocusZ) focusDownZ $ focusMasterZ st) mostRecent
+
+preserveFocusOrder :: X ()
+preserveFocusOrder = do
+  rws <- recentWindows
+  sendMessage $ (G.Modify $ focusWithOrder rws)
 -- begin hack for tabs
 
 data Patch l a = Patch (l a) deriving (Show, Read)

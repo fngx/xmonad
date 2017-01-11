@@ -13,45 +13,39 @@ import XMonad.Util.NamedWindows (getName, unName, NamedWindow)
 import qualified Local.Theme as Theme
 import qualified XMonad.StackSet as W
 import qualified XMonad.Util.ExtensibleState as XS
-import Data.Time.Clock.POSIX (getPOSIXTime, POSIXTime)
-import Data.Ratio
+import Data.Sequence as Seq
+import qualified Data.Set as Set
+import Data.Foldable
+import XMonad.Util.NamedWindows (getName)
 
-import qualified Debug.Trace as D
+import XMonad.Util.XUtils
+import XMonad.Util.Font
 
-timeInSeconds :: IO Integer
-timeInSeconds = round <$> getPOSIXTime
-
-type FTime = Integer
-
-data RecentWindows = RW { _lastFocus :: FTime, _lastWindow :: Window, _history :: [Window] }
+data WindowHistory = WH (Maybe Window) (Seq Window)
   deriving (Typeable, Read, Show)
 
-instance ExtensionClass RecentWindows where
-  initialValue = RW 0 0 []
+instance ExtensionClass WindowHistory where
+  initialValue = WH Nothing empty
   extensionType = PersistentExtension
 
-updateFocus :: FTime -> Window -> RecentWindows -> RecentWindows
-updateFocus t w r@(RW {_lastFocus = t1, _lastWindow = w1, _history = h})
-  | w == w1 = r { _lastFocus = t }
-  | t == t1 && w `elem` h = r { _lastFocus = t1, _lastWindow = w }
-  | t == t1 = r { _lastFocus = t1, _lastWindow = w, _history = w1:h }
-  | otherwise = r { _lastFocus = t1, _lastWindow = w, _history = nub $ w1:h }
-
-cleanup :: [Window] -> RecentWindows -> RecentWindows
-cleanup ws r@(RW {_history = h}) = let good = flip elem ws in r { _history = filter good h }
+updateHistory :: WindowHistory -> X WindowHistory
+updateHistory (WH oldcur oldhist) = withWindowSet $ \ss -> do
+  let newcur   = W.peek ss
+      wins     = Set.fromList $ W.allWindows ss
+      newhist  = Seq.filter (flip Set.member wins) (ins oldcur oldhist)
+  return $ WH newcur (del newcur newhist)
+  where
+    ins x xs = maybe xs (<| xs) x
+    del x xs = maybe xs (\x' -> Seq.filter (/= x') xs) x
 
 recentWindows :: X [Window]
 recentWindows = do
-  (RW {_lastWindow = w, _history = h}) <- XS.get
-  all <- (fmap W.allWindows (gets windowset))
-  let clean = filter (flip elem all)
-  return $ nub $ (clean $ w:(delete w h))++all
+  hook
+  (WH cur hist) <- XS.get
+  return $ (maybeToList cur) ++ (toList hist)
 
 lastFocus = do
-  rws' <- recentWindows
-  all <- (fmap W.allWindows (gets windowset))
-  let clean = filter (flip elem all)
-      rws = clean rws'
+  rws <- recentWindows
   return $ case rws of
              (h:t) -> listToMaybe $ delete h t
              _ -> Nothing
@@ -61,26 +55,60 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o", ("last focus", lastWindow))
-             , ("M-k", ("kill", kill))
-             ]
+windowKeys = [ ("M-o", ("last focus", oldWindow 1))
+             , ("M-S-o", ("second last focus", oldWindow 2))
+             ] ++ [("M-" ++ show n, ("focus " ++ show n, oldWindow n)) | n <- [1 .. 9]]
 
-lastWindow = do us <- readUrgents
-                l <- lastFocus
-                if null us then whenJust l $ (windows . W.focusWindow)
-                  else focusUrgent
-                warp
+(!!?) :: [a] -> Int -> Maybe a
+(!!?) [] _ = Nothing
+(!!?) (x:_) 0 = Just $ x
+(!!?) (_:xs) n = xs !!? (n - 1)
 
-addHistory c = c { logHook = updateHistory >> (logHook c) }
+oldWindow n = do us <- readUrgents
+                 if Data.List.null us then
+                   do rws <- recentWindows
+                      whenJust (rws !!? n) (windows . W.focusWindow)
+                   else focusUrgent
+                 warp
 
-updateHistory :: X ()
-updateHistory = do
-  all <- (fmap W.allWindows (gets windowset))
-  now <- io timeInSeconds
-  focus <- gets (W.peek . windowset)
+addHistory c = c { logHook = hook >> (logHook c) }
 
-  whenJust focus $ \focus -> XS.modify (updateFocus now focus)
-  XS.modify (cleanup all)
+hook :: X ()
+hook = XS.get >>= updateHistory >>= XS.put
 
--- it would be nice to have my own history hook which somehow ignores the bogus focus events
--- produced by X.L.Groups
+jump :: X ()
+jump = withWindowSet $ \ss ->
+  let visible' :: [Window]
+      visible' = concatMap (W.integrate' . W.stack . W.workspace) $ ((W.current ss):(W.visible ss))
+      keys' = [ "h", "j", "k", "l", "a", "s", "d", "f", "q", "w", "e", "r", "z", "x", "c", "v", "b"]
+      (keys, visible) = unzip $ Data.List.zip keys' visible'
+  in
+    do rects <- mapM getWindowRect visible
+       names <- mapM (fmap show . getName) visible :: X [String]
+       font <- initXMF "xft:Monospace-16"
+
+       let labels = Data.List.zipWith (\x y -> x ++ ": " ++ y) keys names
+
+       d <- asks display
+       widths <- mapM (textWidthXMF d font) labels
+
+       -- render all the windows
+       -- grab keys and read one key
+       -- delete all the windows
+
+       releaseXMF font
+
+  -- get their rectangles and names
+  -- make rectangles to display labels in
+  -- bind keys
+  -- etc.
+
+getWindowRect :: Window -> X Rectangle
+getWindowRect w = do d <- asks display
+                     atts <- io $ getWindowAttributes d w
+                     let bw = wa_border_width atts
+                     return $ Rectangle
+                       (fromIntegral $ wa_x atts)
+                       (fromIntegral $ wa_y atts)
+                       (fromIntegral $ bw + wa_width atts)
+                       (fromIntegral $ bw + wa_height atts)
