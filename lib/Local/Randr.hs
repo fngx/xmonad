@@ -5,6 +5,7 @@ import           Control.Applicative                 ((<$>),(<|>))
 import           Control.Monad                       (void)
 import           Control.Monad.IO.Class              (MonadIO)
 import qualified Data.List                     as List
+import Data.List ( (\\) )
 import qualified Text.ParserCombinators.Parsec as P
 import qualified Text.ParserCombinators.Parsec.Token as T
 import           Text.ParserCombinators.Parsec.Char  (alphaNum)
@@ -26,7 +27,16 @@ import           Text.ParserCombinators.Parsec       (Parser
                                                      )
 import           XMonad.Util.Run                     (runProcessWithInput, safeSpawn)
 import Data.Maybe
+import System.IO
+import Control.Exception (catch)
 -- width and height
+
+lidIsClosed :: IO Bool
+lidIsClosed = catch readState err
+  where readState :: IO Bool
+        readState = ((== "closed") . last . words) <$> readFile "/proc/acpi/button/lid/LID/state"
+        err :: IOError -> IO Bool
+        err _ = return False
 
 runXRandR :: MonadIO m => m String
 runXRandR = runProcessWithInput "xrandr" [] ""
@@ -112,8 +122,10 @@ type Layout = [String]
 updateLayout :: ([Display] -> Layout) -> X ()
 updateLayout lf = do
   co <- runXRandR
+  lidClosed <- io $ lidIsClosed
   case parseXRandR co of
-    (Right ds) -> applyLayout ds $ lf ds
+    (Right ds) -> let layout = (lf ds) \\ (if lidClosed then ["LVDS1"] else []) in
+                    applyLayout ds $ layout
     other -> io $ putStrLn $ show other
 
 preferredSize :: Display -> (Int, Int)
@@ -145,8 +157,8 @@ applyLayout ds l =
         safeSpawn "xrandr" command
 
 randrKeys =
-  [ ("M-q d d", ("randr enable", updateLayout enableConnected))
-  , ("M-q d r", ("randr reverse", updateLayout $ reverseExisting))
+  [ ("M-q d d", ("randr enable",  updateLayout enableConnected))
+  , ("M-q d r", ("randr reverse", updateLayout reverseExisting))
   ]
 
 -- grammar
