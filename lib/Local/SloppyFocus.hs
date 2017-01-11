@@ -13,7 +13,7 @@ instance ExtensionClass SloppyFocus where
 
 sloppyFocus config =
   config
-  { handleEventHook = (handleEventHook config) >> focusFollow }
+  { handleEventHook = (handleEventHook config) <+> focusFollow }
 
 focusFollow e@(CrossingEvent {ev_window=w, ev_event_type=t})
   | t == enterNotify, ev_mode e == notifyNormal =
