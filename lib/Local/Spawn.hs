@@ -30,4 +30,5 @@ spawnKeys =
   , ("M-a x", ("clock", spawn "xclock"))
   , ("M-a m", ("mail check", spawn "notmuch new"))
   , ("M-a e", emacs)
+  , ("M-a g", ("telegram", spawn "telegram-desktop"))
   ]

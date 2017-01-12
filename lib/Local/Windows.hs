@@ -57,7 +57,7 @@ greedyFocusWindow w s | Just w == W.peek s = s
 
 windowKeys = [ ("M-o", ("last focus", oldWindow 1))
              , ("M-S-o", ("second last focus", oldWindow 2))
-             ] ++ [("M-" ++ show n, ("focus " ++ show n, oldWindow n)) | n <- [1 .. 9]]
+             ]
 
 (!!?) :: [a] -> Int -> Maybe a
 (!!?) [] _ = Nothing

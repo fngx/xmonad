@@ -28,6 +28,8 @@ import qualified XMonad.Layout.Maximize as Max
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.Renamed
 import Data.List (find)
+import Data.Monoid
+import System.IO
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
@@ -44,7 +46,9 @@ layout = trackFloating $
          (wmii shrinkText Theme.decorations)
 
 addLayout c =
-  c { layoutHook = layout }
+  c { layoutHook = layout
+    -- , handleEventHook = (handleEventHook c) <+> deleteRefocusEventHook
+    }
 
 layoutKeys =
   [ ("M-n", ("down", alt (focusZ False) W.focusDown))
@@ -154,7 +158,15 @@ preserveFocusOrder :: X ()
 preserveFocusOrder = do
   rws <- recentWindows
   sendMessage $ (G.Modify $ focusWithOrder rws)
--- begin hack for tabs
+
+-- deleteRefocusEventHook :: Event -> X All
+-- deleteRefocusEventHook e@(UnmapEvent {}) =
+--   do io $ hPutStrLn stderr $ "destroy window event " ++ (show e)
+--      --preserveFocusOrder
+--      return $ (All True)
+-- deleteRefocusEventHook e =
+--   do io $ hPutStrLn stderr $ "event " ++ (show e)
+--      return (All True)
 
 data Patch l a = Patch (l a) deriving (Show, Read)
 
