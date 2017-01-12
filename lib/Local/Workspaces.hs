@@ -32,9 +32,13 @@ withNthNEWorkspace job wnum = do ws <- nonEmptyNames
                                    (w:_) -> windows $ job w
                                    [] -> return ()
 
+--not quite right
 nonEmptyNames :: X [WorkspaceId]
 nonEmptyNames = do sort <- getSortByIndex
-                   gets (map W.tag . sort . (filter (isJust . W.stack)) . W.workspaces . windowset)
+                   ws <- gets windowset
+                   let spaces = (map W.workspace ((W.current ws):(W.visible ws))) ++
+                                (filter (isJust . W.stack) $ W.hidden ws)
+                   return $ map W.tag $ sort spaces
 
 workspaceNames :: X [WorkspaceId]
 workspaceNames = do sort <- getSortByIndex

@@ -47,8 +47,16 @@ clickNames names pp =
      , ppHidden  = click (ppHidden pp)
      }
   where click :: (String -> String) -> String -> String
-        click f s = concat ["<action=xdotool key super+",
-                            (show $ 1+(fromJust$elemIndex s names)),
-                            ">",
-                            f s,
-                            "</action>"]
+        click f s =
+          let ix = elemIndex s names
+              inner = f s
+              wrapped n = concat ["<action=xdotool key super+",
+                                  (show $ 1+n),
+                                  ">",
+                                  inner,
+                                  "</action>"]
+          in
+          case ix of
+            Just n -> if n > 8 then inner
+                      else wrapped n
+            Nothing -> inner
