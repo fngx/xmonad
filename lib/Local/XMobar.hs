@@ -33,7 +33,7 @@ pp = xmobarPP
   { ppCurrent = xmobarColor "deepskyblue" "" . esc
   , ppVisible = xmobarColor "white" "" . esc
   , ppHidden  = xmobarColor "grey50" "" . esc
-  , ppLayout = const ""
+  , ppLayout = esc
   , ppTitle = xmobarColor "white" "" . esc
   }
 

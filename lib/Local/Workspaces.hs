@@ -8,16 +8,29 @@ import XMonad.Actions.CycleWS
 import XMonad.Actions.DynamicWorkspaces
 import XMonad.Actions.Warp
 import XMonad.Util.WorkspaceCompare ( getSortByIndex )
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, isNothing)
+import Data.List ( (\\) )
 
-fixedWorkspaces = ["one", "two"]
+fixedWorkspaces = ["1", "2"]
 
-workspaceKeys = [ ("M-d M-d", ("screen swap", swapNextScreen >> warp))
-                , ("M-d M-s", ("screen shift", shiftNextScreen >> nextScreen >> warp))
-                , ("M-d M-f", ("screen focus", nextScreen >> warp))
-                ] ++
-                [("M-" ++ show n, ("view " ++ show n, withNthNEWorkspace W.greedyView (n-1))) | n <- [1 .. 9]] ++
-                [("M-S-" ++ show n, ("view " ++ show n, withNthNEWorkspace W.shift (n-1))) | n <- [1 .. 9]]
+workspaceKeys =
+  let swapS = ("screen swap", swapNextScreen >> warp)
+      focusS = ("screen focus", nextScreen >> warp)
+      shiftS = ("screen shift", shiftNextScreen >> nextScreen >> warp)
+      view n = ("view " ++ show n, withNthNEWorkspace W.greedyView (n-1))
+      shiftTo n = ("shift to " ++ show n, withNthNEWorkspace W.shift (n-1))
+      onEmpty a = ("view empty", do en <- emptyNames
+                                    an <- workspaceNames
+                                    a $ head $ en ++ ([show n | n <- [1..]] \\ an))
+  in [ ("M-d M-d", swapS)
+     , ("M-d M-s", shiftS)
+     , ("M-d M-f", focusS)
+--     , ("M-z", focusS)
+     , ("M-e", onEmpty addWorkspace)
+     , ("M-S-e", onEmpty (\w -> addHiddenWorkspace w >> windows (W.shift w) >> windows (W.view w)))
+     ] ++
+     [("M-" ++ show n, view n) | n <- [1 .. 9]] ++
+     [("M-S-" ++ show n, shiftTo n) | n <- [1 .. 9]]
 
 warp :: X ()
 warp = do mf <- gets (W.peek . windowset)
@@ -32,7 +45,11 @@ withNthNEWorkspace job wnum = do ws <- nonEmptyNames
                                    (w:_) -> windows $ job w
                                    [] -> return ()
 
---not quite right
+
+emptyNames :: X [WorkspaceId]
+emptyNames = do sort <- getSortByIndex
+                gets (map W.tag . sort . (filter (isNothing . W.stack)) . W.workspaces . windowset)
+
 nonEmptyNames :: X [WorkspaceId]
 nonEmptyNames = do sort <- getSortByIndex
                    ws <- gets windowset

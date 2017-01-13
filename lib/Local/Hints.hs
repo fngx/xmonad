@@ -103,13 +103,15 @@ runKeyTree pfx kt = do
   let y0 = 1 + fst extent
   let x0 = 2
 
+  let grey = "#222222"
+
   let render :: String -> (String, String) -> String -> X ()
       render prefix (message, colr) border = do
-        paintWindow win sw wh 1 "#444" border
-        printStringXMF d win font gc "white" "#444" x0 (1 + (fst extent)) prefix
+        paintWindow win sw wh 1 grey border
+        printStringXMF d win font gc "white" grey x0 (1 + (fst extent)) prefix
         plength <- textWidthXMF d font prefix
         let x1 = fi plength + fi x0
-        printStringXMF d win font gc colr "#444444" (8 + fi x1) y0 message
+        printStringXMF d win font gc colr grey (8 + fi x1) y0 message
         io $ sync d False
 
       runKT :: [Key] -> KeyTree -> X ()

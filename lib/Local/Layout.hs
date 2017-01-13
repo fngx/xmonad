@@ -24,7 +24,6 @@ import XMonad.Layout.MultiToggle.Instances
 import XMonad.Actions.MessageFeedback
 import Control.Monad (unless, when)
 import qualified Local.Row as Row
-import qualified XMonad.Layout.Maximize as Max
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.Renamed
 import Data.List (find)
@@ -33,15 +32,13 @@ import System.IO
 
 wmii s t = G.group inner outer
   where inner = column ||| tabs
-        outer = Row.orderRow Row.H
+        outer = Row.orderRow Row.H ||| Full
         column = Row.row Row.V
         tabs = renamed [Replace "T"] $ tabbed s t
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         renamed [CutWordsLeft 1] $
-         Max.maximize $
          Patch $
          (wmii shrinkText Theme.decorations)
 
@@ -72,6 +69,7 @@ layoutKeys =
   , ("M-S-=", ("grow V", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Grow :: Row.Msg Window)))
   , ("M-'", ("reset", do sendMessage $ G.ToAll $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
                          sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Equalize :: Row.Msg Int)))
+
   , ("M-s", ("col right", H.moveToNewGroupDown >> preserveFocusOrder))
   , ("M-S-s", ("col left", H.moveToNewGroupUp >> preserveFocusOrder))
   , ("M-v", ("split col", H.splitGroup >> preserveFocusOrder))
@@ -79,8 +77,7 @@ layoutKeys =
   , ("M-l", ("next layout", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout))
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
-
-  , ("M-m", ("mag", withFocused (sendMessage . Max.maximizeRestore))) -- magnifier
+  , ("M-S-f", ("gfull", sendMessage $ G.ToEnclosing $ SomeMessage $ NextLayout))
 
   , ("M-c M-c", ("rows in cols", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Int)
                                     sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Window)))
@@ -94,9 +91,8 @@ layoutKeys =
   -- could show me the ws I am on and window title and whether fullscreen?
   -- and the date and battery and VPN
 
-  , ("M-b", ("dock", (broadcastMessage ToggleStruts) >> refresh))
   , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))
-  , ("M-M1-b", ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
+  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
 
   , ("M-k", ("kill", kill >> preserveFocusOrder))
   ]
