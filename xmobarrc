@@ -4,8 +4,7 @@ Config
 , commands = [ Run UnsafeStdinReader
              , Run Date "%a, %b %_d %Y %I:%M%P" "date" 30
              , Run Battery [] 60
-             , Run MarqueePipeReader "$HOME/.xmonad/xmobar-pipe" (30, 10, ".") "pipe"
              ]
-, template = "%UnsafeStdinReader% }{ %pipe% <fc=#FFFFFF>%battery%</fc> | <fc=deepskyblue>%date%</fc>"
+, template = "%UnsafeStdinReader% }{ <fc=#FFFFFF>%battery%</fc> | <fc=deepskyblue>%date%</fc>"
 , pickBroadest = True
 }

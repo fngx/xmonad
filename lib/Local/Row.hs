@@ -171,7 +171,7 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
 
           dragHandler :: Handle a -> X ()
           dragHandler h = maybe (return ())
-            (\r -> (flip mouseDrag (return ()) $
+            (\r -> (flip mouseDrag destroyAllHandles $
                     \x y -> send $ Drag h ((ax x y) + 3) r))
             (M.lookup (fst (between h)) (sizes st))
 

@@ -91,8 +91,8 @@ layoutKeys =
   -- could show me the ws I am on and window title and whether fullscreen?
   -- and the date and battery and VPN
 
-  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))
-  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
+  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar"))
+  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar"))
 
   , ("M-k", ("kill", kill >> preserveFocusOrder))
   ]
