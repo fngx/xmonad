@@ -4,6 +4,7 @@ module Local.Theme (decorations,
                     hasUrgentBorderColor,
                     normalBorderColor, normalText,
                     otherWindow, smallFont
+                   ,prevWindow
                    ) where
 
 import XMonad.Layout.Decoration
@@ -11,6 +12,7 @@ import XMonad.Layout.Decoration
 focusedBorderColor   = "white"
 normalBorderColor    = "black"
 otherWindow          = "grey50"
+prevWindow           = "slateblue3"
 hasUrgentBorderColor = "darkred"
 urgentBorderColor    = "red"
 

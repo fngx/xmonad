@@ -15,7 +15,7 @@ import XMonad.Actions.CopyWindow (copyToAll)
 import qualified Data.Map as M
 import qualified Debug.Trace as D
 
-import Local.Windows (recentWindows)
+import Local.Windows (recentWindows, nextInHistory)
 import Data.Maybe (listToMaybe)
 
 setBorder c w = withDisplay $ \d -> io $ do
@@ -41,8 +41,11 @@ setBorderHook =
        let mc c mw = whenJust mw (setBorder c)
        when (not us) $
          (drop 1 <$> recentWindows) >>=
-         \ws -> do mc Local.Theme.normalBorderColor (listToMaybe $ drop 1 ws)
-                   mc Local.Theme.otherWindow (listToMaybe ws)
+         \ws -> do nextM <- nextInHistory False
+                   prevM <- nextInHistory True
+                   mc Local.Theme.normalBorderColor (listToMaybe $ drop 1 ws)
+                   mc Local.Theme.otherWindow nextM
+                   mc Local.Theme.prevWindow  prevM
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused

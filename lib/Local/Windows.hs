@@ -1,6 +1,6 @@
  {-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
 
-module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow) where
+module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow, nextInHistory) where
 
 import Local.Marks
 
@@ -20,12 +20,11 @@ import Data.Sequence as Seq
 import qualified Data.Set as Set
 import Data.Foldable
 import XMonad.Util.NamedWindows (getName)
+import Data.Monoid
 
 import XMonad.Util.XUtils
 import XMonad.Util.Font
 import XMonad.Hooks.FloatNext (runLogHook)
-
-import qualified Debug.Trace as D
 
 data WindowHistory = WH (Maybe Window) (Seq Window)
   deriving (Typeable, Read, Show)
@@ -58,11 +57,14 @@ greedyFocusWindow w s | Just w == W.peek s = s
 windowKeys = [ ("M-o", ("last focus", nextFocus))
              , ("M-i", ("next focus", prevFocus))
 
-             , ("M-.", ("set mark", do clearMarks '.'
-                                       withFocused $ mark '.'))
-             , ("M-,", ("find mark",
-                        do ms <- allMarked '.'
-                           whenJust (listToMaybe ms) $ windows . W.focusWindow
+             , ("M-S-.", ("set mark",
+                           do clearMarks '.'
+                              withFocused $ mark '.'))
+             , ("M-.", ("find mark",
+                        do win <- gets (W.peek . windowset)
+                           ms <- listToMaybe <$> allMarked '.'
+                           if win == ms then nextFocus
+                             else whenJust ms $ windows . W.focusWindow
                        ))
              ]
 
@@ -76,9 +78,12 @@ nextInHistory m = recentWindows >>=
 
 nextFocus = focusUrgentOr $
   do nih <- nextInHistory False
-     whenJust nih $ \h -> do withFocused $ mark 'o'
-                             mark 'n' h
-                             windows $ W.focusWindow h
+     case nih of
+       (Just h) -> do withFocused $ mark 'o'
+                      mark 'n' h
+                      windows $ W.focusWindow h
+       Nothing -> do clearMarks 'o'
+                     nextFocus
      warp
 
 prevFocus = do nih <- nextInHistory True
@@ -87,7 +92,8 @@ prevFocus = do nih <- nextInHistory True
                                        windows $ W.focusWindow h
                warp
 
-addHistory c = c { logHook = hook >> (logHook c) }
+addHistory c = c { logHook = hook >> (logHook c)
+                 }
 
 hook :: X ()
 hook = do focusM <- gets (W.peek . windowset)
