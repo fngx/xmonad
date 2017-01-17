@@ -1,4 +1,4 @@
-module Local.Marks (mark, unmark, toggleMark, isMarked, unmarked, marked, clearMarks) where
+module Local.Marks (allMarked, mark, unmark, toggleMark, isMarked, unmarked, marked, clearMarks) where
 
 import qualified XMonad.StackSet as W
 import XMonad hiding (modify, get)
@@ -56,3 +56,6 @@ marked :: Char -> [Window] -> X [Window]
 marked s ws = do marks <- get
                  let s' = M.findWithDefault S.empty s marks
                  return $ filter (flip S.member s') ws
+
+allMarked :: Char -> X [Window]
+allMarked s = S.toList <$> (M.findWithDefault S.empty s) <$> get

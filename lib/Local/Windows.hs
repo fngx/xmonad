@@ -57,6 +57,13 @@ greedyFocusWindow w s | Just w == W.peek s = s
 
 windowKeys = [ ("M-o", ("last focus", nextFocus))
              , ("M-i", ("next focus", prevFocus))
+
+             , ("M-.", ("set mark", do clearMarks '.'
+                                       withFocused $ mark '.'))
+             , ("M-,", ("find mark",
+                        do ms <- allMarked '.'
+                           whenJust (listToMaybe ms) $ windows . W.focusWindow
+                       ))
              ]
 
 focusUrgentOr a = do us <- readUrgents
