@@ -37,7 +37,7 @@ setBorderHook =
          -- others <- gets $ twoOrMore . tiledWindows . windowset
          -- setBorderWidth (if not others then 1 else 3) w
          when us $ setBorder Local.Theme.hasUrgentBorderColor w
-
+       -- how do we know which one to unhighlight
        let mc c mw = whenJust mw (setBorder c)
        when (not us) $
          (drop 1 <$> recentWindows) >>=

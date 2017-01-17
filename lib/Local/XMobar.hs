@@ -50,11 +50,13 @@ clickNames names pp =
         click f s =
           let ix = elemIndex s names
               inner = f s
-              wrapped n = concat ["<action=xdotool key super+",
-                                  (show $ 1+n),
-                                  ">",
-                                  inner,
-                                  "</action>"]
+              wrapped n =
+                let n' = (show $ 1+n) in
+                  concat ["<action=xdotool key super+",
+                           n',
+                           ">",
+                           inner,
+                           "</action>"]
           in
           case ix of
             Just n -> if n > 8 then inner

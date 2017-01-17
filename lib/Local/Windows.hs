@@ -1,7 +1,10 @@
  {-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
 
-module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow, lastFocus) where
+module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow) where
 
+import Local.Marks
+
+import Control.Applicative ((<$>))
 import Control.Monad
 import Data.List
 import Data.Maybe
@@ -20,6 +23,9 @@ import XMonad.Util.NamedWindows (getName)
 
 import XMonad.Util.XUtils
 import XMonad.Util.Font
+import XMonad.Hooks.FloatNext (runLogHook)
+
+import qualified Debug.Trace as D
 
 data WindowHistory = WH (Maybe Window) (Seq Window)
   deriving (Typeable, Read, Show)
@@ -44,64 +50,38 @@ recentWindows = do
   (WH cur hist) <- XS.get
   return $ (maybeToList cur) ++ (toList hist)
 
-lastFocus = do
-  rws <- recentWindows
-  return $ case rws of
-             (h:t) -> listToMaybe $ delete h t
-             _ -> Nothing
-
 greedyFocusWindow w s | Just w == W.peek s = s
                       | otherwise = fromMaybe s $ do
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o", ("last focus", oldWindow 1))
-             , ("M-S-o", ("second last focus", oldWindow 2))
+windowKeys = [ ("M-o", ("last focus", prevFocus))
+             , ("M-i", ("next focus", nextFocus))
              ]
 
-(!!?) :: [a] -> Int -> Maybe a
-(!!?) [] _ = Nothing
-(!!?) (x:_) 0 = Just $ x
-(!!?) (_:xs) n = xs !!? (n - 1)
+focusUrgentOr a = do us <- readUrgents
+                     if Data.List.null us then a else (focusUrgent >> warp)
 
-oldWindow n = do us <- readUrgents
-                 if Data.List.null us then
-                   do rws <- recentWindows
-                      whenJust (rws !!? n) (windows . W.focusWindow)
-                   else focusUrgent
-                 warp
+nextInHistory m = recentWindows >>=
+                  (return . (Data.List.drop 1)) >>=
+                  (if m then marked 'o' else unmarked 'o') >>=
+                  (return . listToMaybe)
+
+nextFocus = focusUrgentOr $
+  do nih <- nextInHistory False
+     whenJust nih $ \h -> do withFocused $ mark 'o'
+                             windows $ W.focusWindow h
+     warp
+
+prevFocus = do nih <- nextInHistory True
+               whenJust nih $ \h -> do withFocused $ unmark 'o'
+                                       windows $ W.focusWindow h
+               warp
 
 addHistory c = c { logHook = hook >> (logHook c) }
 
 hook :: X ()
 hook = XS.get >>= updateHistory >>= XS.put
-
-jump :: X ()
-jump = withWindowSet $ \ss ->
-  let visible' :: [Window]
-      visible' = concatMap (W.integrate' . W.stack . W.workspace) $ ((W.current ss):(W.visible ss))
-      keys' = [ "h", "j", "k", "l", "a", "s", "d", "f", "q", "w", "e", "r", "z", "x", "c", "v", "b"]
-      (keys, visible) = unzip $ Data.List.zip keys' visible'
-  in
-    do rects <- mapM getWindowRect visible
-       names <- mapM (fmap show . getName) visible :: X [String]
-       font <- initXMF "xft:Monospace-16"
-
-       let labels = Data.List.zipWith (\x y -> x ++ ": " ++ y) keys names
-
-       d <- asks display
-       widths <- mapM (textWidthXMF d font) labels
-
-       -- render all the windows
-       -- grab keys and read one key
-       -- delete all the windows
-
-       releaseXMF font
-
-  -- get their rectangles and names
-  -- make rectangles to display labels in
-  -- bind keys
-  -- etc.
 
 getWindowRect :: Window -> X Rectangle
 getWindowRect w = do d <- asks display
