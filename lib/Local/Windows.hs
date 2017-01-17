@@ -55,8 +55,8 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o", ("last focus", prevFocus))
-             , ("M-i", ("next focus", nextFocus))
+windowKeys = [ ("M-o", ("last focus", nextFocus))
+             , ("M-i", ("next focus", prevFocus))
              ]
 
 focusUrgentOr a = do us <- readUrgents
@@ -70,18 +70,26 @@ nextInHistory m = recentWindows >>=
 nextFocus = focusUrgentOr $
   do nih <- nextInHistory False
      whenJust nih $ \h -> do withFocused $ mark 'o'
+                             mark 'n' h
                              windows $ W.focusWindow h
      warp
 
 prevFocus = do nih <- nextInHistory True
                whenJust nih $ \h -> do withFocused $ unmark 'o'
+                                       mark 'n' h
                                        windows $ W.focusWindow h
                warp
 
 addHistory c = c { logHook = hook >> (logHook c) }
 
 hook :: X ()
-hook = XS.get >>= updateHistory >>= XS.put
+hook = do focusM <- gets (W.peek . windowset)
+          (WH lf _) <- XS.get
+          when (lf /= focusM) $
+            do XS.get >>= updateHistory >>= XS.put
+               whenJust focusM $ \focus ->
+                 do markedN <- (isMarked 'n' focus)
+                    if markedN then unmark 'n' focus else clearMarks 'o'
 
 getWindowRect :: Window -> X Rectangle
 getWindowRect w = do d <- asks display

@@ -44,9 +44,8 @@ toggleMark :: Char -> Window -> X ()
 toggleMark s w = modify $ M.alter (maybe (Just $ S.singleton w)
                                    (\s -> Just $ (if S.member w s then S.delete else S.insert) w s)) s
 
-isMarked :: Char -> X (Window -> Bool)
-isMarked s = do mm <- get
-                return $ \w -> ((S.member w) . (M.findWithDefault (S.empty) s)) mm
+isMarked :: Char -> Window -> X Bool
+isMarked s w = ((S.member w) . (M.findWithDefault (S.empty) s)) <$> get
 
 unmarked :: Char -> [Window] -> X [Window]
 unmarked s ws = do marks <- get
