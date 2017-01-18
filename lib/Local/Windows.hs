@@ -57,15 +57,6 @@ greedyFocusWindow w s | Just w == W.peek s = s
 windowKeys = [ ("M-o", ("last focus", nextFocus))
              , ("M-i", ("next focus", prevFocus))
 
-             , ("M-S-.", ("set mark",
-                           do clearMarks '.'
-                              withFocused $ mark '.'))
-             , ("M-.", ("find mark",
-                        do win <- gets (W.peek . windowset)
-                           ms <- listToMaybe <$> allMarked '.'
-                           if win == ms then nextFocus
-                             else whenJust ms $ windows . W.focusWindow
-                       ))
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
                            isFloating <- gets (M.member w . W.floating . windowset)

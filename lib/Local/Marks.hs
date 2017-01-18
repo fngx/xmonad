@@ -9,7 +9,6 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Applicative
 
-
 type MarkMap = Map Char (Set Window)
 
 data Marks = Marks MarkMap

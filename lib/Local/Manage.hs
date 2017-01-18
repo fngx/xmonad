@@ -15,6 +15,7 @@ import XMonad.Actions.CopyWindow (copyToAll)
 import qualified Data.Map as M
 import qualified Debug.Trace as D
 
+import Local.Marks (allMarked)
 import Local.Windows (recentWindows, nextInHistory)
 import Data.Maybe (listToMaybe)
 
@@ -25,27 +26,25 @@ setBorder c w = withDisplay $ \d -> io $ do
 setBorderWidth b w = withDisplay $ \d -> io $ do setWindowBorderWidth d w b
 
 setBorderHook =
-  let twoOrMore :: [a] -> Bool
-      twoOrMore (_:(_:_)) = True
-      twoOrMore _ = False
-      tiledWindows st =
-        let isTiled x = not $ M.member x $ W.floating st in
-          filter isTiled $ W.integrate' $ W.stack $ W.workspace $ W.current st
-  in
-    do us <- fmap (not . null) readUrgents
-       withFocused $ \w -> do
-         -- others <- gets $ twoOrMore . tiledWindows . windowset
-         -- setBorderWidth (if not others then 1 else 3) w
-         when us $ setBorder Local.Theme.hasUrgentBorderColor w
-       -- how do we know which one to unhighlight
-       let mc c mw = whenJust mw (setBorder c)
-       when (not us) $
-         (drop 1 <$> recentWindows) >>=
-         \ws -> do nextM <- nextInHistory False
-                   prevM <- nextInHistory True
-                   mc Local.Theme.normalBorderColor (listToMaybe $ drop 1 ws)
-                   mc Local.Theme.otherWindow nextM
-                   mc Local.Theme.prevWindow  prevM
+    do vis <- gets (concat .
+                    map (W.integrate' . W.stack . W.workspace) .
+                    (\s -> (W.current s):(W.visible s)) .
+                    windowset)
+
+       mapM_ (setBorder Local.Theme.normalBorderColor) vis
+
+       withFocused (setBorder Local.Theme.focusedBorderColor)
+
+       nextM <- nextInHistory False
+       prevM <- nextInHistory True
+
+       whenJust nextM $ setBorder Local.Theme.otherWindow
+       whenJust prevM $ setBorder Local.Theme.prevWindow
+
+       us <- readUrgents
+       mapM_ (setBorder Local.Theme.hasUrgentBorderColor) us
+
+       unless (null us) $ withFocused (setBorder Local.Theme.hasUrgentBorderColor)
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
