@@ -52,7 +52,7 @@ clickNames names pp =
           let ix = elemIndex s names
               wrapped n =
                 let n' = (show $ 1+n)
-                    s' = if nameCount > 4 then n'++":"++s else s
+                    s' = if nameCount > 3 then n'++":"++s else s
                 in
                   concat ["<action=xdotool key super+",
                            n',
