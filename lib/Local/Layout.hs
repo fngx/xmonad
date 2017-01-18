@@ -57,8 +57,10 @@ layoutKeys =
   , ("M-M1-n", ("swap group right", alt (G.swapGroupDown) W.swapDown))
   , ("M-M1-p", ("swap group left", alt (G.swapGroupUp) W.swapUp))
 
-  , ("M-<Tab>", ("group left", alt (G.focusGroupDown) W.focusDown))
-  , ("M-S-<Tab>", ("group right", alt (G.focusGroupUp) W.focusUp))
+  , ("M-<Left>", ("group left", alt (G.focusGroupDown) W.focusDown))
+  , ("M-<Right>", ("group right", alt (G.focusGroupUp) W.focusUp))
+  , ("M-<Up>", ("tab left", alt (G.focusUp) W.focusDown))
+  , ("M-<Down>", ("tab right", alt (G.focusDown) W.focusUp))
 
   , ("M-C-p", ("move left", H.moveToGroupUp False))
   , ("M-C-n", ("move right", H.moveToGroupDown False))
@@ -95,6 +97,7 @@ layoutKeys =
   , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar"))
 
   , ("M-k", ("kill", kill >> preserveFocusOrder))
+
   ]
 
 -- movement operators

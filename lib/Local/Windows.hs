@@ -8,6 +8,7 @@ import Control.Applicative ((<$>))
 import Control.Monad
 import Data.List
 import Data.Maybe
+import qualified Data.Map.Strict as M
 import Local.Util
 import Local.Workspaces (warp)
 import XMonad
@@ -24,7 +25,6 @@ import Data.Monoid
 
 import XMonad.Util.XUtils
 import XMonad.Util.Font
-import XMonad.Hooks.FloatNext (runLogHook)
 
 data WindowHistory = WH (Maybe Window) (Seq Window)
   deriving (Typeable, Read, Show)
@@ -66,7 +66,25 @@ windowKeys = [ ("M-o", ("last focus", nextFocus))
                            if win == ms then nextFocus
                              else whenJust ms $ windows . W.focusWindow
                        ))
+             , ("M-t", ("floaty",
+                        withFocused $ \w -> do
+                           isFloating <- gets (M.member w . W.floating . windowset)
+                           if isFloating then windows $ W.sink w
+                             else floatTo (0.6, 0.95) (0.05, 0.4) w
+                         ))
              ]
+
+floatTo :: (Rational, Rational) -> (Rational, Rational) -> Window -> X ()
+floatTo (left, right) (top, bottom) w = withDisplay $ \d -> do
+  (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
+  let nw = fi $ round $ (fi sw) * (right - left)
+      nh = fi $ round $ (fi sh) * (bottom - top)
+      nx = fi $ round $ (fi sx + fi sw) * left
+      ny = fi $ round $ (fi sy + fi sh) * top
+  io $ raiseWindow d w
+  io $ resizeWindow d w nw nh
+  io $ moveWindow d w nx ny
+  float w
 
 focusUrgentOr a = do us <- readUrgents
                      if Data.List.null us then a else (focusUrgent >> warp)

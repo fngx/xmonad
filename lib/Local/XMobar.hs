@@ -46,19 +46,21 @@ clickNames names pp =
      , ppVisible = click (ppVisible pp)
      , ppHidden  = click (ppHidden pp)
      }
-  where click :: (String -> String) -> String -> String
+  where nameCount = length names
+        click :: (String -> String) -> String -> String
         click f s =
           let ix = elemIndex s names
-              inner = f s
               wrapped n =
-                let n' = (show $ 1+n) in
+                let n' = (show $ 1+n)
+                    s' = if nameCount > 4 then n'++":"++s else s
+                in
                   concat ["<action=xdotool key super+",
                            n',
                            ">",
-                           inner,
+                           f s',
                            "</action>"]
           in
           case ix of
-            Just n -> if n > 8 then inner
+            Just n -> if n > 8 then f s
                       else wrapped n
-            Nothing -> inner
+            Nothing -> f s
