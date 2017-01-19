@@ -2,7 +2,7 @@ module Local.Spawn where
 
 import XMonad
 import XMonad.Util.Paste (pasteSelection)
-import XMonad.Util.Selection (safePromptSelection)
+import XMonad.Util.XSelection (safePromptSelection)
 
 reloadCommand = "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi"
 
