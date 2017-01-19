@@ -35,6 +35,7 @@ pp = xmobarPP
   , ppHidden  = xmobarColor "grey50" "" . esc
   , ppLayout = esc
   , ppTitle = xmobarColor "white" "" . esc
+  , ppUrgent = xmobarColor "white" "red" . esc
   }
 
 esc = concatMap doubleLts
@@ -45,6 +46,7 @@ clickNames names pp =
   pp { ppCurrent = click (ppCurrent pp)
      , ppVisible = click (ppVisible pp)
      , ppHidden  = click (ppHidden pp)
+     , ppUrgent  = click (ppUrgent pp)
      }
   where nameCount = length names
         click :: (String -> String) -> String -> String

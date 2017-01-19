@@ -1,6 +1,8 @@
 module Local.Spawn where
 
 import XMonad
+import XMonad.Util.Paste (pasteSelection)
+import XMonad.Util.Selection (safePromptSelection)
 
 reloadCommand = "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi"
 
@@ -31,4 +33,7 @@ spawnKeys =
   , ("M-a m", ("mail check", spawn "notmuch new"))
   , ("M-a e", emacs)
   , ("M-a g", ("telegram", spawn "telegram-desktop"))
+
+  , ("M-y", ("paste", pasteSelection))
+  , ("M-S-y", ("open", safePromptSelection "xdg-open"))
   ]
