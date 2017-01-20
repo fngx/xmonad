@@ -44,7 +44,7 @@ setBorderHook =
        us <- readUrgents
        mapM_ (setBorder Local.Theme.hasUrgentBorderColor) us
 
-       unless (null us) $ withFocused (setBorder Local.Theme.hasUrgentBorderColor)
+       unless (null us) $ withFocused (setBorder Local.Theme.urgentBorderColor)
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
