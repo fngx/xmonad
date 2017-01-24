@@ -11,7 +11,7 @@ import XMonad.Util.WorkspaceCompare ( getSortByIndex )
 import Data.Maybe (isJust, isNothing)
 import Data.List ( (\\) )
 
-fixedWorkspaces = ["A", "B"]
+fixedWorkspaces = []
 
 workspaceKeys =
   let swapS = ("screen swap", swapNextScreen >> warp)

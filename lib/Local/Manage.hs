@@ -42,9 +42,9 @@ setBorderHook =
        whenJust prevM $ setBorder Local.Theme.prevWindow
 
        us <- readUrgents
-       mapM_ (setBorder Local.Theme.hasUrgentBorderColor) us
+       mapM_ (setBorder Local.Theme.urgentBorderColor) us
 
-       unless (null us) $ withFocused (setBorder Local.Theme.urgentBorderColor)
+       unless (null us) $ withFocused (setBorder Local.Theme.hasUrgentBorderColor)
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
