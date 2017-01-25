@@ -54,8 +54,8 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o", ("last focus", nextFocus))
-             , ("M-i", ("next focus", prevFocus))
+windowKeys = [ ("M-o", ("flip", focusUrgentOr $ ((listToMaybe . Data.List.drop 1) <$> recentWindows) >>= (flip whenJust (windows . W.focusWindow))))
+             , ("M-S-o",   ("last focus", nextFocus))
 
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
