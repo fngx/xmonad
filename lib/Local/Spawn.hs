@@ -3,6 +3,8 @@ module Local.Spawn where
 import XMonad
 import XMonad.Util.Paste (pasteSelection)
 import XMonad.Util.XSelection (safePromptSelection)
+import XMonad.Actions.WindowGo
+import XMonad.Actions.DynamicWorkspaces
 
 reloadCommand = "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi"
 
@@ -32,7 +34,19 @@ spawnKeys =
   , ("M-a x", ("clock", spawn "xclock"))
   , ("M-a m", ("mail check", spawn "notmuch new"))
   , ("M-a e", emacs)
-  , ("M-a g", ("telegram", spawn "telegram-desktop"))
+
+  , ("M-a g", ("telegram",
+               raiseMaybe (do addWorkspace "mail"
+                              spawn "telegram-desktop")
+                (className =? "telegram-desktop")))
+  , ("M-a i", ("inbox",
+               raiseMaybe (do addWorkspace "mail"
+                              spawn "emacsclient -c -e '(my-inbox)'")
+                (className =? "Emacs" <&&> (fmap ((== "*notmuch-search-") .
+                                                   (take (length "*notmuch-search-")))
+                                             title))))
+  , ("M-a a", ("agenda", raiseMaybe (spawn "emacsclient -e '(org-agenda nil \"a\")'")
+                         (className =? "Emacs" <&&> title =? "*Org Agenda*")))
 
   , ("M-y", ("paste", pasteSelection))
   , ("M-S-y", ("open", safePromptSelection "xdg-open"))
