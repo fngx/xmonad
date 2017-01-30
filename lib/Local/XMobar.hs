@@ -30,8 +30,8 @@ xmobar :: LayoutClass l Window
 xmobar = xmobar' "xmobar ~/.xmonad/xmobarrc"
 
 pp = xmobarPP
-  { ppCurrent = xmobarColor "deepskyblue" "" . esc
-  , ppVisible = xmobarColor "white" "" . esc
+  { ppCurrent = xmobarColor "white" "steelblue" . esc
+  , ppVisible = xmobarColor "white" "grey30" . esc
   , ppHidden  = xmobarColor "grey50" "" . esc
   , ppLayout = esc
   , ppTitle = xmobarColor "white" "" . esc

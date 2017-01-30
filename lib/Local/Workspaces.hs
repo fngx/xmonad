@@ -11,7 +11,7 @@ import XMonad.Util.WorkspaceCompare ( getSortByIndex )
 import Data.Maybe (isJust, isNothing)
 import Data.List ( (\\) )
 
-fixedWorkspaces = ["A", "B"]
+fixedWorkspaces = []
 
 workspaceKeys =
   let swapS = ("screen swap", swapNextScreen >> warp)
@@ -22,9 +22,9 @@ workspaceKeys =
       onEmpty a = ("view empty", do en <- emptyNames
                                     an <- workspaceNames
                                     a $ head $ en ++ ([x:[] | x <- ['A' .. 'Z']] \\ an))
-  in [ ("M-d M-d", swapS)
-     , ("M-d M-s", shiftS)
-     , ("M-d M-f", focusS)
+  in [ ("M-r", swapS)
+     , ("M-S-r", shiftS)
+     , ("M-d", focusS)
 --     , ("M-z", focusS)
      , ("M-e", onEmpty addWorkspace)
      , ("M-S-e", onEmpty (\w -> addHiddenWorkspace w >> windows (W.shift w) >> windows (W.view w)))
