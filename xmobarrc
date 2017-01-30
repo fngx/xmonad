@@ -8,4 +8,5 @@ Config
              ]
 , template = "%UnsafeStdinReader% }{ <fc=#FFFFFF>%battery%</fc> | %appts% | <fc=deepskyblue>%date%</fc>"
 , pickBroadest = True
+, overrideRedirect = False
 }
