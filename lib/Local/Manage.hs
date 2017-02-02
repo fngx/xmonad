@@ -35,11 +35,9 @@ setBorderHook =
 
        withFocused (setBorder Local.Theme.focusedBorderColor)
 
-       nextM <- nextInHistory False
-       prevM <- nextInHistory True
+       nextM <- nextInHistory
 
        whenJust nextM $ setBorder Local.Theme.otherWindow
-       whenJust prevM $ setBorder Local.Theme.prevWindow
 
        us <- readUrgents
        mapM_ (setBorder Local.Theme.urgentBorderColor) us

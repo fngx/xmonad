@@ -18,7 +18,7 @@ sloppyFocus config =
 focusFollow e@(CrossingEvent {ev_window=w, ev_event_type=t})
   | t == enterNotify, ev_mode e == notifyNormal =
       do whenX (fmap not $ runQuery (className =? "XClock") w) $
-           do t <- startTimer 0.08
+           do t <- startTimer 0.15
               XS.put $ SF $ Just (t, w)
          return (All True)
 

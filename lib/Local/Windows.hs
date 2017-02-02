@@ -54,8 +54,13 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o", ("flip", focusUrgentOr $ ((listToMaybe . Data.List.drop 1) <$> recentWindows) >>= (flip whenJust (windows . W.focusWindow))))
-             , ("M-S-o",   ("last focus", nextFocus))
+windowKeys = [ ("M-o",   ("flip",       focusUrgentOr $ focusDotOr $
+                                        ((listToMaybe . Data.List.drop 1) <$> recentWindows) >>=
+                                        (flip whenJust (windows . W.focusWindow))))
+
+             , ("M-S-o", ("last focus", do whenX (Data.List.null <$> allMarked '.') $
+                                             withFocused $ mark '.'
+                                           nextFocus))
 
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
@@ -77,29 +82,28 @@ floatTo (left, right) (top, bottom) w = withDisplay $ \d -> do
   io $ moveWindow d w nx ny
   float w
 
+focusDotOr a = do m <- allMarked '.'
+                  if Data.List.null m then a
+                    else do unmark '.' (head m)
+                            windows $ W.focusWindow $ head m
+                  clearMarks 'o'
+
 focusUrgentOr a = do us <- readUrgents
                      if Data.List.null us then a else (focusUrgent >> warp)
 
-nextInHistory m = recentWindows >>=
+nextInHistory = recentWindows >>=
                   (return . (Data.List.drop 1)) >>=
-                  (if m then marked 'o' else unmarked 'o') >>=
+                  (unmarked 'o') >>=
                   (return . listToMaybe)
 
 nextFocus = focusUrgentOr $
-  do nih <- nextInHistory False
+  do nih <- nextInHistory
      case nih of
        (Just h) -> do withFocused $ mark 'o'
-                      mark 'n' h
                       windows $ W.focusWindow h
        Nothing -> do clearMarks 'o'
                      nextFocus
      warp
-
-prevFocus = do nih <- nextInHistory True
-               whenJust nih $ \h -> do withFocused $ unmark 'o'
-                                       mark 'n' h
-                                       windows $ W.focusWindow h
-               warp
 
 addHistory c = c { logHook = hook >> (logHook c)
                  }
@@ -109,9 +113,6 @@ hook = do focusM <- gets (W.peek . windowset)
           (WH lf _) <- XS.get
           when (lf /= focusM) $
             do XS.get >>= updateHistory >>= XS.put
-               whenJust focusM $ \focus ->
-                 do markedN <- (isMarked 'n' focus)
-                    if markedN then unmark 'n' focus else clearMarks 'o'
 
 getWindowRect :: Window -> X Rectangle
 getWindowRect w = do d <- asks display
