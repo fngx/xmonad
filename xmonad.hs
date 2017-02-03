@@ -4,7 +4,7 @@ import Local.Layout
 import Local.Manage
 import Local.Prompts
 import Local.Randr
-import Local.SloppyFocus
+--import Local.SloppyFocus
 import Local.Spawn
 import Local.Workspaces
 import Local.XMobar (xmobar)
@@ -21,7 +21,7 @@ main = xmonad =<< xmobar conf
 
 conf =
   Windows.addHistory $
-  sloppyFocus $
+--  sloppyFocus $
   addManageRules $
   addLayout $
   desktopConfig
@@ -31,7 +31,7 @@ conf =
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces
-  , focusFollowsMouse = False
+  , focusFollowsMouse = True
   }
   `additionalMouseBindings`
   [((mod4Mask, 3), \w -> focus w >> (Flex.mouseResizeWindow w)),

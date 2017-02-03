@@ -49,17 +49,18 @@ recentWindows = do
   (WH cur hist) <- XS.get
   return $ (maybeToList cur) ++ (toList hist)
 
+flipWindow :: X ()
+flipWindow = ((listToMaybe . Data.List.drop 1) <$> recentWindows) >>= (flip whenJust (windows . W.focusWindow))
+
 greedyFocusWindow w s | Just w == W.peek s = s
                       | otherwise = fromMaybe s $ do
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o",   ("flip",       focusUrgentOr $ focusDotOr $
-                                        ((listToMaybe . Data.List.drop 1) <$> recentWindows) >>=
-                                        (flip whenJust (windows . W.focusWindow))))
-
+windowKeys = [ ("M-o",   ("flip",       focusUrgentOr $ focusDotOr $ flipWindow))
              , ("M-S-o", ("last focus", do whenX (Data.List.null <$> allMarked '.') $
-                                             withFocused $ mark '.'
+                                             do --nextFocus
+                                                withFocused $ mark '.'
                                            nextFocus))
 
              , ("M-t", ("floaty",
@@ -96,7 +97,7 @@ nextInHistory = recentWindows >>=
                   (unmarked 'o') >>=
                   (return . listToMaybe)
 
-nextFocus = focusUrgentOr $
+nextFocus =
   do nih <- nextInHistory
      case nih of
        (Just h) -> do withFocused $ mark 'o'
