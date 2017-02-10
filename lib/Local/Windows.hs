@@ -60,10 +60,11 @@ greedyFocusWindow w s | Just w == W.peek s = s
 
 windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
                                    focusUrgentOr focusNext
-                                   repeatHintedKeys [("M-o", ("next", focusNext)) ,("M-i", ("prev", focusPrev))]
-                                   withTagged "." $ delTag "."
+                                   warp
+                                   repeatHintedKeys [("M-o", ("next", focusNext >> warp)) ,("M-i", ("prev", focusPrev >> warp))]
                                    -- push start window down to next focus
                                    XS.get >>= insertHistory oldFocus >>= updateHistory >>= XS.put
+                                   withTaggedGlobal "." $ delTag "."
                        ))
 
              , ("M-t", ("floaty",
