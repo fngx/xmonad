@@ -2,7 +2,7 @@
 
 module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow, nextInHistory) where
 
-import Local.Marks
+import XMonad.Actions.TagWindows
 
 import Control.Applicative ((<$>))
 import Control.Monad
@@ -20,8 +20,9 @@ import qualified XMonad.Util.ExtensibleState as XS
 import Data.Sequence as Seq
 import qualified Data.Set as Set
 import Data.Foldable
-import XMonad.Util.NamedWindows (getName)
+import XMonad.Util.NamedWindows (getName, unName)
 import Data.Monoid
+import Local.Hints (repeatHintedKeys)
 
 import XMonad.Util.XUtils
 import XMonad.Util.Font
@@ -34,9 +35,12 @@ instance ExtensionClass WindowHistory where
   extensionType = PersistentExtension
 
 updateHistory :: WindowHistory -> X WindowHistory
-updateHistory (WH oldcur oldhist) = withWindowSet $ \ss -> do
-  let newcur   = W.peek ss
-      wins     = Set.fromList $ W.allWindows ss
+updateHistory input = withWindowSet $ \ss -> do
+  insertHistory (W.peek ss) input
+
+insertHistory :: Maybe Window -> WindowHistory -> X WindowHistory
+insertHistory newcur (WH oldcur oldhist) = withWindowSet $ \ss -> do
+  let wins     = Set.fromList $ W.allWindows ss
       newhist  = Seq.filter (flip Set.member wins) (ins oldcur oldhist)
   return $ WH newcur (del newcur newhist)
   where
@@ -49,19 +53,18 @@ recentWindows = do
   (WH cur hist) <- XS.get
   return $ (maybeToList cur) ++ (toList hist)
 
-flipWindow :: X ()
-flipWindow = ((listToMaybe . Data.List.drop 1) <$> recentWindows) >>= (flip whenJust (windows . W.focusWindow))
-
 greedyFocusWindow w s | Just w == W.peek s = s
                       | otherwise = fromMaybe s $ do
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-windowKeys = [ ("M-o",   ("flip",       focusUrgentOr $ focusDotOr $ flipWindow))
-             , ("M-S-o", ("last focus", do whenX (Data.List.null <$> allMarked '.') $
-                                             do --nextFocus
-                                                withFocused $ mark '.'
-                                           nextFocus))
+windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
+                                   focusUrgentOr focusNext
+                                   repeatHintedKeys [("M-o", ("next", focusNext)) ,("M-i", ("prev", focusPrev))]
+                                   withTagged "." $ delTag "."
+                                   -- push start window down to next focus
+                                   XS.get >>= insertHistory oldFocus >>= updateHistory >>= XS.put
+                       ))
 
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
@@ -71,40 +74,21 @@ windowKeys = [ ("M-o",   ("flip",       focusUrgentOr $ focusDotOr $ flipWindow)
                          ))
              ]
 
-floatTo :: (Rational, Rational) -> (Rational, Rational) -> Window -> X ()
-floatTo (left, right) (top, bottom) w = withDisplay $ \d -> do
-  (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
-  let nw = fi $ round $ (fi sw) * (right - left)
-      nh = fi $ round $ (fi sh) * (bottom - top)
-      nx = fi $ round $ (fi sx + fi sw) * left
-      ny = fi $ round $ (fi sy + fi sh) * top
-  io $ raiseWindow d w
-  io $ resizeWindow d w nw nh
-  io $ moveWindow d w nx ny
-  float w
-
-focusDotOr a = do m <- allMarked '.'
-                  if Data.List.null m then a
-                    else do unmark '.' (head m)
-                            windows $ W.focusWindow $ head m
-                  clearMarks 'o'
-
 focusUrgentOr a = do us <- readUrgents
                      if Data.List.null us then a else (focusUrgent >> warp)
 
+focusNext = do withFocused $ addTag "."
+               rw <- recentWindows >>= filterM ((fmap not) . hasTag ".")
+               whenJust (listToMaybe rw) $ windows . W.focusWindow
+
+focusPrev = do withFocused $ delTag "."
+               rw <- recentWindows >>= filterM (hasTag ".")
+               whenJust (listToMaybe rw) $ windows . W.focusWindow
+
 nextInHistory = recentWindows >>=
                   (return . (Data.List.drop 1)) >>=
-                  (unmarked 'o') >>=
+                  (filterM ((fmap not) . hasTag ".")) >>=
                   (return . listToMaybe)
-
-nextFocus =
-  do nih <- nextInHistory
-     case nih of
-       (Just h) -> do withFocused $ mark 'o'
-                      windows $ W.focusWindow h
-       Nothing -> do clearMarks 'o'
-                     nextFocus
-     warp
 
 addHistory c = c { logHook = hook >> (logHook c)
                  }
@@ -124,3 +108,15 @@ getWindowRect w = do d <- asks display
                        (fromIntegral $ wa_y atts)
                        (fromIntegral $ bw + wa_width atts)
                        (fromIntegral $ bw + wa_height atts)
+
+floatTo :: (Rational, Rational) -> (Rational, Rational) -> Window -> X ()
+floatTo (left, right) (top, bottom) w = withDisplay $ \d -> do
+  (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
+  let nw = fi $ round $ (fi sw) * (right - left)
+      nh = fi $ round $ (fi sh) * (bottom - top)
+      nx = fi $ round $ (fi sx + fi sw) * left
+      ny = fi $ round $ (fi sy + fi sh) * top
+  io $ raiseWindow d w
+  io $ resizeWindow d w nw nh
+  io $ moveWindow d w nx ny
+  float w

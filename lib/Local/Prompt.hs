@@ -313,18 +313,23 @@ render = do
 
 ellipsis = "..." --"…"
 
-nextKeyEvent :: Display -> X (Maybe (KeyMask, KeySym, String))
+data KEvent = Expose | Press KeyMask KeySym String | Release KeySym | Skip deriving (Show)
+
+nextKeyEvent :: Display -> X KEvent
 nextKeyEvent d = do
   io $ do allocaXEvent $ \e -> do
-            maskEvent d (exposureMask .|. keyPressMask) e
+            maskEvent d (exposureMask .|. keyPressMask .|. keyReleaseMask) e
             ev <- getEvent e
             if ev_event_type ev == keyPress then
               do x <- lookupString $ asKeyEvent e
-                 return $ case x of (Just ks, str) -> Just (ev_state ev, ks, str)
-                                    _ -> Nothing
-              else return $ if ev_event_type ev == expose &&
-                               ev_count ev == 0 then Just (0, xK_VoidSymbol, "")
-                            else Nothing
+                 return $ case x of (Just ks, str) -> Press (ev_state ev) ks str
+                                    _ -> Skip
+              else if ev_event_type ev == keyRelease then
+                     do s <- keycodeToKeysym d (ev_keycode ev) 0
+                        return $ Release s
+              else if ev_event_type ev == expose && ev_count ev == 0 then
+                     return $ Expose
+              else return Skip
 
 handleKeys :: Prompt ()
 handleKeys = do
@@ -333,16 +338,16 @@ handleKeys = do
 
   keym <- lift $ nextKeyEvent d
 
-  whenJust keym $ keyAction mod h
-  when (isJust keym) render
+  case keym of
+    Expose -> render
+    Press mask sym string -> keyAction mod h (mask, sym, string) >> render
+    _ -> return ()
 
   gets done >>= flip unless handleKeys
 
   where keyAction mod h (mask, sym, str) = case (M.lookup (mask, sym) h) of
-          Just x -> --D.traceShow ("user handler for", mask, sym, str)
-            x
-          Nothing -> --D.traceShow ("default handler for ", mask, sym, str)
-            defaultHandle
+          Just x -> x
+          Nothing -> defaultHandle
             where
               defaultHandle
                 | mask == 0 || mask == shiftMask = promptInsertStr str

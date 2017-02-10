@@ -15,7 +15,6 @@ import XMonad.Actions.CopyWindow (copyToAll)
 import qualified Data.Map as M
 import qualified Debug.Trace as D
 
-import Local.Marks (allMarked)
 import Local.Windows (recentWindows, nextInHistory)
 import Data.Maybe (listToMaybe)
 

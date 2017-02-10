@@ -1,4 +1,4 @@
-module Local.Hints (hintedKeysP) where
+module Local.Hints (hintedKeysP, doHintedKeys, repeatHintedKeys) where
 
 import Local.Theme (smallFont)
 
@@ -12,8 +12,8 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.Font
 import XMonad.Util.Types
 import XMonad.Util.XUtils
-import Local.Prompt (readKey, nextKeyEvent, mkUnmanagedWindow)
-import Data.Maybe (mapMaybe, fromMaybe, fromJust, isJust)
+import Local.Prompt (readKey, nextKeyEvent, mkUnmanagedWindow, KEvent (..) )
+import Data.Maybe (mapMaybe, fromMaybe, fromJust, isJust, maybeToList)
 import Graphics.X11.Xlib.Misc (keysymToString)
 import qualified Debug.Trace as D
 
@@ -45,7 +45,20 @@ hintedKeysP conf ks =
     toBindings (Leaf _ _) = []
     toBindings (Sub m) = flip map (M.toList m) $ \(a, b) -> (a, toBindings1 a b)
     toBindings1 _ (Leaf _ a) = a
-    toBindings1 p t = runKeyTree p t
+    toBindings1 p t = runKeyTree False (Just p) t
+
+doHintedKeys :: [(String, (String, X ()))] -> X ()
+doHintedKeys ks = do
+  XConf { XMonad.config = XConfig { modMask = mod }} <- ask
+  let kt = toKeyTree mod ks
+  runKeyTree False Nothing kt
+
+-- repeat running hinted keys until the mod key is released
+repeatHintedKeys :: [(String, (String, X ()))] -> X ()
+repeatHintedKeys ks = do
+  XConf { XMonad.config = XConfig { modMask = mod }} <- ask
+  let kt = toKeyTree mod ks
+  runKeyTree True Nothing kt
 
 toKeyTree :: KeyMask -> [(String, (String, X ()))] -> KeyTree
 toKeyTree mask keys = foldl insertKey emptyKT $
@@ -81,8 +94,8 @@ showKey (masks, sym) =
                   ("S", shiftMask) ]
               , (modMask .&. masks) /= zeroBits ]
 
-runKeyTree :: Key -> KeyTree -> X ()
-runKeyTree pfx kt = do
+runKeyTree :: Bool -> Maybe Key -> KeyTree -> X ()
+runKeyTree autostop pfx0 kt0 = do
   -- make a window
   XConf {display = d, theRoot = rw} <- ask
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
@@ -119,24 +132,28 @@ runKeyTree pfx kt = do
         let prefixs = intercalate " " $ map showKey prefix
         case kt of
           Leaf n a -> do render prefixs (n, "green") "#fff"
-                         io $ threadDelay 100000
+                         io $ threadDelay (if autostop then 80000 else 100000)
                          a
+                         when autostop $ runKT (maybeToList pfx0) kt0
           Sub m -> do let nexts = show kt
                       render prefixs (nexts, "#ccc") "#999"
-                      keym <- nextKeyEvent d
-                      let handle (km, k, s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
+                      keym <- D.traceShowId <$> nextKeyEvent d
+                      let handle (Press km k s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
+                          handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
+                          handle _ = cont
+
                           cont = runKT prefix kt
                           noMatch km k s
                             | km == controlMask && k == xK_g = return ()
                             | km == 0 && k == xK_Escape = return ()
                             | not $ null s = (render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "#f66") "#fff") >> (io $ threadDelay 800000)
                             | otherwise = cont
-                      maybe cont handle keym
+                      handle keym
 
   status <- io $ grabKeyboard d win True grabModeAsync grabModeAsync currentTime
 
   when (status == grabSuccess) $ do
-    runKT [pfx] kt
+    runKT (maybeToList pfx0) kt0
     io $ ungrabKeyboard d currentTime
 
   io $ sync d False

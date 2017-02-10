@@ -41,7 +41,7 @@ spawnKeys =
                 (className =? "telegram-desktop")))
   , ("M-a i", ("inbox",
                raiseMaybe (do addWorkspace "mail"
-                              spawn "emacsclient -c -e '(my-inbox)'")
+                              spawn "emacsclient -n -c -e '(my-inbox)'")
                 (className =? "Emacs" <&&> (fmap ((== "*notmuch-search-") .
                                                    (take (length "*notmuch-search-")))
                                              title))))
