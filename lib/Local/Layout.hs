@@ -89,8 +89,8 @@ layoutKeys =
   , ("M-c c", ("flip cols", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Flip :: Row.Msg Int)))
   , ("M-c r", ("flip rows", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Flip :: Row.Msg Window)))
 
-  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar"))
-  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar"))
+  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar" >> refresh))
+  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar" >> refresh))
 
   , ("M-k", ("kill", kill >> preserveFocusOrder))
 

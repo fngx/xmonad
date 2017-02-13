@@ -2,11 +2,11 @@ Config
 { position = Bottom
 , font="xft:Terminus-9"
 , commands = [ Run UnsafeStdinReader
-             , Run PipeReader "no appt:/home/hinton/.xmonad/xmobar-pipe" "appts"
+             , Run XPropertyLog "NEXT_APPOINTMENT"
              , Run Date "%a, %b %_d %Y %I:%M%P" "date" 30
              , Run Battery [] 60
              ]
-, template = "%UnsafeStdinReader% }{ <fc=#FFFFFF>%battery%</fc> | %appts% | <fc=deepskyblue>%date%</fc>"
+, template = "%UnsafeStdinReader% }{ <fc=#FFFFFF>%battery%</fc> | %NEXT_APPOINTMENT% | <fc=deepskyblue>%date%</fc>"
 , pickBroadest = True
 , overrideRedirect = False
 }
