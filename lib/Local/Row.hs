@@ -239,7 +239,7 @@ render st screen as =
               gr = if r == 1 then 0 else (fromIntegral $ gap st)
               dw = (fromIntegral gl) + (fromIntegral gr)
               pos p h = (floor ((fromIntegral p) + (fromIntegral h) * l) + gl :: Position)
-              ext h = (floor ((fromIntegral h - dw) * (r - l)) :: Dimension)
+              ext h = (round ((fromIntegral h) * (r - l) - dw) :: Dimension)
 
       rects = map cut bounds
   in (zip as rects, st {sizes = M.fromList (zip as nszs)})
