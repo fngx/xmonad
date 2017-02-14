@@ -156,9 +156,10 @@ preserveFocusOrder = do
   rws <- recentWindows
   sendMessage $ (G.Modify $ focusWithOrder rws)
 
-autoColumn :: Int -> G.ModifySpec
-autoColumn n l gs = let count = length $ fst $ toIndex gs in
-  if count < n then G.moveToNewGroupDown l gs
+autoColumn :: [Window] -> Int -> G.ModifySpec
+autoColumn rws n l gs = let count = length $ fst $ toIndex gs in
+  if count < n then
+    focusWithOrder rws l $ G.moveToNewGroupDown l gs
   else gs
 
 -- this serves to pass relevant messages to sublayouts
@@ -174,7 +175,8 @@ instance (LayoutClass l a) => LayoutClass (Patch l) a where
     if i' > i then
       -- todo what if we want to send multiple messages, and what if they depend on X state
       do (Rectangle _ _ sw _) <- gets $ screenRect . W.screenDetail . W.current . windowset
-         ml2 <- handleMessage l1 $ SomeMessage $ G.Modify $ autoColumn $ floor $ (fromIntegral sw) / 800
+         rws <- recentWindows
+         ml2 <- handleMessage l1 $ SomeMessage $ G.Modify $ autoColumn rws $ floor $ (fromIntegral sw) / 800
          let l2 = fromMaybe l1 ml2
          (rs, ml3) <- runLayout (Workspace t l2 ms) scr
          let l3 = fromMaybe l2 ml3
