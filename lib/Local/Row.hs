@@ -96,8 +96,8 @@ minSize = 0.05
 
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
   description p = case axis p of
-                    H -> "|"
-                    V -> "-"
+                    H -> "C"
+                    V -> "R"
   runLayout (W.Workspace _ state ms) screen = do
     deleteHandles state
     (rects, statem) <- maybe (emptyLayout state screen) (doLayout state screen) ms
@@ -125,9 +125,9 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
     | (Just ReleaseResources) <- fromMessage msg = cleanup
     | (Just Equalize) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ equalize st
     | (Just (Local.Row.Grow)) <- fromMessage msg :: Maybe (Msg a) =
-        return $ maybe (Nothing) (\w -> Just $ resz st minSize w) (lastFocus st)
+        return $ maybe (Nothing) (\w -> Just $ resz st (2 * minSize) w) (lastFocus st)
     | (Just (Local.Row.Shrink)) <- fromMessage msg :: Maybe (Msg a) =
-        return $ maybe (Nothing) (\w -> Just $ resz st (- minSize) w) (lastFocus st)
+        return $ maybe (Nothing) (\w -> Just $ resz st (-2 * minSize) w) (lastFocus st)
     | (Just Flip) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ st { axis = flipax $ axis st }
     | (Just (SetAxis a)) <- fromMessage msg :: Maybe (Msg a) = return $ Just $ st { axis = a }
     | (Just e) <- fromMessage msg :: Maybe Event = resize e (handles st) >> return Nothing
@@ -223,6 +223,7 @@ render :: (Show a, Ord a) => Pile a -> Rectangle -> [a] -> ([(a, Rectangle)], Pi
 render st screen as =
   let -- lookup sizes
       szs :: [Rational]
+      -- halves, quarters etc.
       szs = map (flip (M.findWithDefault (1 % (max 1 $ fromIntegral $ M.size $ sizes st))) (sizes st)) as
       t = sum szs
       nszs = map (flip (/) t) szs

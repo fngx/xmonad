@@ -3,7 +3,7 @@ module Local.Theme (decorations,
                     Local.Theme.urgentBorderColor, urgentText,
                     hasUrgentBorderColor,
                     normalBorderColor, normalText,
-                    otherWindow, smallFont
+                    otherWindow, smallFont, bigFont
                    ,prevWindow
                    ) where
 
@@ -20,11 +20,12 @@ focusedText = "black"
 normalText = "white"
 urgentText = "white"
 
-smallFont = "xft:Terminus-9" --"xft:Liberation Mono-8"
+smallFont = "xft:Sans-8" --"xft:Liberation Mono-8"
+bigFont = "xft:Sans-12"
 
 decorations = def
   { fontName = smallFont
-  , decoHeight = 14
+  , decoHeight = 15
 
   , activeBorderColor = focusedBorderColor
   , activeTextColor = focusedText

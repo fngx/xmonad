@@ -1,6 +1,6 @@
 module Local.Hints (hintedKeysP, doHintedKeys, repeatHintedKeys) where
 
-import Local.Theme (smallFont)
+import Local.Theme (bigFont)
 
 import Data.Bits
 import Control.Monad
@@ -100,7 +100,7 @@ runKeyTree autostop pfx0 kt0 = do
   XConf {display = d, theRoot = rw} <- ask
   (Rectangle sx sy sw sh) <- gets $ screenRect . W.screenDetail . W.current . windowset
 
-  font <- initXMF $ smallFont
+  font <- initXMF $ bigFont
   extent <- textExtentsXMF font "ASDKFH"
 
   let wh = (fi $ fst extent) + (fi $ snd extent) + 2
@@ -137,7 +137,7 @@ runKeyTree autostop pfx0 kt0 = do
                          when autostop $ runKT (maybeToList pfx0) kt0
           Sub m -> do let nexts = show kt
                       render prefixs (nexts, "#ccc") "#999"
-                      keym <- D.traceShowId <$> nextKeyEvent d
+                      keym <- nextKeyEvent d
                       let handle (Press km k s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
                           handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
                           handle _ = cont

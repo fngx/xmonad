@@ -5,7 +5,7 @@ module Local.Layout (addLayout, layoutKeys, preserveFocusOrder) where
 import Local.Windows (recentWindows)
 import qualified Local.Theme as Theme
 
-import XMonad
+import XMonad hiding ( (|||) )
 import qualified XMonad.Layout.Groups as G
 import qualified XMonad.Layout.Groups.Helpers as H
 import qualified XMonad.StackSet as W
@@ -18,7 +18,7 @@ import XMonad.Layout.TrackFloating
 import XMonad.Layout.NoBorders
 import XMonad.Layout.ShowWName
 import XMonad.Layout.Tabbed
-import XMonad.Layout
+import XMonad.Layout hiding ( (|||) )
 import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
 import XMonad.Actions.MessageFeedback
@@ -29,23 +29,26 @@ import XMonad.Layout.Renamed
 import Data.List (find)
 import Data.Monoid
 import System.IO
+import Data.Maybe
+import XMonad.Layout.LayoutCombinators
 
 wmii s t = G.group inner outer
-  where inner = column ||| tabs
-        outer = Row.orderRow Row.H ||| Full
-        column = Row.row Row.V
+  where inner = innerRow ||| tabs ||| innerColumn
+        outer = outerColumn ||| Full ||| outerRow
         tabs = renamed [Replace "T"] $ tabbed s t
+        outerColumn = Row.orderRow Row.H
+        outerRow = Row.orderRow Row.V
+        innerColumn = Row.row Row.H
+        innerRow = Row.row Row.V
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         Patch $
+         Patch 0 $
          (wmii shrinkText Theme.decorations)
 
 addLayout c =
-  c { layoutHook = layout
-    -- , handleEventHook = (handleEventHook c) <+> deleteRefocusEventHook
-    }
+  c { layoutHook = layout }
 
 layoutKeys =
   [ ("M-n", ("down", alt (focusZ False) W.focusDown))
@@ -54,16 +57,14 @@ layoutKeys =
   , ("M-S-n", ("swap down", alt (swapZ False) W.swapDown))
   , ("M-S-p", ("swap up", alt (swapZ True) W.swapUp))
 
-  , ("M-M1-n", ("swap group right", alt (G.swapGroupDown) W.swapDown))
-  , ("M-M1-p", ("swap group left", alt (G.swapGroupUp) W.swapUp))
+  , ("M-M1-h", ("swap group left", alt (G.swapGroupUp) W.swapUp))
+  , ("M-M1-j", ("swap group right", alt (G.swapGroupDown) W.swapDown))
 
-  , ("M-<Right>", ("group left", alt (G.focusGroupDown) W.focusDown))
-  , ("M-<Left>",  ("group right", alt (G.focusGroupUp) W.focusUp))
-  , ("M-<Down>",    ("tab left", alt (G.focusUp) W.focusDown))
-  , ("M-<Up>",  ("tab right", alt (G.focusDown) W.focusUp))
+  , ("M-h", ("group left", alt (G.focusGroupDown) W.focusDown))
+  , ("M-j",  ("group right", alt (G.focusGroupUp) W.focusUp))
 
-  , ("M-C-p", ("move left", H.moveToGroupUp False))
-  , ("M-C-n", ("move right", H.moveToGroupDown False))
+  , ("M-S-h", ("move left", H.moveToGroupUp False))
+  , ("M-S-j", ("move right", H.moveToGroupDown False))
 
   , ("M--", ("shrink H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Shrink :: Row.Msg Int)))
   , ("M-=", ("grow H", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Grow :: Row.Msg Int)))
@@ -76,18 +77,15 @@ layoutKeys =
   , ("M-S-s", ("col left", H.moveToNewGroupUp >> preserveFocusOrder))
   , ("M-v", ("split col", H.splitGroup >> preserveFocusOrder))
 
-  , ("M-l", ("next layout", sendMessage $ G.ToFocused $ SomeMessage $ NextLayout))
-
   , ("M-f", ("full", sendMessage $ Toggle FULL))
   , ("M-S-f", ("gfull", sendMessage $ G.ToEnclosing $ SomeMessage $ NextLayout))
 
-  , ("M-c M-c", ("rows in cols", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Int)
-                                    sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Window)))
-  , ("M-c M-r", ("cols in rows", do sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.SetAxis Row.V :: Row.Msg Int)
-                                    sendMessage $ G.ToAll $ SomeMessage $ (Row.SetAxis Row.H :: Row.Msg Window)))
+  , ("M-c M-c", ("normal", jump2 "C" "R"))
+  , ("M-c M-r", ("flipped", jump2 "R" "C"))
+  , ("M-c M-t", ("all tabs", jump2 "C" "T"))
 
-  , ("M-c c", ("flip cols", sendMessage $ G.ToEnclosing $ SomeMessage $ (Row.Flip :: Row.Msg Int)))
-  , ("M-c r", ("flip rows", sendMessage $ G.ToFocused $ SomeMessage $ (Row.Flip :: Row.Msg Window)))
+  , ("M-l", ("tabs", jumpi "T"))
+  , ("M-S-l", ("rows", jumpi "R"))
 
   , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar" >> refresh))
   , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar" >> refresh))
@@ -95,6 +93,10 @@ layoutKeys =
   , ("M-k", ("kill", kill >> preserveFocusOrder))
 
   ]
+  where
+    jump2 o i = do sendMessage $ G.ToAll $ SomeMessage $ JumpToLayout i
+                   sendMessage $ G.ToEnclosing $ SomeMessage $ JumpToLayout o
+    jumpi i = sendMessage $ G.ToFocused $ SomeMessage $ JumpToLayout i
 
 -- movement operators
 
@@ -154,25 +156,33 @@ preserveFocusOrder = do
   rws <- recentWindows
   sendMessage $ (G.Modify $ focusWithOrder rws)
 
--- deleteRefocusEventHook :: Event -> X All
--- deleteRefocusEventHook e@(UnmapEvent {}) =
---   do io $ hPutStrLn stderr $ "destroy window event " ++ (show e)
---      --preserveFocusOrder
---      return $ (All True)
--- deleteRefocusEventHook e =
---   do io $ hPutStrLn stderr $ "event " ++ (show e)
---      return (All True)
+autoColumn :: Int -> G.ModifySpec
+autoColumn n l gs = let count = length $ fst $ toIndex gs in
+  if count < n then G.moveToNewGroupDown l gs
+  else gs
 
-data Patch l a = Patch (l a) deriving (Show, Read)
+-- this serves to pass relevant messages to sublayouts
+data Patch l a = Patch Int (l a) deriving (Show, Read)
 
 instance (LayoutClass l a) => LayoutClass (Patch l) a where
-  description (Patch x) = description x
+  description (Patch i x) = description x
 
-  runLayout (Workspace t (Patch ml) ms) scr = do
-    (rs, ml) <- runLayout (Workspace t ml ms) scr
-    return $ (rs, fmap Patch ml)
+  runLayout (Workspace t (Patch i l0) ms) scr = do
+    let i' = length $ W.integrate' ms
+    (rs, ml1) <- runLayout (Workspace t l0 ms) scr
+    let l1 = (fromMaybe l0 ml1)
+    if i' > i then
+      -- todo what if we want to send multiple messages, and what if they depend on X state
+      do (Rectangle _ _ sw _) <- gets $ screenRect . W.screenDetail . W.current . windowset
+         ml2 <- handleMessage l1 $ SomeMessage $ G.Modify $ autoColumn $ floor $ (fromIntegral sw) / 800
+         let l2 = fromMaybe l1 ml2
+         (rs, ml3) <- runLayout (Workspace t l2 ms) scr
+         let l3 = fromMaybe l2 ml3
+         return $ (rs, Just $ Patch i' l3)
+      else if i' < i then return $ (rs, Just $ Patch i' l1)
+           else return $ (rs, fmap (Patch i') ml1)
 
-  handleMessage (Patch l) m = fmap (fmap (\x -> (Patch x))) $ handleMessage l m'
+  handleMessage (Patch i l) m = fmap (fmap (\x -> (Patch i x))) $ handleMessage l m'
     where
       m' -- this is a hack to make the tabs update
         | Just e@(ButtonEvent {}) <- fromMessage m = SomeMessage $ G.ToAll $ SomeMessage e

@@ -24,6 +24,7 @@ conf =
 --  sloppyFocus $
   addManageRules $
   addLayout $
+  randrAuto $
   desktopConfig
   { modMask = mod4Mask
   , terminal = "urxvt"

@@ -1,6 +1,6 @@
 Config
 { position = Bottom
-, font="xft:Terminus-9"
+, font="xft:Sans-8"
 , commands = [ Run UnsafeStdinReader
              , Run XPropertyLog "NEXT_APPOINTMENT"
              , Run Date "%a, %b %_d %Y %I:%M%P" "date" 30
@@ -9,4 +9,5 @@ Config
 , template = "%UnsafeStdinReader% }{ <fc=#FFFFFF>%battery%</fc> | %NEXT_APPOINTMENT% | <fc=deepskyblue>%date%</fc>"
 , pickBroadest = True
 , overrideRedirect = False
+, bgColor = "#222"
 }

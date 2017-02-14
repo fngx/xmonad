@@ -1,34 +1,36 @@
-module Local.Randr (randrKeys) where
+{-# LANGUAGE DeriveDataTypeable #-}
+module Local.Randr (randrKeys, randrAuto) where
 
-import           XMonad                              (X, io, spawn)
-import           Control.Applicative                 ((<$>),(<|>))
-import           Control.Monad                       (void)
-import           Control.Monad.IO.Class              (MonadIO)
-import qualified Data.List                     as List
+import XMonad (X, io, spawn, Event (..), startupHook, handleEventHook, withDisplay, asks
+              , (<+>), theRoot, display
+              , rrOutputChangeNotifyMask, rrScreenChangeNotifyMask
+              , rrCrtcChangeNotifyMask, rrOutputPropertyNotifyMask
+              , ExtensionClass, Typeable, initialValue, extensionType
+              , StateExtension (PersistentExtension)
+             )
+
+import qualified XMonad.Util.ExtensibleState as XS
+import Graphics.X11.Xrandr (xrrSelectInput)
+import Control.Applicative ((<$>),(<|>))
+import Control.Monad (void, when)
+import Control.Monad.IO.Class (MonadIO)
+import qualified Data.List as List
 import Data.List ( (\\) )
 import qualified Text.ParserCombinators.Parsec as P
 import qualified Text.ParserCombinators.Parsec.Token as T
-import           Text.ParserCombinators.Parsec.Char  (alphaNum)
-import           Text.ParserCombinators.Parsec       (Parser
-                                                     ,ParseError
-                                                     ,GenParser
-                                                     ,string
-                                                     ,digit
-                                                     ,char
-                                                     ,anyToken
-                                                     ,manyTill
-                                                     ,eof
-                                                     ,space
-                                                     ,spaces
-                                                     ,try
-                                                     ,lookAhead
-                                                     ,many
-
-                                                     )
-import           XMonad.Util.Run                     (runProcessWithInput, safeSpawn)
+import Text.ParserCombinators.Parsec.Char  (alphaNum)
+import Text.ParserCombinators.Parsec (Parser ,ParseError ,GenParser ,string
+                                     ,digit ,char ,anyToken ,manyTill
+                                     ,eof ,space ,spaces ,try
+                                     ,lookAhead ,many)
+import XMonad.Util.Run (runProcessWithInput, safeSpawn)
 import Data.Maybe
 import System.IO
 import Control.Exception (catch)
+
+import qualified Debug.Trace as D
+
+import Data.Monoid
 -- width and height
 
 lidIsClosed :: IO Bool
@@ -124,8 +126,22 @@ updateLayout lf = do
   co <- runXRandR
   lidClosed <- io $ lidIsClosed
   case parseXRandR co of
-    (Right ds) -> let layout = (lf ds) \\ (if lidClosed then ["LVDS1"] else []) in
-                    applyLayout ds $ layout
+    (Right ds) -> let layout = (lf ds) \\ (if lidClosed then ["LVDS1"] else [])
+                  in do -- io $ putStrLn $ show layout
+                        -- io $ putStrLn $ show ds
+                        applyLayout ds $ layout
+    other -> io $ putStrLn $ show other
+
+updateOnConnection :: ([Display] -> Layout) -> X ()
+updateOnConnection lf = do
+  RRConnections cs <- XS.get
+  co <- runXRandR
+  lidClosed <- io $ lidIsClosed
+  case parseXRandR co of
+    (Right ds) -> let layout = (lf ds) \\ (if lidClosed then ["LVDS1"] else [])
+                      cs' = (map name $ filter connected ds) \\ (if lidClosed then ["LVDS1"] else [])
+                  in when (cs' /= cs) $ do applyLayout ds layout
+                                           XS.put $ RRConnections cs'
     other -> io $ putStrLn $ show other
 
 preferredSize :: Display -> (Int, Int)
@@ -139,6 +155,7 @@ preferredSize (Display {modes = ms}) =
 applyLayout :: [Display] -> Layout -> X ()
 applyLayout ds l =
   let (ons', offs) = List.partition (\x -> connected x && (name x) `elem` l) ds
+      -- not sure why this line is here:
       ons = mapMaybe (\x -> List.find ((== x) . name) ons') l
       sizes = map preferredSize ons
       tallest = maximum $ map snd sizes
@@ -153,8 +170,30 @@ applyLayout ds l =
                        , concatMap mode $ zip ons sizes
                        , concatMap position $ zip3 ons sizes xs
                        ]
-  in do io $ putStrLn $ show command
+  in do -- io $ putStrLn $ show command
         safeSpawn "xrandr" command
+
+data RRConnections = RRConnections [String] deriving (Typeable, Read, Show)
+
+instance ExtensionClass RRConnections where
+  initialValue = RRConnections []
+  extensionType = PersistentExtension
+
+onOutputChanged :: X () -> Event -> X All
+onOutputChanged a (RRScreenChangeNotifyEvent {}) = a >> return (All True)
+onOutputChanged _ _ = return (All True)
+
+selectRandrEvents :: X ()
+selectRandrEvents = do
+  dpy <- asks display
+  root <- asks theRoot
+  io $ xrrSelectInput dpy root rrScreenChangeNotifyMask
+
+randrAuto config = config
+  { startupHook = startupHook config >> selectRandrEvents
+  , handleEventHook = handleEventHook config <+>
+                      onOutputChanged (updateOnConnection enableConnected)
+  }
 
 randrKeys =
   [ ("M-q d d", ("randr enable",  updateLayout enableConnected))
