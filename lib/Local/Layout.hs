@@ -31,15 +31,25 @@ import Data.Monoid
 import System.IO
 import Data.Maybe
 import XMonad.Layout.LayoutCombinators
+import Local.Spacing (spacing)
+import XMonad.Layout.Accordion
+import Local.Hints (repeatHintedKeys)
 
 wmii s t = G.group inner outer
-  where inner = innerRow ||| tabs ||| innerColumn
-        outer = outerColumn ||| Full ||| outerRow
-        tabs = renamed [Replace "T"] $ tabbed s t
-        outerColumn = Row.orderRow Row.H
-        outerRow = Row.orderRow Row.V
-        innerColumn = Row.row Row.H
-        innerRow = Row.row Row.V
+  where inner = acc ||| irow ||| tabs ||| icol
+
+        as x = renamed [Replace x]
+        il n = (as n) . (spacing 0 2)
+
+        acc  = il "A" $ Accordion
+        irow = il "R" $ Row.row Row.V
+        icol = il "C" $ Row.row Row.H
+        tabs = as "T" $ tabbed s t
+
+        outer = renamed [CutWordsLeft 2] $ spacing 4 2 $ ocol ||| Full ||| orow
+
+        ocol = Row.orderRow Row.H
+        orow = Row.orderRow Row.V
 
 layout = trackFloating $
          lessBorders OnlyFloat $
@@ -60,8 +70,8 @@ layoutKeys =
   , ("M-M1-h", ("swap group left", alt (G.swapGroupUp) W.swapUp))
   , ("M-M1-j", ("swap group right", alt (G.swapGroupDown) W.swapDown))
 
-  , ("M-h", ("group left", alt (G.focusGroupDown) W.focusDown))
-  , ("M-j",  ("group right", alt (G.focusGroupUp) W.focusUp))
+  , ("M-h",  ("group left", alt (G.focusGroupUp) W.focusUp))
+  , ("M-j", ("group right", alt (G.focusGroupDown) W.focusDown))
 
   , ("M-S-h", ("move left", H.moveToGroupUp False))
   , ("M-S-j", ("move right", H.moveToGroupDown False))
@@ -84,8 +94,14 @@ layoutKeys =
   , ("M-c M-r", ("flipped", jump2 "R" "C"))
   , ("M-c M-t", ("all tabs", jump2 "C" "T"))
 
-  , ("M-l", ("tabs", jumpi "T"))
-  , ("M-S-l", ("rows", jumpi "R"))
+  , ("M-l",   ("switchl",
+               repeatHintedKeys
+                [("M-l", ("cycle", cycleInnerLayout >> refresh))
+                ,("M-t", ("tabs", jumpi "T"))
+                ,("M-a", ("accordion", jumpi "A"))
+                ,("M-r", ("rows", jumpi "R"))
+                ,("M-c", ("cols", jumpi "C"))]
+              ))
 
   , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar" >> refresh))
   , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar" >> refresh))
@@ -97,6 +113,7 @@ layoutKeys =
     jump2 o i = do sendMessage $ G.ToAll $ SomeMessage $ JumpToLayout i
                    sendMessage $ G.ToEnclosing $ SomeMessage $ JumpToLayout o
     jumpi i = sendMessage $ G.ToFocused $ SomeMessage $ JumpToLayout i
+    cycleInnerLayout = sendMessage $ G.ToFocused $ SomeMessage $ NextLayout
 
 -- movement operators
 

@@ -47,7 +47,7 @@ instance (Show a) => LayoutClass OrderLayout a where
 data Pile a = Pile
   {
     axis :: !Axis
-  , gap :: !Int
+  , draggerWidth :: !Int
   , sizes :: !(M.Map a Rational)
   , handles :: !(M.Map Window (Handle a))
   , isOuterLayout :: Bool
@@ -182,7 +182,7 @@ deleteHandles (Pile {handles = h}) = do
 createHandles :: Pile a -> Rectangle -> [(a, Rectangle)] -> X (M.Map Window (Handle a))
 createHandles st (Rectangle sx sy sw sh) rects =
   let a = axis st
-      g = max 6 (fromIntegral $ gap st)
+      g = (fromIntegral $ draggerWidth st)
 
       glyph = if a == V then xC_sb_v_double_arrow else xC_sb_h_double_arrow
       positionFrom (Rectangle x y w h) = if a == V then (fromIntegral g+y+fromIntegral h) else (fromIntegral g+x+fromIntegral w)
@@ -235,16 +235,13 @@ render st screen as =
       cut (l, r)
         | (axis st) == H = (Rectangle (pos sx sw) sy          (ext sw) sh      )
         | otherwise      = (Rectangle sx          (pos sy sh) sw       (ext sh))
-        where gl = if l == 0 then 0 else (fromIntegral $ gap st)
-              gr = if r == 1 then 0 else (fromIntegral $ gap st)
-              dw = (fromIntegral gl) + (fromIntegral gr)
-              pos p h = (floor ((fromIntegral p) + (fromIntegral h) * l) + gl :: Position)
-              ext h = (round ((fromIntegral h) * (r - l) - dw) :: Dimension)
+        where pos p h = (floor ((fromIntegral p) + (fromIntegral h) * l) :: Position)
+              ext h = (round ((fromIntegral h) * (r - l)) :: Dimension)
 
       rects = map cut bounds
   in (zip as rects, st {sizes = M.fromList (zip as nszs)})
 
-row a = Pile { gap = 2
+row a = Pile { draggerWidth = 6
               , sizes = M.empty
               , handles = M.empty
               , axis = a
