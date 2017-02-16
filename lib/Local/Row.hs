@@ -22,35 +22,12 @@ flipax :: Axis -> Axis
 flipax H = V
 flipax V = H
 
--- todo: maybe change groups to give access to the IDs since I need Ord rather than Eq
--- or I could stop using Map and use [()] instead.
-data OrderLayout a = OrderLayout (Pile Int) deriving (Read, Show)
-
--- what should I do to fix the silly bugs where windows get lost
-
-instance (Show a) => LayoutClass OrderLayout a where
-  description (OrderLayout p) = description p
-
-  runLayout (W.Workspace t (OrderLayout p) ms) screen = do
-    let ws = W.integrate' ms
-        indices = take (length ws) [0..]
-        stack' = fmap (\st -> (iterate W.focusDown' st) !! (length $ maybe [] W.up ms)) (W.differentiate indices)
-        inverse = M.fromList $ zip indices ws
-        invert (i, r) = (fromJust $ M.lookup i inverse, r)
-    (indices, p') <- runLayout (W.Workspace t p stack') screen
-    return (map invert indices, fmap OrderLayout p')
-
-  handleMessage (OrderLayout p) msg =
-    do p' <- handleMessage p msg
-       return $ fmap OrderLayout p'
-
 data Pile a = Pile
   {
     axis :: !Axis
   , draggerWidth :: !Int
   , sizes :: !(M.Map a Rational)
   , handles :: !(M.Map Window (Handle a))
-  , isOuterLayout :: Bool
   , lastFocus :: !(Maybe a)
   } deriving (Read, Show)
 
@@ -158,16 +135,11 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
             if t == buttonPress then
               -- if I am an inner layout and I get a button event
               -- it might be for the outer layout if it is
-              maybe (if (isOuterLayout st) then (return ()) else (sendOut e))
-              dragHandler $ M.lookup w handles
+              whenJust (M.lookup w handles) dragHandler
             else return ()
           resize _ _ = return ()
 
-          sendOut x = sendMessage $ ToEnclosing $ SomeMessage x
-
-          send = if (isOuterLayout st)
-                 then sendOut
-                 else sendMessage
+          send = sendMessage
 
           dragHandler :: Handle a -> X ()
           dragHandler h = maybe (return ())
@@ -245,8 +217,5 @@ row a = Pile { draggerWidth = 6
               , sizes = M.empty
               , handles = M.empty
               , axis = a
-              , isOuterLayout = False
               , lastFocus = Nothing
               }
-
-orderRow a = OrderLayout ((row a) {isOuterLayout = True})
