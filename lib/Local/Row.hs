@@ -48,27 +48,6 @@ data Handle a = Handle
   , range :: !Dimension
   } deriving (Read, Show)
 
--- for whatever reason, sometimes we miss a Hide message
--- to prevent handle windows getting orphaned, we keep track of all of them
--- and destroy the lot every now and then.
-data HandleWindows = HW (S.Set Window) deriving (Typeable, Read, Show)
-
-instance ExtensionClass HandleWindows where
-  initialValue = HW $ S.empty
-
-rememberHandle :: Window -> X ()
-rememberHandle w = XS.modify (\(HW s) -> HW $ S.insert w s)
-
-forgetHandle :: Window -> X ()
-forgetHandle w = do XS.modify (\(HW s) -> HW $ S.delete w s)
-                    deleteWindow w
-
-destroyAllHandles :: X ()
-destroyAllHandles = do
-  (HW s) <- XS.get
-  mapM_ deleteWindow s
-  XS.put $ HW (S.empty :: S.Set Window)
-
 minSize = 0.05
 
 instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
@@ -128,7 +107,7 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
                                          fmap (const minSize) sz }
                               else Nothing
 
-          cleanup = destroyAllHandles >> (return $ Just $ st {handles=M.empty})
+          cleanup = deleteHandles st >> (return $ Just $ st {handles=M.empty})
           ax x y = if (axis st) == H then x else y
 
           resize e@(ButtonEvent {ev_window = w, ev_event_type = t}) handles =
@@ -143,13 +122,13 @@ instance (Typeable a, Show a, Ord a) => LayoutClass Pile a where
 
           dragHandler :: Handle a -> X ()
           dragHandler h = maybe (return ())
-            (\r -> (flip mouseDrag destroyAllHandles $
+            (\r -> (flip mouseDrag (return ()) $
                     \x y -> send $ Drag h ((ax x y) + 3) r))
             (M.lookup (fst (between h)) (sizes st))
 
 deleteHandles :: Pile a -> X ()
 deleteHandles (Pile {handles = h}) = do
-  mapM_ forgetHandle $ M.keys h
+  mapM_ deleteWindow $ M.keys h
 
 createHandles :: Pile a -> Rectangle -> [(a, Rectangle)] -> X (M.Map Window (Handle a))
 createHandles st (Rectangle sx sy sw sh) rects =
@@ -184,7 +163,6 @@ createHandles st (Rectangle sx sy sw sh) rects =
       createHandle :: ((a, Rectangle), a) -> X (Window, Handle a)
       createHandle ((left, rect), right) = do
         window <- createHandleWindow $ handleRect rect
-        rememberHandle window
         return (window, Handle { between = (left, right),
                                  position = positionFrom rect,
                                  range = range })
@@ -208,7 +186,7 @@ render st screen as =
         | (axis st) == H = (Rectangle (pos sx sw) sy          (ext sw) sh      )
         | otherwise      = (Rectangle sx          (pos sy sh) sw       (ext sh))
         where pos p h = (floor ((fromIntegral p) + (fromIntegral h) * l) :: Position)
-              ext h = (round ((fromIntegral h) * (r - l)) :: Dimension)
+              ext h = (ceiling ((fromIntegral h) * (r - l)) :: Dimension)
 
       rects = map cut bounds
   in (zip as rects, st {sizes = M.fromList (zip as nszs)})

@@ -6,8 +6,6 @@ import Local.Windows (recentWindows)
 import qualified Local.Theme as Theme
 
 import XMonad hiding ( (|||) )
-import qualified XMonad.Layout.Groups as G
-import qualified XMonad.Layout.Groups.Helpers as H
 import qualified XMonad.StackSet as W
 import XMonad.Layout.Groups.Examples
 import XMonad.Layout.ZoomRow
@@ -35,9 +33,11 @@ import Local.Spacing (spacing)
 import XMonad.Layout.Accordion
 import Local.Hints (repeatHintedKeys)
 import qualified Local.SimpleGroups as SG
+import XMonad.Util.Stack
 
-inner = tabs ||| acc ||| irow ||| icol
-  where as x = renamed [Replace x]
+inner = SG.group (spacing 0 2 $ Row.row Row.V) tabs [Just 1]
+  where inner0 = tabs ||| acc ||| irow ||| icol
+        as x = renamed [Replace x]
         il n = (as n) . (spacing 0 2)
 
         acc  = il "A" $ Accordion
@@ -45,8 +45,7 @@ inner = tabs ||| acc ||| irow ||| icol
         icol = il "C" $ Row.row Row.H
         tabs = as "T" $ tabbed shrinkText Theme.decorations
 
-
-wmii = SG.group outer inner [1, 0]
+wmii = SG.group outer inner [Just 1, Nothing]
   where outer = spacing 4 2 $ ocol ||| Full ||| orow
         ocol = Row.row Row.H
         orow = Row.row Row.V
@@ -65,6 +64,12 @@ layoutKeys =
 
   , ("M-S-n", ("swap down", windows W.swapDown))
   , ("M-S-p", ("swap up", windows W.swapUp))
+
+  -- delete column
+  , ("M-s", ("make column", sendMessage $ SG.ChangeCapacities $ \z -> (Just 1):(W.integrate' z)))
+  , ("M-v", ("make row", do sendMessage $ SG.ToCurrent $ SomeMessage $ SG.ChangeCapacities $ \z -> (Just 1):(W.integrate' z)
+                            sendMessage $ SG.ChangeCapacities $ \z -> W.integrate' $ flip mapZ z $ \isF n -> if isF then Nothing else n
+            ))
 
   , ("M--", ("shrink H",   outerRowMsg inner Row.Shrink))
   , ("M-=", ("grow H",     outerRowMsg inner Row.Grow))
