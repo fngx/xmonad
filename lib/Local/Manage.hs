@@ -12,11 +12,12 @@ import XMonad.Hooks.ManageHelpers
 import XMonad.Util.NamedWindows (getName)
 import qualified XMonad.StackSet as W
 import XMonad.Actions.CopyWindow (copyToAll)
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Debug.Trace as D
+import qualified XMonad.Util.ExtensibleState as XS
 
 import Local.Windows (recentWindows, nextInHistory)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, maybeToList)
 
 setBorder c w = withDisplay $ \d -> io $ do
   g <- initColor d c
@@ -24,29 +25,47 @@ setBorder c w = withDisplay $ \d -> io $ do
 
 setBorderWidth b w = withDisplay $ \d -> io $ do setWindowBorderWidth d w b
 
+data BorderColors = BorderColors (M.Map Window String)
+  deriving (Read, Show, Typeable)
+
+instance ExtensionClass BorderColors where
+  initialValue = BorderColors $ M.empty
+
+changeBorderColors :: M.Map Window String -> X ()
+changeBorderColors new = do
+  BorderColors old <- XS.get
+  mapM_ (setBorder Local.Theme.normalBorderColor) $
+    M.keys $ M.difference old new
+
+  let mSetBorder w c
+        | Just c == M.lookup w old = return ()
+        | otherwise = setBorder c w
+
+  -- this would be better as a difference operation
+  mapM_ (uncurry mSetBorder) $ M.toList new
+  XS.put $ BorderColors new
+
 setBorderHook =
-    do vis <- gets (concat .
-                    map (W.integrate' . W.stack . W.workspace) .
-                    (\s -> (W.current s):(W.visible s)) .
-                    windowset)
+  do us <- readUrgents
+     nextM <- nextInHistory
+     focus <- gets (W.peek . windowset)
 
-       mapM_ (setBorder Local.Theme.normalBorderColor) vis
+     let ucs = map (flip (,) Local.Theme.urgentBorderColor) us
+         ncs = (flip (,) Local.Theme.otherWindow) <$> nextM
+         fbc = if null us
+               then Local.Theme.focusedBorderColor
+               else Local.Theme.hasUrgentBorderColor
+         fcs = (flip (,) fbc) <$> focus
 
-       withFocused (setBorder Local.Theme.focusedBorderColor)
-
-       nextM <- nextInHistory
-
-       whenJust nextM $ setBorder Local.Theme.otherWindow
-
-       us <- readUrgents
-       mapM_ (setBorder Local.Theme.urgentBorderColor) us
-
-       unless (null us) $ withFocused (setBorder Local.Theme.hasUrgentBorderColor)
+     changeBorderColors $ M.fromList $
+       ucs ++ maybeToList ncs ++ maybeToList fcs
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
                                  , remindWhen = Every 120 }
                    $ c { manageHook = (manageHook c) <+> windowRules
+                       -- this is run on every state update
+                       -- when things send a message, which sucks rather
                        , logHook = (logHook c) >> setBorderHook
                        }
 
