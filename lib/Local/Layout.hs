@@ -30,7 +30,6 @@ import System.IO
 import Data.Maybe
 import XMonad.Layout.LayoutCombinators
 import Local.Spacing (spacing)
-import XMonad.Layout.Accordion
 import Local.Hints (repeatHintedKeys)
 import qualified Local.SimpleGroups as SG
 import XMonad.Util.Stack
