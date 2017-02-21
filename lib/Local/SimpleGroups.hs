@@ -1,6 +1,7 @@
 {-# LANGUAGE StandaloneDeriving, FlexibleContexts, DeriveDataTypeable
   , UndecidableInstances, FlexibleInstances, MultiParamTypeClasses
-, PatternGuards, Rank2Types, TypeSynonymInstances #-}
+  , PatternGuards, Rank2Types, TypeSynonymInstances, TypeFamilies
+  , EmptyDataDecls #-}
 
 module Local.SimpleGroups ( group, GroupMessage (..), Group )
 where
@@ -14,12 +15,13 @@ import Data.List (unfoldr, intercalate, partition)
 import Data.Either
 import Data.Maybe (fromMaybe, fromJust, isNothing, isJust)
 import Control.Arrow (second, first, (&&&), (***))
+import Data.IORef
 
 type Gid = Int
 
 data Group l a = G { groupLayout :: l a
                    , lastSt :: Zipper a
-                   , capacity :: Maybe Int
+                   , capacity :: Int
                    , gid :: Gid
                    }
                deriving (Read, Show)
@@ -42,35 +44,41 @@ data GroupMessage = ToOuter SomeMessage
                   | ToCurrent SomeMessage
                   | ToAll SomeMessage
                   | ToInner SomeMessage
-                  -- | Rearrange (Arrangement -> Arrangement)
-                  | ChangeCapacities (Zipper (Maybe Int) -> [Maybe Int])
+                  | GetCapacities (IORef (Zipper Int))
+                  | ChangeCapacity (Int -> Int) -- of the focused column
+                  | AddGroup
+                  | DeleteGroup
                   deriving Typeable
 
 instance Message GroupMessage
 
 -- the layout function for public consumption
-group :: lo (Group li Window) -> li Window -> [Maybe Int] -> Groups lo li Window
+group :: lo (Group li Window) -> li Window -> [Int] -> Groups lo li Window
 group lo li szs = foldl addGroup emptyG $ reverse szs
   where emptyG = (GS { groups = emptyZ , innerLayout = li , outerLayout = lo, nextGid = 0 })
 
 -- what is called by ChangeCapacities
 
-changeCapacity :: (Zipper (Maybe Int) -> [Maybe Int]) -> (Groups li lo Window) -> (Groups li lo Window)
-changeCapacity f g =
+changeCapacity :: (Zipper Int -> X [Int]) -> (Groups li lo Window) -> X (Groups li lo Window)
+changeCapacity f g = do
   let currentC = mapZ_ capacity $ groups g
-      newC = f currentC
-
-      (curGroups, focused) = toIndex $ groups g
+  newC <- f currentC
+  -- if this sends an event, then it all goes wrong, a state update gets lost
+  -- I think this means we can't do this in this way
+  -- we can instead send multiple increment / decrement messages
+  -- but not any set messages
+  let (curGroups, focused) = toIndex $ groups g
 
       extendGroups = curGroups ++ (map emptyG [nextGid g ..])
-      emptyG n = G { groupLayout = (innerLayout g), lastSt = emptyZ, capacity = Nothing, gid = n }
+      emptyG n = G { groupLayout = (innerLayout g), lastSt = emptyZ, capacity = 1, gid = n }
 
       capGroups = zip extendGroups newC
 
       updateCaps = flip map capGroups $ \(g, c) -> g {capacity = c}
-      newGroups  = filter ((maybe True (> 0)) . capacity) updateCaps
+      newGroups  = filter ((> 0) . capacity) updateCaps
       groups' = fromIndex newGroups (fromMaybe 0 focused)
-  in g { groups = groups', nextGid = 1 + (maximum $ map gid newGroups) }
+
+  return $ g { groups = groups', nextGid = 1 + (maximum $ map gid newGroups) }
 
 lengthZ Nothing = 0
 lengthZ (Just (W.Stack f u d)) = 1 + length u + length d
@@ -92,8 +100,7 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
   => LayoutClass (Groups lo li) Window where
 
   description (GS { outerLayout = o, groups = g }) =
-    description o ++ "[" ++ (intercalate "," $ W.integrate' $ mapZ_ label g) ++ "]"
-    where label g = maybe "*" show (capacity g) ++ description (groupLayout g)
+    "[" ++ (concat $ W.integrate' $ mapZ_ (description . groupLayout) g) ++ "]"
 
   -- layouting
   runLayout wspa@(W.Workspace _ g0 st) r = do
@@ -101,7 +108,7 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
         theFocus = W.focus <$> st
 
         -- make sure there is a group
-        g = if null (groups g0) then addGroup g0 Nothing else g0
+        g = if null (groups g0) then addGroup g0 1 else g0
 
         -- if there is a group with capacity Nothing, it is the overflow
         -- otherwise the overflow is the rightmost group
@@ -113,15 +120,7 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
         allocate [] _ = []
         allocate (g:[]) ws = [(g, ws)]
         allocate gs [] = map (flip (,) []) gs
-        allocate (g:gs) ws = case capacity g of
-          Nothing -> let capR = sum $ map (fromMaybe 0 . capacity) gs
-                         nthR :: Int
-                         nthR = 1 + (length $ filter (isNothing . capacity) gs)
-                         nws = length ws
-                         excess = nws - capR
-                         (wsHere, wsLeft) = splitAt (excess `div` nthR) ws
-                     in (g, wsHere):(allocate gs wsLeft)
-          Just c -> let (wl, wr) = splitAt c ws in (g, wl):(allocate gs wr)
+        allocate (g:gs) ws = let (wl, wr) = splitAt (capacity g) ws in (g, wl):(allocate gs wr)
 
         -- put the windows with the groups
         allocation = allocate (W.integrate' $ groups g) ws
@@ -167,6 +166,10 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
     | Just e@(ButtonEvent {}) <- fromMessage sm = bcast e
     | Just e@(PropertyEvent {}) <- fromMessage sm = bcast e
     | Just e@(ExposeEvent {}) <- fromMessage sm = bcast e
+    where
+      bcast m = handleMessage l $ SomeMessage $ ToAll $ SomeMessage m
+
+  handleMessage l sm
     | Just m@Hide <- fromMessage sm = bcast m
     | Just m@ReleaseResources <- fromMessage sm = bcast m
     where
@@ -179,9 +182,17 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
     Just (ToOuter sm') -> handleOuter g sm'
     Just (ToCurrent sm') -> handleCurrent g sm'
     Just (ToInner sm') -> handleInner g sm'
-    -- Just (Rearrange f) -> arrange f g
-    Just (ChangeCapacities f) -> return $ Just $ changeCapacity f g
+    Just (GetCapacities r) -> let cs = mapZ_ capacity $ groups g in
+                                do io (modifyIORef' r (const cs))
+                                   return Nothing
+    Just (ChangeCapacity f) -> return $ Just g { groups = flip onFocusedZ (groups g) $
+                                                 \g -> g { capacity = f (capacity g)} }
 
+    Just (AddGroup) -> return $ Just $ addGroup g 1
+    Just (DeleteGroup) -> do
+      whenJust (getFocusZ $ groups g) $ \f -> do handleMessage (groupLayout f) (SomeMessage Hide)
+                                                 return ()
+      return $ Just g { groups = deleteFocusedZ $ groups g }
     Nothing -> handleMessage g $ SomeMessage $ ToCurrent sm
 
     where
@@ -214,67 +225,3 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
               case res' of
                 Just x -> return res'
                 Nothing -> handleOuter g sm'
-
-
-
-
-
--- -- analogous to windows for the normal stack
--- -- takes an updater for the double-stack, and updates the normal stack
--- -- plus the grouping rules. the real stuff is in arrange below
--- rearrange :: (Arrangement -> Arrangement) -> X ()
--- rearrange f = sendMessage $ Rearrange f
-
--- createColumn = rearrange $
---   \arr -> let arr' :: Arrangement
---               arr'  = onFocusedZ (second deleteFocusedZ) arr
---               focus = do focusGroup <- getFocusZ arr
---                          focusWindow <- getFocusZ $ snd focusGroup
---                          return focusWindow
---           in maybe arr (\w -> insertUpZ (Nothing, singletonZ w) arr') focus
-
--- not public
--- arrange :: (Arrangement -> Arrangement) -> Groups li lo Window -> X (Maybe (Groups li lo Window))
--- arrange f g =
---   let currentA = mapZ_ ((Just . gid) &&& lastSt) $ groups g
---       newA = f currentA
-
---       -- each thing in the arrangement is a group which has a certain number of windows
---       -- figuring out when to delete groups requires a little work
---       --  any empty group preceding a nonempty group should be deleted
---       --  any nonempty group which had a capacity limit should have its limit
---       --  set to its current size
---       --  new groups get their current size and the default layout
-
---       groupIndex = map (gid &&& id) $ W.integrate' $ groups g
-
---       lr True = Right
---       lr False = Left
-
---       updateGroup isF (nid, rest) (Nothing, stk) =
---         (nid+1, (lr isF $ G { gid = nid, lastSt = stk, capacity = Just $ lengthZ stk, groupLayout = innerLayout g }) : rest)
---       updateGroup isF (nid, rest) (Just gid, stk) =
---           case lookup gid groupIndex of
---             Just oldG -> (nid, (lr isF $ oldG { lastSt = stk
---                                              , capacity = (const $ lengthZ stk) <$> (capacity oldG)
---                                              }) : rest)
---             Nothing -> updateGroup isF (nid, rest) (Nothing, stk)
-
---       -- TODO: append leftover groups
---       -- TODO: delete dead groups
---       newG = g { groups = let (_, groups') = foldlZ updateGroup (lengthZ $ groups g, []) newA
---                           in fromTags groups' }
-
---       -- stuff to flatten an arrangement back into a stack of windows
---       flatten1 isF (_, subStack) = W.integrate' $ flip mapZ subStack (flatten2 isF)
---       flatten2 True True = Right
---       flatten2 _ _ = Left
-
---       newStack = fromTags $ concat $ W.integrate' $ flip mapZ newA flatten1
---   in if newA == currentA then return Nothing
---      else do windows $ W.modify Nothing $ const newStack
---              return $ Just newG -- not sure how this will work out, but bam, let's just do it
-
-
-
--- type Arrangement = Zipper (Maybe Int, Zipper Window)

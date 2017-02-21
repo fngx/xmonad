@@ -22,8 +22,8 @@ workspaceKeys =
       onEmpty a = ("view empty", do en <- emptyNames
                                     an <- workspaceNames
                                     a $ head $ en ++ ([x:[] | x <- ['A' .. 'Z']] \\ an))
-  in [ ("M-r", swapS)
-     , ("M-S-r", shiftS)
+  in [ ("M-s", swapS)
+     , ("M-S-s", shiftS)
      , ("M-d", focusS)
 --     , ("M-z", focusS)
      , ("M-e", onEmpty addWorkspace)
