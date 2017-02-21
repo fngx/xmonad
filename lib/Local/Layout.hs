@@ -38,37 +38,27 @@ import Data.IORef
 import XMonad.Actions.CycleWindows
 
 inner = SG.group (spacing 0 2 $ Row.row Row.V) tabs [1]
+
+tabs = as "t" $ tabbed shrinkText Theme.decorations
   where as x = renamed [Replace x]
-        tabs = as "t" $ tabbed shrinkText Theme.decorations
 
--- could I specialcase SG.group so that
--- it knows about the capacity of an outer group
--- because it looks at the inner group
-
-wmii = SG.group outer inner [1, 1]
-  where outer = spacing 4 2 $ ocol ||| Full ||| orow
-        ocol = Row.row Row.H
-        orow = Row.row Row.V
+outer = spacing 4 2 $ ocol
+  where ocol = Row.row Row.H
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         wmii
+         SG.group outer inner [1, 1]
 
 addLayout c =
   c { layoutHook = layout }
 
 layoutKeys =
-  let jump2 o i = do sendMessage $ SG.ToInner $ SomeMessage $ JumpToLayout i
-                     sendMessage $ SG.ToOuter $ SomeMessage $ JumpToLayout o
-      jumpi i = sendMessage $ SG.ToCurrent $ SomeMessage $ JumpToLayout i
-      cycleInnerLayout = sendMessage $ SG.ToCurrent $ SomeMessage $ NextLayout
+  let rowMsg :: Typeable l => l Window -> Row.Msg (SG.Group l Window) -> SomeMessage
+      rowMsg _ m = SomeMessage $ m
 
-      outerRowMsg :: Typeable l => l Window -> Row.Msg (SG.Group l Window) -> X ()
-      outerRowMsg _ m = sendMessage $ SG.ToOuter $ SomeMessage $ m
-
-      innerRowMsg :: Row.Msg Window -> X ()
-      innerRowMsg m = sendMessage $ SG.ToCurrent $ SomeMessage $ m
+      flip = do sendMessage $ SG.ToInner $ SomeMessage $ SG.ToOuter $ rowMsg tabs Row.Flip
+                sendMessage $ SG.ToOuter $ rowMsg inner Row.Flip
 
       updateColumnCapacity = do
         ref <- io $ newIORef Nothing
@@ -88,6 +78,8 @@ layoutKeys =
   , ("M-.", ("del row", do sendMessage $ SG.ToCurrent $ SomeMessage $ SG.DeleteGroup
                            updateColumnCapacity))
 
+  , ("M-v", ("flip", flip))
+
   , ("M-S-,", ("new col", sendMessage $ SG.AddGroup))
   , ("M-S-.", ("del col", do sendMessage $ SG.DeleteGroup
                              updateColumnCapacity))
@@ -98,13 +90,13 @@ layoutKeys =
   , ("M-S-n", ("swap down", windows W.swapDown))
   , ("M-S-p", ("swap up", windows W.swapUp))
 
-  , ("M--", ("shrink H",   outerRowMsg inner Row.Shrink))
-  , ("M-=", ("grow H",     outerRowMsg inner Row.Grow))
-  , ("M-S--", ("shrink V", innerRowMsg Row.Shrink))
-  , ("M-S-=", ("grow V",   innerRowMsg Row.Grow))
+  , ("M--", ("shrink H",   sendMessage $ SG.ToOuter   $ rowMsg inner Row.Shrink))
+  , ("M-=", ("grow H",     sendMessage $ SG.ToOuter   $ rowMsg inner Row.Grow))
+  , ("M-S--", ("shrink V", sendMessage $ SG.ToCurrent $ rowMsg tabs Row.Shrink))
+  , ("M-S-=", ("grow V",   sendMessage $ SG.ToCurrent $ rowMsg tabs Row.Grow))
 
-  , ("M-'", ("reset",      do sendMessage $ SG.ToInner $ SomeMessage $ (Row.Equalize :: Row.Msg Window)
-                              outerRowMsg inner Row.Equalize))
+  , ("M-'", ("reset",      do sendMessage $ SG.ToOuter $ rowMsg inner Row.Equalize
+                              sendMessage $ SG.ToInner $ rowMsg tabs Row.Equalize))
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
   , ("M-S-f", ("gfull", sendMessage $ SG.ToOuter $ SomeMessage $ NextLayout))
