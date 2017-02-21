@@ -15,10 +15,12 @@ import Data.Either
 import Data.Maybe (fromMaybe, fromJust, isNothing, isJust)
 import Control.Arrow (second, first, (&&&), (***))
 
+type Gid = Int
+
 data Group l a = G { groupLayout :: l a
                    , lastSt :: Zipper a
                    , capacity :: Maybe Int
-                   , gid :: Int
+                   , gid :: Gid
                    }
                deriving (Read, Show)
 
@@ -30,7 +32,8 @@ instance Ord (Group l a) where
 
 data Groups lo li a = GS { groups :: Zipper (Group li a)
                          , innerLayout :: li a
-                         , outerLayout :: lo (Group li a)}
+                         , outerLayout :: lo (Group li a)
+                         , nextGid :: Gid }
 
 deriving instance (Show a, Show (li a), Show (lo (Group li a))) => Show (Groups lo li a)
 deriving instance (Read a, Read (li a), Read (lo (Group li a))) => Read (Groups lo li a)
@@ -48,7 +51,7 @@ instance Message GroupMessage
 -- the layout function for public consumption
 group :: lo (Group li Window) -> li Window -> [Maybe Int] -> Groups lo li Window
 group lo li szs = foldl addGroup emptyG $ reverse szs
-  where emptyG = (GS { groups = emptyZ , innerLayout = li , outerLayout = lo})
+  where emptyG = (GS { groups = emptyZ , innerLayout = li , outerLayout = lo, nextGid = 0 })
 
 -- what is called by ChangeCapacities
 
@@ -58,15 +61,16 @@ changeCapacity f g =
       newC = f currentC
 
       (curGroups, focused) = toIndex $ groups g
-      extendGroups = curGroups ++ (map emptyG [length curGroups..])
-      emptyG n = G { groupLayout = (innerLayout g), lastSt = emptyZ, capacity = Nothing, gid = n}
+
+      extendGroups = curGroups ++ (map emptyG [nextGid g ..])
+      emptyG n = G { groupLayout = (innerLayout g), lastSt = emptyZ, capacity = Nothing, gid = n }
 
       capGroups = zip extendGroups newC
 
       updateCaps = flip map capGroups $ \(g, c) -> g {capacity = c}
       newGroups  = filter ((maybe True (> 0)) . capacity) updateCaps
       groups' = fromIndex newGroups (fromMaybe 0 focused)
-  in g { groups = groups' }
+  in g { groups = groups', nextGid = 1 + (maximum $ map gid newGroups) }
 
 lengthZ Nothing = 0
 lengthZ (Just (W.Stack f u d)) = 1 + length u + length d
@@ -75,8 +79,8 @@ anyZ _ Nothing = False
 anyZ t (Just (W.Stack f u d)) = t f || any t u || any t d
 
 addGroup g@(GS { groups = gs, innerLayout = il }) c =
-  g { groups = insertUpZ newGroup gs }
-  where newGroup =  G { groupLayout = il, lastSt = emptyZ, capacity = c, gid = (lengthZ gs) }
+  g { groups = insertUpZ newGroup gs , nextGid = (nextGid g + 1)}
+  where newGroup =  G { groupLayout = il, lastSt = emptyZ, capacity = c, gid = nextGid g }
 
 both :: (a -> b) -> Either a a -> b
 both f = either f f
@@ -103,6 +107,8 @@ instance (LayoutClass li Window, LayoutClass lo (Group li Window))
         -- otherwise the overflow is the rightmost group
         -- if there are two groups with capacity nothing, not really sure
         -- could fill them all up evenly?
+
+        -- it would be nice to adjust the capacity when windows appear or are deleted
         allocate :: [Group li Window] -> [Window] -> [(Group li Window, [Window])]
         allocate [] _ = []
         allocate (g:[]) ws = [(g, ws)]
