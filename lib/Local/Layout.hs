@@ -99,7 +99,6 @@ layoutKeys =
                               sendMessage $ SG.ToInner $ rowMsg tabs Row.Equalize))
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
-  , ("M-S-f", ("gfull", sendMessage $ SG.ToOuter $ SomeMessage $ NextLayout))
 
   , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar" >> refresh))
   , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar" >> refresh))
