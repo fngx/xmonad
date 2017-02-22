@@ -3,7 +3,7 @@
   , PatternGuards, Rank2Types, TypeSynonymInstances, TypeFamilies
   , EmptyDataDecls #-}
 
-module Local.SimpleGroups ( group, GroupMessage (..), Group )
+module Local.SimpleGroups ( group, groupl, GroupMessage (..), Group )
 where
 
 import XMonad hiding (focus)
@@ -56,6 +56,12 @@ instance Message GroupMessage
 group :: lo (Group li Window) -> li Window -> [Int] -> Groups lo li Window
 group lo li szs = foldl addGroup emptyG $ reverse szs
   where emptyG = (GS { groups = emptyZ , innerLayout = li , outerLayout = lo, nextGid = 0 })
+
+groupl :: lo (Group li Window) -> li Window -> [(Int, li Window)] -> Groups lo li Window
+groupl lo li initial = GS { groups = fromIndex (map toGroup (zip [0..] initial)) 0
+                          , innerLayout = li, outerLayout = lo
+                          , nextGid = length initial }
+  where toGroup (g, (c, st)) = (G { groupLayout = st, lastSt = emptyZ, gid = g, capacity = c})
 
 -- what is called by ChangeCapacities
 

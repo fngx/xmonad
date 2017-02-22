@@ -35,8 +35,10 @@ import qualified Local.SimpleGroups as SG
 import XMonad.Util.Stack
 import Data.IORef
 import XMonad.Actions.CycleWindows
+import Local.BSP
 
-inner = SG.group (spacing 0 2 $ Row.row Row.V) tabs [1]
+inner = innerN [1]
+innerN = SG.group (spacing 0 2 $ Row.row Row.V) tabs
 
 tabs = as "t" $ tabbed shrinkText Theme.decorations
   where as x = renamed [Replace x]
@@ -47,7 +49,7 @@ outer = spacing 4 2 $ ocol
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         SG.group outer inner [1, 1]
+         SG.groupl outer inner [(1, inner), (2, innerN [1, 1])]
 
 addLayout c =
   c { layoutHook = layout }
