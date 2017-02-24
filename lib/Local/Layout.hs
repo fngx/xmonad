@@ -7,43 +7,24 @@ import qualified Local.Theme as Theme
 
 import XMonad hiding ( (|||) )
 import qualified XMonad.StackSet as W
-import XMonad.Layout.Groups.Examples
-import XMonad.Layout.ZoomRow
 import XMonad.Layout.Tabbed
 import XMonad.StackSet (Workspace (Workspace), Stack (..))
-import XMonad.Util.Stack
 import XMonad.Layout.TrackFloating
 import XMonad.Layout.NoBorders
-import XMonad.Layout.ShowWName
-import XMonad.Layout.Tabbed
 import XMonad.Layout hiding ( (|||) )
 import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
-import XMonad.Actions.MessageFeedback
-import Control.Monad (unless, when)
-import qualified Local.Row as Row
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
-import XMonad.Layout.Renamed
-import Data.List (find)
-import Data.Monoid
-import System.IO
-import Data.Maybe
 import XMonad.Layout.LayoutCombinators
-import XMonad.Util.Stack
-import Data.IORef
 import XMonad.Actions.CycleWindows
 import Local.MC
 
-
-tabs = as "t" $ tabbed shrinkText Theme.decorations
-  where as x = renamed [Replace x]
-
+tabs = tabbed shrinkText Theme.decorations
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         MC { cells = [(1, [1]), (1, [1,1])]
-            , overflow = tabs }
+         MC { cells = [(1, [1]), (1, [1])] , overflow = tabs }
 
 addLayout c =
   c { layoutHook = layout }

@@ -1,6 +1,6 @@
-{-# LANGUAGE StandaloneDeriving, FlexibleContexts, DeriveDataTypeable
+{-# LANGUAGE FlexibleContexts, DeriveDataTypeable
   , UndecidableInstances, FlexibleInstances, MultiParamTypeClasses
-  , PatternGuards, Rank2Types, TypeSynonymInstances, TypeFamilies #-}
+  , PatternGuards, Rank2Types, TypeSynonymInstances #-}
 
 module Local.MC where
 
@@ -12,9 +12,10 @@ import Data.Maybe
 import Data.List (intercalate)
 import qualified Debug.Trace as D
 
--- TODO: remember overflow focus?
+-- TODO: remember overflow focus / rearrange overflow focus automatically
 -- TODO: messages for border resize and grow / shrink / etc
 -- TODO: add gaps?
+-- TODO: small screen layout swapper
 
 data MC l a = MC
   { cells :: [(Rational, [Rational])]
@@ -53,7 +54,9 @@ instance (Show a, LayoutClass l a) => LayoutClass (MC l) a where
         limit n ((cw, rws):rest)
           | length rws >= n = [(cw, take n rws)]
           | otherwise = (cw, rws):(limit (n - length rws) rest)
-
+        -- do I need coordinates to handle dragging?
+        -- border resize is silly and adds handles to tabs and screen edges
+        -- so it seems have to do it myself.
         divide :: Int -> [(Rectangle, (Int, Int))]
         divide n = let cs = limit n $ cells state
                        cols = explode cutV rect $ map fst cs
@@ -80,18 +83,12 @@ instance (Show a, LayoutClass l a) => LayoutClass (MC l) a where
     | Just (ButtonEvent {}) <- fromMessage sm = overflowHandle state sm
     | Just (PropertyEvent {}) <- fromMessage sm = overflowHandle state sm
     | Just (ExposeEvent {}) <- fromMessage sm = overflowHandle state sm
-
-  handleMessage state sm
     | Just Hide <- fromMessage sm = overflowHandle state sm
     | Just ReleaseResources <- fromMessage sm = overflowHandle state sm
-
-  handleMessage state sm = case fromMessage sm of
-    Just (SetCells cs) -> if (cells state) /= cs
-                          then return $ Just $ state { cells = cs }
-                          else return $ Nothing
-    _ -> return Nothing
-
-  handleMessage state sm = return Nothing
+    | Just (SetCells cs) <- fromMessage sm = if (cells state) /= cs
+                                             then return $ Just $ state { cells = cs }
+                                             else return $ Nothing
+    | otherwise = return Nothing
 
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
