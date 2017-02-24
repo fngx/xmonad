@@ -29,79 +29,50 @@ import Data.Monoid
 import System.IO
 import Data.Maybe
 import XMonad.Layout.LayoutCombinators
-import Local.Spacing (spacing)
-import Local.Hints (repeatHintedKeys)
-import qualified Local.SimpleGroups as SG
 import XMonad.Util.Stack
 import Data.IORef
 import XMonad.Actions.CycleWindows
-import Local.BSP
+import Local.MC
 
-inner = innerN [1]
-innerN = SG.group (spacing 0 2 $ Row.row Row.V) tabs
 
 tabs = as "t" $ tabbed shrinkText Theme.decorations
   where as x = renamed [Replace x]
 
-outer = spacing 4 2 $ ocol
-  where ocol = Row.row Row.H
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         SG.groupl outer inner [(1, inner), (2, innerN [1, 1])]
+         MC { cells = [(1, [1]), (1, [1,1])]
+            , overflow = tabs }
 
 addLayout c =
   c { layoutHook = layout }
 
 layoutKeys =
-  let rowMsg :: Typeable l => l Window -> Row.Msg (SG.Group l Window) -> SomeMessage
-      rowMsg _ m = SomeMessage $ m
-
-      flip = do sendMessage $ SG.ToInner $ SomeMessage $ SG.ToOuter $ rowMsg tabs Row.Flip
-                sendMessage $ SG.ToOuter $ rowMsg inner Row.Flip
-
-      updateColumnCapacity = do
-        ref <- io $ newIORef Nothing
-        sendMessage $ SG.ToCurrent $ SomeMessage $ SG.GetCapacities ref
-        rowCaps <- io $ readIORef ref
-        sendMessage $ SG.ChangeCapacity $ const $ sum $ W.integrate' rowCaps
-  in
+  let col n = (1, take n $ repeat 1) in
   [ ("M-n", ("down", windows W.focusDown))
-  , ("M-p", ("up", windows W.focusUp))
+  , ("M-p", ("up",   windows W.focusUp))
 
-  , ("M-M1-n", ("rfd", rotFocusedDown))
-  , ("M-M1-p", ("rfd", rotFocusedUp))
+  , ("M-m", ("focus master",  windows W.focusMaster))
+  , ("M-S-m", ("swap master", windows W.swapMaster))
 
-  , ("M-,", ("new row", do sendMessage $ SG.ToCurrent $ SomeMessage $ SG.AddGroup
-                           updateColumnCapacity))
+  , ("M-l 1", ("1",   sendMessage $ SetCells [col 1] ))
+  , ("M-l 2", ("1|1", sendMessage $ SetCells [col 1, col 1] ))
+  , ("M-l 3", ("1|2", sendMessage $ SetCells [col 1, col 2] ))
+  , ("M-l 4", ("1|3", sendMessage $ SetCells [col 1, col 3] ))
+  , ("M-l 5", ("2|2", sendMessage $ SetCells [col 2, col 2] ))
 
-  , ("M-.", ("del row", do sendMessage $ SG.ToCurrent $ SomeMessage $ SG.DeleteGroup
-                           updateColumnCapacity))
-
-  , ("M-v", ("flip", flip))
-
-  , ("M-S-,", ("new col", sendMessage $ SG.AddGroup))
-  , ("M-S-.", ("del col", do sendMessage $ SG.DeleteGroup
-                             updateColumnCapacity))
-
-  , ("M-c M-t", ("new tab", do sendMessage $ SG.ToCurrent $ SomeMessage $ SG.ChangeCapacity (+ 1)
-                               updateColumnCapacity))
+  , ("M-M1-n", ("rfd", rotUnfocusedDown))
+  , ("M-M1-p", ("rfd", rotUnfocusedUp))
 
   , ("M-S-n", ("swap down", windows W.swapDown))
   , ("M-S-p", ("swap up", windows W.swapUp))
 
-  , ("M--", ("shrink H",   sendMessage $ SG.ToOuter   $ rowMsg inner Row.Shrink))
-  , ("M-=", ("grow H",     sendMessage $ SG.ToOuter   $ rowMsg inner Row.Grow))
-  , ("M-S--", ("shrink V", sendMessage $ SG.ToCurrent $ rowMsg tabs Row.Shrink))
-  , ("M-S-=", ("grow V",   sendMessage $ SG.ToCurrent $ rowMsg tabs Row.Grow))
-
-  , ("M-'", ("reset",      do sendMessage $ SG.ToOuter $ rowMsg inner Row.Equalize
-                              sendMessage $ SG.ToInner $ rowMsg tabs Row.Equalize))
-
   , ("M-f", ("full", sendMessage $ Toggle FULL))
 
-  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> spawn "pkill -STOP xmobar" >> refresh))
-  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> spawn "pkill -CONT xmobar" >> refresh))
+  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >>
+                          spawn "pkill -STOP xmobar" >> refresh))
+  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >>
+                           spawn "pkill -CONT xmobar" >> refresh))
 
   , ("M-k", ("kill", kill))]
