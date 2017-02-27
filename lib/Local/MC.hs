@@ -9,7 +9,7 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.Stack
 import XMonad.Layout (splitHorizontallyBy, splitVerticallyBy)
 import Data.Maybe
-import Data.List (intercalate)
+import Data.List (intercalate, transpose)
 import Control.Arrow (first, second, (&&&))
 import Control.Applicative ((<$>))
 import qualified Data.Map.Strict as M
@@ -30,6 +30,7 @@ data MC l a = MC
   , overflow :: l a
   , coords :: M.Map a (Int, Int)
   , mirror :: Bool
+  , fillColumns :: Bool
   } deriving (Read, Show)
 
 mc :: l a -> [(Rational, [Rational])] -> MC l a
@@ -45,8 +46,10 @@ data MCMsg a =
 instance Typeable a => Message (MCMsg a)
 
 instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a where
-  description (MC { cells = cs }) =
-    intercalate "|" (map (show . length . snd) cs)
+  description (MC { cells = cs, mirror = m, fillColumns = fc }) =
+    concat [ if mirror then "M" else ""
+           , if fillColumns then "C" else ""
+           , intercalate "|" (map (show . length . snd) cs) ]
 
   runLayout wspa@(W.Workspace _ state stack) rect' = do
     let mirr r@(Rectangle sx sy sw sh)
@@ -72,7 +75,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
           in map (cut rect) bounds
 
         limit :: Int -> [(Rational, [Rational])] -> [(Rational, [Rational])]
-        limit 0 [] = []
+        limit 0 _ = []
         limit n ((cw, rws):rest)
           | length rws >= n = [(cw, take n rws)]
           | otherwise = (cw, rws):(limit (n - length rws) rest)
