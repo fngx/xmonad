@@ -59,6 +59,7 @@ layoutKeys =
   , ("M-S-p", ("swap up", windows W.swapUp))
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
+  , ("M-v", ("flip", sendMC Flip))
 
   , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >>
                           spawn "pkill -STOP xmobar" >> refresh))

@@ -18,6 +18,8 @@ import XMonad.Util.Types (Direction2D (..))
 import Graphics.X11.Xlib.Extras (getWindowAttributes,
                                  WindowAttributes (..))
 
+import Graphics.X11.Xlib.Misc (warpPointer)
+
 -- TODO: remember overflow focus / rearrange overflow focus automatically
 -- TODO: messages for border resize and grow / shrink / etc
 -- TODO: add gaps?
@@ -27,16 +29,18 @@ data MC l a = MC
   { cells :: [(Rational, [Rational])]
   , overflow :: l a
   , coords :: M.Map a (Int, Int)
+  , mirror :: Bool
   } deriving (Read, Show)
 
 mc :: l a -> [(Rational, [Rational])] -> MC l a
-mc il c0 = MC { cells = c0 , overflow = il, coords = M.empty }
+mc il c0 = MC { cells = c0 , overflow = il, coords = M.empty, mirror = False }
 
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
   ResizeCell Rational Rational a |
   SetEdge Direction2D Rational a |
-  ChangeCells ([(Rational, [Rational])] -> [(Rational, [Rational])])
+  ChangeCells ([(Rational, [Rational])] -> [(Rational, [Rational])]) |
+  Flip
 
 instance Typeable a => Message (MCMsg a)
 
@@ -44,8 +48,12 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
   description (MC { cells = cs }) =
     intercalate "|" (map (show . length . snd) cs)
 
-  runLayout wspa@(W.Workspace _ state stack) rect = do
-    let ws = W.integrate' stack
+  runLayout wspa@(W.Workspace _ state stack) rect' = do
+    let mirr r@(Rectangle sx sy sw sh)
+          | mirror state = (Rectangle sy sx sh sw)
+          | otherwise = r
+        rect = mirr rect'
+        ws = W.integrate' stack
         capacity = foldl (+) 0 $ map (length . snd) $ cells state
         demand = length ws
 
@@ -82,7 +90,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
               o' <- handleMessage (overflow state) $ SomeMessage Hide
               let state' = state { overflow = fromMaybe (overflow state) o'
                                  , coords = M.fromList (zip ws $ map snd rs)}
-              return $ (zip ws rects, Just $ state')
+              return $ (zip ws (map mirr rects), Just $ state')
       else do let rs = divide capacity
                   rects = map fst rs
                   (main, extra) = splitAt (capacity - 1) ws
@@ -92,10 +100,10 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                   ocoord = (length (cells state) - 1,
                             length (snd $ last $ cells state) - 1)
               (owrs, o') <- runLayout wspa { W.stack = ostack
-                                           , W.layout = (overflow state) } orect
+                                           , W.layout = (overflow state) } (mirr orect)
               let state' = state { overflow = fromMaybe (overflow state) o'
                                  , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord) }
-              return $ ((zip main rects) ++ owrs, Just $ state')
+              return $ ((zip main (map mirr rects)) ++ owrs, Just $ state')
 
   handleMessage state sm
     | Just (ButtonEvent {}) <- fromMessage sm = overflowHandle state sm
@@ -107,16 +115,25 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                                              then return $ Just $ state { cells = cs }
                                              else return $ Nothing
     | Just (ResizeCell dx dy a) <- fromMessage sm =
-        return $ (resizeCell (normalizeState state) (+ dx) (+ dy)) <$> (M.lookup a $ coords state)
+        let (dx', dy') = if mirror state then (dy, dx) else (dx, dy) in
+          return $ (resizeCell (normalizeState state) (+ dx') (+ dy')) <$> (M.lookup a $ coords state)
 
     | Just (SetEdge e p w) <- fromMessage sm =
-        return $ (setEdgeAbsolute state e p) <$> (M.lookup w $ coords state)
+        return $ (setEdgeAbsolute state (unmirror e) p) <$> (M.lookup w $ coords state)
 
     | Just (ChangeCells f :: MCMsg a) <- fromMessage sm =
         return $ Just $ state { cells = f (cells state) }
 
-    | otherwise = return Nothing
+    | Just (Flip :: MCMsg a) <- fromMessage sm = return $ Just $ state { mirror = not (mirror state) }
 
+    | otherwise = return Nothing
+    where unmirror e
+            | mirror state = case e of
+                               L -> U
+                               R -> D
+                               U -> L
+                               D -> R
+            | otherwise = e
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
 
@@ -159,7 +176,7 @@ toNth _ _ [] = []
 toNth f 0 (x:xs) = (f x):xs
 toNth f n (x:xs) = x:(toNth f (n-1) xs)
 
-mouseResizeTile :: Int -> (Window -> X ())  -> Window -> X ()
+mouseResizeTile :: Rational -> (Window -> X ())  -> Window -> X ()
 mouseResizeTile border fallback w =
   whenX (isClient w) $
   withDisplay $ \dpy -> do
@@ -178,15 +195,15 @@ mouseResizeTile border fallback w =
       oy = fromIntegral oy'
 
       drag mouse wpos wdim e1 e2
-        | mouse - wpos < border =
-            (True, \px -> sendMessage $ SetEdge e1 px w)
-        | (wpos + wdim) - mouse < border =
-            (True, \px -> sendMessage $ SetEdge e2 px w)
+        | mouse - wpos < (wdim * border) =
+            (True, 0, \px -> sendMessage $ SetEdge e1 px w)
+        | (wpos + wdim) - mouse < (wdim * border) =
+            (True, wdim, \px -> sendMessage $ SetEdge e2 px w)
         | otherwise =
-            (False, \px -> return ())
+            (False, mouse, \px -> return ())
 
-      (hitX, dragX) = drag ox wx ww L R
-      (hitY, dragY) = drag oy wy wh U D
+      (hitX, warpx, dragX) = drag ox wx ww L R
+      (hitY, warpy, dragY) = drag oy wy wh U D
 
       dragHandler x y = do
         let xp = (fromIntegral x - fromIntegral sx) / fromIntegral sw
@@ -195,5 +212,7 @@ mouseResizeTile border fallback w =
         dragY yp
       stopHandler = return ()
   if hitX || hitY
-    then mouseDrag dragHandler stopHandler
+    -- warp pointer here
+    then do io $ warpPointer dpy none w 0 0 0 0 (floor warpx) (floor warpy)
+            mouseDrag dragHandler stopHandler
     else fallback w

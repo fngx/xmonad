@@ -44,7 +44,7 @@ conf =
   , ((mod4Mask, 1), \w -> do float <- isFloating w
                              if float
                                then (focus w >> Flex.mouseWindow Flex.discrete w)
-                               else mouseResizeTile 150 mouseMoveWindow w)
+                               else mouseResizeTile (1/3) mouseMoveWindow w)
   , ((mod4Mask, 4), sendMessage . ResizeCell (-0.1) 0) -- scroll up
   , ((mod4Mask, 5), sendMessage . ResizeCell 0.1 0) -- scroll down
   , ((mod4Mask, 6), sendMessage . ResizeCell 0 (-0.1)) -- scroll left
