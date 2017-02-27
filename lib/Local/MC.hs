@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, DeriveDataTypeable
   , UndecidableInstances, FlexibleInstances, MultiParamTypeClasses
-  , PatternGuards, Rank2Types, TypeSynonymInstances #-}
+  , PatternGuards, Rank2Types, TypeSynonymInstances, ScopedTypeVariables #-}
 
 module Local.MC where
 
@@ -10,23 +10,36 @@ import XMonad.Util.Stack
 import XMonad.Layout (splitHorizontallyBy, splitVerticallyBy)
 import Data.Maybe
 import Data.List (intercalate)
+import Control.Arrow (first, second, (&&&))
+import Control.Applicative ((<$>))
+import qualified Data.Map.Strict as M
 import qualified Debug.Trace as D
+import XMonad.Util.Types (Direction2D (..))
+import Graphics.X11.Xlib.Extras (getWindowAttributes,
+                                 WindowAttributes (..))
 
 -- TODO: remember overflow focus / rearrange overflow focus automatically
 -- TODO: messages for border resize and grow / shrink / etc
 -- TODO: add gaps?
--- TODO: small screen layout swapper
+-- TODO: small screen layout swapper?
 
 data MC l a = MC
   { cells :: [(Rational, [Rational])]
   , overflow :: l a
+  , coords :: M.Map a (Int, Int)
   } deriving (Read, Show)
 
-data MCMsg = SetCells [(Rational, [Rational])]
+mc :: l a -> [(Rational, [Rational])] -> MC l a
+mc il c0 = MC { cells = c0 , overflow = il, coords = M.empty }
 
-instance Message MCMsg
+data MCMsg a =
+  SetCells [(Rational, [Rational])] |
+  ResizeCell Rational Rational a |
+  SetEdge Direction2D Rational a
 
-instance (Show a, LayoutClass l a) => LayoutClass (MC l) a where
+instance Typeable a => Message (MCMsg a)
+
+instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a where
   description (MC { cells = cs }) =
     intercalate "|" (map (show . length . snd) cs)
 
@@ -49,16 +62,15 @@ instance (Show a, LayoutClass l a) => LayoutClass (MC l) a where
               bounds = zip parts (drop 1 parts)
           in map (cut rect) bounds
 
-        limit :: Int -> [(a, [b])] -> [(a, [b])]
+        limit :: Int -> [(Rational, [Rational])] -> [(Rational, [Rational])]
         limit 0 [] = []
         limit n ((cw, rws):rest)
           | length rws >= n = [(cw, take n rws)]
           | otherwise = (cw, rws):(limit (n - length rws) rest)
-        -- do I need coordinates to handle dragging?
-        -- border resize is silly and adds handles to tabs and screen edges
-        -- so it seems have to do it myself.
+
         divide :: Int -> [(Rectangle, (Int, Int))]
-        divide n = let cs = limit n $ cells state
+        divide n = let cs :: [(Rational, [Rational])]
+                       cs = limit n $ cells state
                        cols = explode cutV rect $ map fst cs
                        rows = map (uncurry (explode cutH)) $ zip cols $ map snd cs
                    in concatMap (\(c, rs) -> zip rs (map ((,) c) [0 :: Int ..])) $ zip [0 :: Int ..] rows
@@ -67,28 +79,110 @@ instance (Show a, LayoutClass l a) => LayoutClass (MC l) a where
       then do let rs = divide demand
                   rects = map fst rs
               o' <- handleMessage (overflow state) $ SomeMessage Hide
-              let state' = state { overflow = fromMaybe (overflow state) o' }
+              let state' = state { overflow = fromMaybe (overflow state) o'
+                                 , coords = M.fromList (zip ws $ map snd rs)}
               return $ (zip ws rects, Just $ state')
       else do let rs = divide capacity
                   rects = map fst rs
                   (main, extra) = splitAt (capacity - 1) ws
-                  odex = (D.traceShowId $ maybe 0 (length . W.up) stack) - (capacity-1)
+                  odex = (maybe 0 (length . W.up) stack) - (capacity-1)
                   ostack = fromIndex extra odex
+                  orect = last rects
+                  ocoord = (length (cells state) - 1,
+                            length (snd $ last $ cells state) - 1)
               (owrs, o') <- runLayout wspa { W.stack = ostack
-                                           , W.layout = (overflow state) } (last rects)
-              let state' = state { overflow = fromMaybe (overflow state) o' }
+                                           , W.layout = (overflow state) } orect
+              let state' = state { overflow = fromMaybe (overflow state) o'
+                                 , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord) }
               return $ ((zip main rects) ++ owrs, Just $ state')
 
   handleMessage state sm
     | Just (ButtonEvent {}) <- fromMessage sm = overflowHandle state sm
     | Just (PropertyEvent {}) <- fromMessage sm = overflowHandle state sm
     | Just (ExposeEvent {}) <- fromMessage sm = overflowHandle state sm
-    | Just Hide <- fromMessage sm = overflowHandle state sm
-    | Just ReleaseResources <- fromMessage sm = overflowHandle state sm
-    | Just (SetCells cs) <- fromMessage sm = if (cells state) /= cs
+    | Just (Hide) <- fromMessage sm = overflowHandle state sm
+    | Just (ReleaseResources) <- fromMessage sm = overflowHandle state sm
+    | Just (SetCells cs :: MCMsg a) <- fromMessage sm = if (cells state) /= cs
                                              then return $ Just $ state { cells = cs }
                                              else return $ Nothing
+    | Just (ResizeCell dx dy a) <- fromMessage sm =
+        return $ (uncurry (resizeCell state (+ dx) (+ dy))) <$> (M.lookup a $ coords state)
+
+    | Just (SetEdge e p w) <- fromMessage sm =
+        return $ (setEdgeAbsolute state e p) <$> (M.lookup w $ coords state)
+
     | otherwise = return Nothing
 
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
+
+normalize a = let s = sum a in map (flip (/) s) a
+
+setAbsolute _ _ _ [] = []
+setAbsolute 0 p psf (t:(n:rs)) =
+  -- n + (t - t') > 0.05
+  -- n + t > 0.05 + t'
+  -- t' > n + t - 0.05
+  let t' = min (n + t - 0.05) $ max 0.05 (p - psf)
+      n' = n + (t - t')
+  in t':n':rs
+setAbsolute 0 p psf (t:[]) = [t]
+setAbsolute n p psf (x:xs) = x:(setAbsolute n p (psf + x) xs)
+
+setEdgeAbsolute :: MC l a -> Direction2D -> Rational -> (Int, Int) -> MC l a
+setEdgeAbsolute state e p (c, r)
+  | c < 0 = state
+  | r < 0 = state
+  | e == L = setEdgeAbsolute state R p (c - 1, r)
+  | e == U = setEdgeAbsolute state D p (c, r - 1)
+  | e == R = let cps = setAbsolute c p 0 $ normalize (map fst $ cells state)
+             in state { cells = zip cps $ map snd $ cells state }
+  | e == D = state { cells = toNth (second $ (setAbsolute r p 0 . normalize))
+                             c (cells state) }
+  | otherwise = state
+
+resizeCell state tx ty ci ri = state
+  { cells = toNth (second (toNth ty ri) . first tx) ci (cells state) }
+
+toNth _ _ [] = []
+toNth f 0 (x:xs) = (f x):xs
+toNth f n (x:xs) = x:(toNth f (n-1) xs)
+
+mouseResizeTile :: Window -> X ()
+mouseResizeTile w =
+  whenX (isClient w) $
+  withDisplay $ \dpy -> do
+  (Rectangle sx sy sw sh) <- gets (screenRect .
+                                    W.screenDetail .
+                                    W.current .
+                                    windowset)
+  wa <- io $ getWindowAttributes dpy w
+  (_, _, _, ox', oy', _, _, _) <- io $ queryPointer dpy w
+
+  let wx = fromIntegral $ wa_x wa
+      wy = fromIntegral $ wa_y wa
+      ww = fromIntegral $ wa_width wa
+      wh = fromIntegral $ wa_height wa
+      ox = fromIntegral ox'
+      oy = fromIntegral oy'
+
+      drag mouse wpos wdim e1 e2
+        | mouse - wpos < 150 =
+            (True, \px -> sendMessage $ SetEdge e1 px w)
+        | (wpos + wdim) - mouse < 150 =
+            (True, \px -> sendMessage $ SetEdge e2 px w)
+        | otherwise =
+            (False, \px -> return ())
+
+      (hitX, dragX) = drag ox wx ww L R
+      (hitY, dragY) = drag oy wy wh U D
+
+      dragHandler x y = do
+        let xp = (fromIntegral x - fromIntegral sx) / fromIntegral sw
+            yp = (fromIntegral y - fromIntegral sy) / fromIntegral sh
+        dragX xp
+        dragY yp
+      stopHandler = return ()
+  if hitX || hitY
+    then mouseDrag dragHandler stopHandler
+    else mouseMoveWindow w

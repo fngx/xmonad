@@ -24,24 +24,30 @@ tabs = tabbed shrinkText Theme.decorations
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         MC { cells = [(1, [1]), (1, [1])] , overflow = tabs }
+         mc tabs [(1, [1]), (1, [1])]
 
 addLayout c =
   c { layoutHook = layout }
 
 layoutKeys =
-  let col n = (1, take n $ repeat 1) in
+  let col n = (1, take n $ repeat 1)
+      sendMC :: MCMsg Window -> X ()
+      sendMC = sendMessage
+  in
   [ ("M-n", ("down", windows W.focusDown))
   , ("M-p", ("up",   windows W.focusUp))
 
   , ("M-m", ("focus master",  windows W.focusMaster))
   , ("M-S-m", ("swap master", windows W.swapMaster))
 
-  , ("M-l 1", ("1",   sendMessage $ SetCells [col 1] ))
-  , ("M-l 2", ("1|1", sendMessage $ SetCells [col 1, col 1] ))
-  , ("M-l 3", ("1|2", sendMessage $ SetCells [col 1, col 2] ))
-  , ("M-l 4", ("1|3", sendMessage $ SetCells [col 1, col 3] ))
-  , ("M-l 5", ("2|2", sendMessage $ SetCells [col 2, col 2] ))
+  , ("M-l 1", ("1",   sendMC $ SetCells [col 1] ))
+  , ("M-l 2", ("1|1", sendMC $ SetCells [col 1, col 1] ))
+  , ("M-l 3", ("1|2", sendMC $ SetCells [col 1, col 2] ))
+  , ("M-l 4", ("1|3", sendMC $ SetCells [col 1, col 3] ))
+  , ("M-l 5", ("2|2", sendMC $ SetCells [col 2, col 2] ))
+
+  , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.1 0.1))))
+  , ("M--", ("shrink", withFocused $ (sendMC . (ResizeCell (-0.1) (-0.1)))))
 
   , ("M-M1-n", ("rfd", rotUnfocusedDown))
   , ("M-M1-p", ("rfd", rotUnfocusedUp))
