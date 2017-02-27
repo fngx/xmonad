@@ -39,7 +39,7 @@ data MCMsg a =
   SetCells [(Rational, [Rational])] |
   ResizeCell Rational Rational a |
   SetEdge Direction2D Rational a |
-  ChangeCells ([(Rational, [Rational])] -> [(Rational, [Rational])]) |
+  ChangeCells (Maybe (Int, Int) -> [(Rational, [Rational])] -> [(Rational, [Rational])]) a |
   Flip
 
 instance Typeable a => Message (MCMsg a)
@@ -121,8 +121,8 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
     | Just (SetEdge e p w) <- fromMessage sm =
         return $ (setEdgeAbsolute state (unmirror e) p) <$> (M.lookup w $ coords state)
 
-    | Just (ChangeCells f :: MCMsg a) <- fromMessage sm =
-        return $ Just $ state { cells = f (cells state) }
+    | Just (ChangeCells f w :: MCMsg a) <- fromMessage sm =
+        return $ Just $ state { cells = f (M.lookup w $ coords state) (cells state) }
 
     | Just (Flip :: MCMsg a) <- fromMessage sm = return $ Just $ state { mirror = not (mirror state) }
 
