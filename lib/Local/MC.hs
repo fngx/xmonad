@@ -34,7 +34,11 @@ data MC l a = MC
   } deriving (Read, Show)
 
 mc :: l a -> [(Rational, [Rational])] -> MC l a
-mc il c0 = MC { cells = c0 , overflow = il, coords = M.empty, mirror = False }
+mc il c0 = MC { cells = c0
+              , overflow = il
+              , coords = M.empty
+              , mirror = False
+              , fillColumns = False }
 
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
@@ -47,8 +51,8 @@ instance Typeable a => Message (MCMsg a)
 
 instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a where
   description (MC { cells = cs, mirror = m, fillColumns = fc }) =
-    concat [ if mirror then "M" else ""
-           , if fillColumns then "C" else ""
+    concat [ if m then "M" else ""
+           , if fc then "C" else ""
            , intercalate "|" (map (show . length . snd) cs) ]
 
   runLayout wspa@(W.Workspace _ state stack) rect' = do
