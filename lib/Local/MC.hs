@@ -30,15 +30,13 @@ data MC l a = MC
   , overflow :: l a
   , coords :: M.Map a (Int, Int)
   , mirror :: Bool
-  , fillColumns :: Bool
   } deriving (Read, Show)
 
 mc :: l a -> [(Rational, [Rational])] -> MC l a
 mc il c0 = MC { cells = c0
               , overflow = il
               , coords = M.empty
-              , mirror = False
-              , fillColumns = False }
+              , mirror = False }
 
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
@@ -50,9 +48,8 @@ data MCMsg a =
 instance Typeable a => Message (MCMsg a)
 
 instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a where
-  description (MC { cells = cs, mirror = m, fillColumns = fc }) =
+  description (MC { cells = cs, mirror = m }) =
     concat [ if m then "M" else ""
-           , if fc then "C" else ""
            , intercalate "|" (map (show . length . snd) cs) ]
 
   runLayout wspa@(W.Workspace _ state stack) rect' = do
@@ -153,16 +150,15 @@ normalizeState state =
 
 normalize a = let s = sum a in map (flip (/) s) a
 
+-- is not right when not all the rows in a column are used.
+-- only happens in the last column
 setAbsolute _ _ _ [] = []
 setAbsolute 0 p psf (t:(n:rs)) =
-  -- n + (t - t') > 0.05
-  -- n + t > 0.05 + t'
-  -- t' > n + t - 0.05
   let t' = min (n + t - 0.05) $ max 0.05 (p - psf)
       n' = n + (t - t')
   in t':n':rs
 setAbsolute 0 p psf (t:[]) = [t]
-setAbsolute n p psf (x:xs) = x:(setAbsolute n p (psf + x) xs)
+setAbsolute n p psf (x:xs) = x:(setAbsolute (n - 1) p (psf + x) xs)
 
 setEdgeAbsolute :: MC l a -> Direction2D -> Rational -> (Int, Int) -> MC l a
 setEdgeAbsolute state e p (c, r)
