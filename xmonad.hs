@@ -18,6 +18,7 @@ import qualified XMonad.Actions.ConstrainedResize as CR
 import qualified XMonad.Actions.FlexibleResize as Flex
 import XMonad.Util.Paste (pasteSelection)
 import Local.MC (mouseResizeTile, MCMsg(ResizeCell))
+import qualified XMonad.Actions.FlexibleManipulate as Flex
 
 main = xmonad =<< xmobar conf
 
@@ -42,7 +43,7 @@ conf =
   , ((mod4Mask, 2), \w -> focus w >> pasteSelection)
   , ((mod4Mask, 1), \w -> do float <- isFloating w
                              if float
-                               then mouseMoveWindow w
+                               then (focus w >> Flex.mouseWindow Flex.discrete w)
                                else mouseResizeTile 150 mouseMoveWindow w)
   , ((mod4Mask, 4), sendMessage . ResizeCell (-0.1) 0) -- scroll up
   , ((mod4Mask, 5), sendMessage . ResizeCell 0.1 0) -- scroll down
