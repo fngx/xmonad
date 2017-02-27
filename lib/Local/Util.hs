@@ -4,7 +4,9 @@ import Data.Ratio ((%))
 import Graphics.X11.Xlib.Extras
 import Graphics.X11.Xlib.Misc (queryPointer)
 import XMonad
+import qualified XMonad.StackSet as W
 import XMonad.Util.XUtils
+import qualified Data.Map.Strict as M
 
 trim :: Int->String->String
 trim n s
@@ -30,8 +32,10 @@ getPointer window = do d <- asks display
                        (_,_,_,x,y,_,_,_) <- io $ queryPointer d window
                        return (fi x,fi y)
 
-
 getWindowTopLeft :: Window -> X (Position, Position)
 getWindowTopLeft w = do d <- asks display
                         atts <- io $ getWindowAttributes d w
                         return (fi $ wa_x atts, fi $ wa_y atts)
+
+isFloating :: Window -> X Bool
+isFloating w = gets ((M.member w) . W.floating . windowset)

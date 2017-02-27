@@ -33,6 +33,8 @@ layoutKeys =
   let col n = (1, take n $ repeat 1)
       sendMC :: MCMsg Window -> X ()
       sendMC = sendMessage
+
+      equalize a = zip (repeat 1) $ map ((map (const 1)) . snd) a
   in
   [ ("M-n", ("down", windows W.focusDown))
   , ("M-p", ("up",   windows W.focusUp))
@@ -45,9 +47,10 @@ layoutKeys =
   , ("M-l 3", ("1|2", sendMC $ SetCells [col 1, col 2] ))
   , ("M-l 4", ("1|3", sendMC $ SetCells [col 1, col 3] ))
   , ("M-l 5", ("2|2", sendMC $ SetCells [col 2, col 2] ))
+  , ("M-l e", ("equalize", sendMC $ ChangeCells equalize))
 
-  , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.1 0.1))))
-  , ("M--", ("shrink", withFocused $ (sendMC . (ResizeCell (-0.1) (-0.1)))))
+  , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
+  , ("M--", ("shrink", withFocused $ (sendMC . (ResizeCell (-0.2) (-0.2)))))
 
   , ("M-M1-n", ("rfd", rotUnfocusedDown))
   , ("M-M1-p", ("rfd", rotUnfocusedUp))

@@ -35,7 +35,8 @@ mc il c0 = MC { cells = c0 , overflow = il, coords = M.empty }
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
   ResizeCell Rational Rational a |
-  SetEdge Direction2D Rational a
+  SetEdge Direction2D Rational a |
+  ChangeCells ([(Rational, [Rational])] -> [(Rational, [Rational])])
 
 instance Typeable a => Message (MCMsg a)
 
@@ -106,15 +107,25 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                                              then return $ Just $ state { cells = cs }
                                              else return $ Nothing
     | Just (ResizeCell dx dy a) <- fromMessage sm =
-        return $ (uncurry (resizeCell state (+ dx) (+ dy))) <$> (M.lookup a $ coords state)
+        return $ (resizeCell (normalizeState state) (+ dx) (+ dy)) <$> (M.lookup a $ coords state)
 
     | Just (SetEdge e p w) <- fromMessage sm =
         return $ (setEdgeAbsolute state e p) <$> (M.lookup w $ coords state)
+
+    | Just (ChangeCells f :: MCMsg a) <- fromMessage sm =
+        return $ Just $ state { cells = f (cells state) }
 
     | otherwise = return Nothing
 
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
+
+normalizeState state =
+  let cells0 = cells state in
+    state { cells =
+            (zip
+              (normalize $ map fst cells0)
+              (map normalize $ map snd cells0)) }
 
 normalize a = let s = sum a in map (flip (/) s) a
 
@@ -141,7 +152,7 @@ setEdgeAbsolute state e p (c, r)
                              c (cells state) }
   | otherwise = state
 
-resizeCell state tx ty ci ri = state
+resizeCell state tx ty (ci, ri) = state
   { cells = toNth (second (toNth ty ri) . first tx) ci (cells state) }
 
 toNth _ _ [] = []

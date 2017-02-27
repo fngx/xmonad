@@ -7,6 +7,7 @@ import Local.Randr
 --import Local.SloppyFocus
 import Local.Spawn
 import Local.Workspaces
+import Local.Util (isFloating)
 import Local.XMobar (xmobar)
 import XMonad.Config.Desktop (desktopConfig)
 import XMonad.Util.EZConfig
@@ -16,7 +17,7 @@ import qualified Local.Windows as Windows
 import qualified XMonad.Actions.ConstrainedResize as CR
 import qualified XMonad.Actions.FlexibleResize as Flex
 import XMonad.Util.Paste (pasteSelection)
-import Local.MC (mouseResizeTile)
+import Local.MC (mouseResizeTile, MCMsg(ResizeCell))
 
 main = xmonad =<< xmobar conf
 
@@ -39,11 +40,16 @@ conf =
   [((mod4Mask, 3), \w -> focus w >> (Flex.mouseResizeWindow w))
   , ((mod4Mask .|. shiftMask, 3), (\w -> focus w >> CR.mouseResizeWindow w True ))
   , ((mod4Mask, 2), \w -> focus w >> pasteSelection)
-  , ((mod4Mask, 1), mouseResizeTile 150 mouseMoveWindow) -- todo always mousemove floating windows
---  , ((mod4Mask, 4), return ()) -- scroll up
-    --  , ((mod4Mask, 5), return ()) -- scroll down
-    --  , ((mod4Mask, 6), return ()) -- scroll left
-    --  , ((mod4Mask, 7), return ()) -- scroll right
+  , ((mod4Mask, 1), \w -> do float <- isFloating w
+                             if float
+                               then mouseMoveWindow w
+                               else mouseResizeTile 150 mouseMoveWindow w)
+  , ((mod4Mask, 4), sendMessage . ResizeCell (-0.1) 0) -- scroll up
+  , ((mod4Mask, 5), sendMessage . ResizeCell 0.1 0) -- scroll down
+  , ((mod4Mask, 6), sendMessage . ResizeCell 0 (-0.1)) -- scroll left
+  , ((mod4Mask, 7), sendMessage . ResizeCell 0 0.1) -- scroll right
+  , ((mod4Mask .|. shiftMask, 4), sendMessage . ResizeCell 0 (-0.1)) -- scroll left
+  , ((mod4Mask .|. shiftMask, 5), sendMessage . ResizeCell 0 0.1) -- scroll right
   ]
   `hintedKeysP`
   keys
