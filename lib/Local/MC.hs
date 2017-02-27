@@ -148,8 +148,8 @@ toNth _ _ [] = []
 toNth f 0 (x:xs) = (f x):xs
 toNth f n (x:xs) = x:(toNth f (n-1) xs)
 
-mouseResizeTile :: Window -> X ()
-mouseResizeTile w =
+mouseResizeTile :: Int -> (Window -> X ())  -> Window -> X ()
+mouseResizeTile border fallback w =
   whenX (isClient w) $
   withDisplay $ \dpy -> do
   (Rectangle sx sy sw sh) <- gets (screenRect .
@@ -167,9 +167,9 @@ mouseResizeTile w =
       oy = fromIntegral oy'
 
       drag mouse wpos wdim e1 e2
-        | mouse - wpos < 150 =
+        | mouse - wpos < border =
             (True, \px -> sendMessage $ SetEdge e1 px w)
-        | (wpos + wdim) - mouse < 150 =
+        | (wpos + wdim) - mouse < border =
             (True, \px -> sendMessage $ SetEdge e2 px w)
         | otherwise =
             (False, \px -> return ())
@@ -185,4 +185,4 @@ mouseResizeTile w =
       stopHandler = return ()
   if hitX || hitY
     then mouseDrag dragHandler stopHandler
-    else mouseMoveWindow w
+    else fallback w

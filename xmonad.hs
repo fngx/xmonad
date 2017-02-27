@@ -36,10 +36,14 @@ conf =
   , focusFollowsMouse = True
   }
   `additionalMouseBindings`
-  [((mod4Mask, 3), \w -> focus w >> (Flex.mouseResizeWindow w)),
-   ((mod4Mask .|. shiftMask, 3), (\w -> focus w >> CR.mouseResizeWindow w True )),
-   ((mod4Mask, 2), \w -> focus w >> pasteSelection),
-   ((mod4Mask, 1), mouseResizeTile)
+  [((mod4Mask, 3), \w -> focus w >> (Flex.mouseResizeWindow w))
+  , ((mod4Mask .|. shiftMask, 3), (\w -> focus w >> CR.mouseResizeWindow w True ))
+  , ((mod4Mask, 2), \w -> focus w >> pasteSelection)
+  , ((mod4Mask, 1), mouseResizeTile 150 mouseMoveWindow) -- todo always mousemove floating windows
+--  , ((mod4Mask, 4), return ()) -- scroll up
+    --  , ((mod4Mask, 5), return ()) -- scroll down
+    --  , ((mod4Mask, 6), return ()) -- scroll left
+    --  , ((mod4Mask, 7), return ()) -- scroll right
   ]
   `hintedKeysP`
   keys
