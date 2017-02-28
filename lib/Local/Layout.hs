@@ -3,6 +3,7 @@
 module Local.Layout (addLayout, layoutKeys) where
 
 import Local.Windows (recentWindows)
+import Local.Workspaces (warp)
 import qualified Local.Theme as Theme
 
 import XMonad hiding ( (|||) )
@@ -60,11 +61,11 @@ layoutKeys =
                                      in al++(tail ar)
 
   in
-  [ ("M-n", ("down", windows W.focusDown))
-  , ("M-p", ("up",   windows W.focusUp))
+  [ ("M-n", ("down", windows W.focusDown >> warp))
+  , ("M-p", ("up",   windows W.focusUp >> warp))
 
-  , ("M-m", ("focus master",  windows W.focusMaster))
-  , ("M-S-m", ("swap master", windows W.swapMaster))
+  , ("M-m", ("focus master",  windows W.focusMaster >> warp))
+  , ("M-S-m", ("swap master", windows W.swapMaster >> warp))
 
   , ("M-l 1",   ("full",   sendMC $ SetCells [col 1] ))
   , ("M-l 2",   ("1|1", sendMC $ SetCells [col 1, col 1] ))
@@ -84,8 +85,8 @@ layoutKeys =
   , ("M-M1-n", ("rfd", rotSlavesDown))
   , ("M-M1-p", ("rfd", rotSlavesUp))
 
-  , ("M-S-n", ("swap down", windows W.swapDown))
-  , ("M-S-p", ("swap up", windows W.swapUp))
+  , ("M-S-n", ("swap down", windows W.swapDown >> warp))
+  , ("M-S-p", ("swap up", windows W.swapUp >> warp))
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
   , ("M-v", ("flip", sendMC Flip))
