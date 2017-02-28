@@ -31,7 +31,7 @@ decorations = def
   , activeTextColor = focusedText
   , activeColor = focusedBorderColor
 
-  , inactiveBorderColor = otherWindow
+  , inactiveBorderColor = "grey30"
   , inactiveTextColor = normalText
   , inactiveColor = normalBorderColor
 
