@@ -19,13 +19,17 @@ import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStru
 import XMonad.Layout.LayoutCombinators
 import XMonad.Actions.RotSlaves
 import Local.MC
+import XMonad.Layout.PerScreen
 
 tabs = tabbed shrinkText Theme.decorations
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         mc tabs [(1, [1]), (1, [1])]
+         ifWider 1400 twocol onecol
+  where
+    twocol = mc tabs [(1, [1]), (1, [1])]
+    onecol = mc tabs [(1, [1])]
 
 addLayout c =
   c { layoutHook = layout }
