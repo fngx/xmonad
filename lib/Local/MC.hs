@@ -20,13 +20,9 @@ import Graphics.X11.Xlib.Extras (getWindowAttributes,
 
 import Graphics.X11.Xlib.Misc (warpPointer)
 
--- TODO: remember overflow focus / rearrange overflow focus automatically
--- TODO: messages for border resize and grow / shrink / etc
--- TODO: add gaps?
--- TODO: small screen layout swapper?
-
 data MC l a = MC
   { cells :: [(Rational, [Rational])]
+  , lastCells :: [(Rational, [Rational])]
   , overflow :: l a
   , coords :: M.Map a (Int, Int)
   , mirror :: Bool
@@ -36,7 +32,8 @@ mc :: l a -> [(Rational, [Rational])] -> MC l a
 mc il c0 = MC { cells = c0
               , overflow = il
               , coords = M.empty
-              , mirror = False }
+              , mirror = False
+              , lastCells = [] }
 
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
@@ -66,8 +63,8 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
         cutH (Rectangle sx sy sw sh) (l, r) =
           (Rectangle sx (pos l sy sh) sw (ext l r sh))
 
-        pos l p h = (ceiling ((fromIntegral p) + (fromIntegral h) * l) :: Position)
-        ext l r h = (floor ((fromIntegral h) * (r - l)) :: Dimension)
+        pos l p h = (round ((fromIntegral p) + (fromIntegral h) * l) :: Position)
+        ext l r h = (round ((fromIntegral h) * (r - l)) :: Dimension)
 
         explode cut rect rats =
           let t = sum rats
@@ -81,21 +78,21 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
           | length rws >= n = [(cw, take n rws)]
           | otherwise = (cw, rws):(limit (n - length rws) rest)
 
-        divide :: Int -> [(Rectangle, (Int, Int))]
-        divide n = let cs :: [(Rational, [Rational])]
-                       cs = limit n $ cells state
-                       cols = explode cutV rect $ map fst cs
-                       rows = map (uncurry (explode cutH)) $ zip cols $ map snd cs
+        divide :: [(Rational, [Rational])] -> [(Rectangle, (Int, Int))]
+        divide cs = let cols = explode cutV rect $ map fst cs
+                        rows = map (uncurry (explode cutH)) $ zip cols $ map snd cs
                    in concatMap (\(c, rs) -> zip rs (map ((,) c) [0 :: Int ..])) $ zip [0 :: Int ..] rows
 
     if capacity >= demand
-      then do let rs = divide demand
+      then do let cs = limit demand $ cells state
+                  rs = divide cs
                   rects = map fst rs
               o' <- handleMessage (overflow state) $ SomeMessage Hide
               let state' = state { overflow = fromMaybe (overflow state) o'
-                                 , coords = M.fromList (zip ws $ map snd rs)}
+                                 , coords = M.fromList (zip ws $ map snd rs)
+                                 , lastCells = cs }
               return $ (zip ws (map mirr rects), Just $ state')
-      else do let rs = divide capacity
+      else do let rs = divide $ cells state
                   rects = map fst rs
                   (main, extra) = splitAt (capacity - 1) ws
                   odex = (maybe 0 (length . W.up) stack) - (capacity-1)
@@ -106,7 +103,8 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
               (owrs, o') <- runLayout wspa { W.stack = ostack
                                            , W.layout = (overflow state) } (mirr orect)
               let state' = state { overflow = fromMaybe (overflow state) o'
-                                 , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord) }
+                                 , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord)
+                                 , lastCells = (cells state) }
               return $ ((zip main (map mirr rects)) ++ owrs, Just $ state')
 
   handleMessage state sm
@@ -123,7 +121,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
           return $ (resizeCell (normalizeState state) (+ dx') (+ dy')) <$> (M.lookup a $ coords state)
 
     | Just (SetEdge e p w) <- fromMessage sm =
-        return $ (setEdgeAbsolute state (unmirror e) p) <$> (M.lookup w $ coords state)
+        return $ (setEdgeAbsolute (normalizeState state) (unmirror e) p) <$> (M.lookup w $ coords state)
 
     | Just (ChangeCells f w :: MCMsg a) <- fromMessage sm =
         return $ Just $ state { cells = f (M.lookup w $ coords state) (cells state) }
@@ -142,16 +140,15 @@ overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
 
 normalizeState state =
-  let cells0 = cells state in
-    state { cells =
-            (zip
-              (normalize $ map fst cells0)
-              (map normalize $ map snd cells0)) }
+  let cells0 = cells state
+      cells1 = lastCells state
+      ctotal = sum $ map fst cells1
+      rtotals = (map (sum . snd) cells1) ++ repeat 0
+  in state { cells =
+             flip map (zip cells0 rtotals) $
+             \((c, rs), rtotal) -> (c / ctotal, map (flip (/) rtotal) rs)
+           }
 
-normalize a = let s = sum a in map (flip (/) s) a
-
--- is not right when not all the rows in a column are used.
--- only happens in the last column
 setAbsolute _ _ _ [] = []
 setAbsolute 0 p psf (t:(n:rs)) =
   let t' = min (n + t - 0.05) $ max 0.05 (p - psf)
@@ -160,16 +157,19 @@ setAbsolute 0 p psf (t:(n:rs)) =
 setAbsolute 0 p psf (t:[]) = [t]
 setAbsolute n p psf (x:xs) = x:(setAbsolute (n - 1) p (psf + x) xs)
 
+-- this has a bug in it; if we have some cells which are unused in the
+-- current layout then the dragging is still as though they were used.
+-- I guess this happens due to normalize alternative solution would be
+-- to store the used amount of cols and each row and hack the message
 setEdgeAbsolute :: MC l a -> Direction2D -> Rational -> (Int, Int) -> MC l a
 setEdgeAbsolute state e p (c, r)
   | c < 0 = state
   | r < 0 = state
   | e == L = setEdgeAbsolute state R p (c - 1, r)
   | e == U = setEdgeAbsolute state D p (c, r - 1)
-  | e == R = let cps = setAbsolute c p 0 $ normalize (map fst $ cells state)
+  | e == R = let cps = setAbsolute c p 0 $ (map fst $ cells state)
              in state { cells = zip cps $ map snd $ cells state }
-  | e == D = state { cells = toNth (second $ (setAbsolute r p 0 . normalize))
-                             c (cells state) }
+  | e == D = state { cells = toNth (second $ (setAbsolute r p 0)) c (cells state) }
   | otherwise = state
 
 resizeCell state tx ty (ci, ri) = state
@@ -203,7 +203,7 @@ mouseResizeTile border fallback w =
         | (wpos + wdim) - mouse < (wdim * border) =
             (True, wdim, \px -> sendMessage $ SetEdge e2 px w)
         | otherwise =
-            (False, mouse, \px -> return ())
+            (False, mouse - wpos, \px -> return ())
 
       (hitX, warpx, dragX) = drag ox wx ww L R
       (hitY, warpy, dragY) = drag oy wy wh U D

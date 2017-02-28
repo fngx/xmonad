@@ -16,7 +16,7 @@ import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.LayoutCombinators
-import XMonad.Actions.CycleWindows
+import XMonad.Actions.RotSlaves
 import Local.MC
 
 tabs = tabbed shrinkText Theme.decorations
@@ -81,8 +81,8 @@ layoutKeys =
   , ("M-S-,", ("- row", withFocused $ sendMC . (ChangeCells delCol)))
   , ("M-S-.", ("+ row", withFocused $ sendMC . (ChangeCells addCol)))
 
-  , ("M-M1-n", ("rfd", rotUnfocusedDown))
-  , ("M-M1-p", ("rfd", rotUnfocusedUp))
+  , ("M-M1-n", ("rfd", rotSlavesDown))
+  , ("M-M1-p", ("rfd", rotSlavesUp))
 
   , ("M-S-n", ("swap down", windows W.swapDown))
   , ("M-S-p", ("swap up", windows W.swapUp))
