@@ -10,8 +10,8 @@ module Local.Theme (decorations,
 import XMonad.Layout.Decoration
 
 focusedBorderColor   = "white"
-normalBorderColor    = "black"
-otherWindow          = "grey50"
+normalBorderColor    = "grey20"
+otherWindow          = "darkcyan"
 prevWindow           = "slateblue3"
 hasUrgentBorderColor = "darkred"
 urgentBorderColor    = "red"

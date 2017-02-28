@@ -26,6 +26,7 @@ data MC l a = MC
   , overflow :: l a
   , coords :: M.Map a (Int, Int)
   , mirror :: Bool
+  , lastRect :: Rectangle
   } deriving (Read, Show)
 
 mc :: l a -> [(Rational, [Rational])] -> MC l a
@@ -33,16 +34,20 @@ mc il c0 = MC { cells = c0
               , overflow = il
               , coords = M.empty
               , mirror = False
-              , lastCells = [] }
+              , lastCells = []
+              , lastRect = Rectangle 0 0 10 10 }
 
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
   ResizeCell Rational Rational a |
-  SetEdge Direction2D Rational a |
+  SetEdge Direction2D Position a |
   ChangeCells (Maybe (Int, Int) -> [(Rational, [Rational])] -> [(Rational, [Rational])]) a |
   Flip
 
 instance Typeable a => Message (MCMsg a)
+
+flipR :: Rectangle -> Rectangle
+flipR (Rectangle sx sy sw sh) = Rectangle sy sx sh sw
 
 instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a where
   description (MC { cells = cs, mirror = m }) =
@@ -50,25 +55,22 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
            , intercalate "|" (map (show . length . snd) cs) ]
 
   runLayout wspa@(W.Workspace _ state stack) rect' = do
-    let mirr r@(Rectangle sx sy sw sh)
-          | mirror state = (Rectangle sy sx sh sw)
-          | otherwise = r
+    let mirr = if mirror state then flipR else id
         rect = mirr rect'
         ws = W.integrate' stack
         capacity = foldl (+) 0 $ map (length . snd) $ cells state
         demand = length ws
 
         cutV (Rectangle sx sy sw sh) (l, r) =
-          (Rectangle (pos l sx sw) sy (ext l r sw) sh )
-        cutH (Rectangle sx sy sw sh) (l, r) =
-          (Rectangle sx (pos l sy sh) sw (ext l r sh))
-
-        pos l p h = (round ((fromIntegral p) + (fromIntegral h) * l) :: Position)
-        ext l r h = (round ((fromIntegral h) * (r - l)) :: Dimension)
+          let wx = sx + ((round $ (l * fromIntegral sw)) :: Position)
+              wr = sx + ((round $ (r * fromIntegral sw)) :: Position)
+              ww = (fromIntegral wr - fromIntegral wx) :: Dimension
+          in Rectangle wx sy ww sh
+        cutH r bs = flipR $ cutV (flipR r) bs
 
         explode cut rect rats =
           let t = sum rats
-              parts = scanl (+) 0 $ map (flip (/) t) rats
+              parts = map (flip (/) t) $ scanl (+) 0 rats
               bounds = zip parts (drop 1 parts)
           in map (cut rect) bounds
 
@@ -90,7 +92,8 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
               o' <- handleMessage (overflow state) $ SomeMessage Hide
               let state' = state { overflow = fromMaybe (overflow state) o'
                                  , coords = M.fromList (zip ws $ map snd rs)
-                                 , lastCells = cs }
+                                 , lastCells = cs
+                                 , lastRect = rect }
               return $ (zip ws (map mirr rects), Just $ state')
       else do let rs = divide $ cells state
                   rects = map fst rs
@@ -104,7 +107,8 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                                            , W.layout = (overflow state) } (mirr orect)
               let state' = state { overflow = fromMaybe (overflow state) o'
                                  , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord)
-                                 , lastCells = (cells state) }
+                                 , lastCells = (cells state)
+                                 , lastRect = rect }
               return $ ((zip main (map mirr rects)) ++ owrs, Just $ state')
 
   handleMessage state sm
@@ -120,8 +124,14 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
         let (dx', dy') = if mirror state then (dy, dx) else (dx, dy) in
           return $ (resizeCell (normalizeState state) (+ dx') (+ dy')) <$> (M.lookup a $ coords state)
 
-    | Just (SetEdge e p w) <- fromMessage sm =
-        return $ (setEdgeAbsolute (normalizeState state) (unmirror e) p) <$> (M.lookup w $ coords state)
+    | Just (SetEdge e pos w) <- fromMessage sm =
+        let p :: Rational
+            p = if e == L || e == R
+                then (fromIntegral $ pos - (fromIntegral $ rect_x $ lastRect state)) /
+                     (fromIntegral $ rect_width $ lastRect state)
+                else (fromIntegral $ pos - (fromIntegral $ rect_y $ lastRect state)) /
+                     (fromIntegral $ rect_height $ lastRect state)
+        in return $ (setEdgeAbsolute (normalizeState state) (unmirror e) p) <$> (M.lookup w $ coords state)
 
     | Just (ChangeCells f w :: MCMsg a) <- fromMessage sm =
         return $ Just $ state { cells = f (M.lookup w $ coords state) (cells state) }
@@ -157,10 +167,6 @@ setAbsolute 0 p psf (t:(n:rs)) =
 setAbsolute 0 p psf (t:[]) = [t]
 setAbsolute n p psf (x:xs) = x:(setAbsolute (n - 1) p (psf + x) xs)
 
--- this has a bug in it; if we have some cells which are unused in the
--- current layout then the dragging is still as though they were used.
--- I guess this happens due to normalize alternative solution would be
--- to store the used amount of cols and each row and hack the message
 setEdgeAbsolute :: MC l a -> Direction2D -> Rational -> (Int, Int) -> MC l a
 setEdgeAbsolute state e p (c, r)
   | c < 0 = state
@@ -179,14 +185,13 @@ toNth _ _ [] = []
 toNth f 0 (x:xs) = (f x):xs
 toNth f n (x:xs) = x:(toNth f (n-1) xs)
 
+
+-- This has a bug in that it uses the whole screen rect when the
+-- layout sees a reduced rect because of e.g. struts
 mouseResizeTile :: Rational -> (Window -> X ())  -> Window -> X ()
 mouseResizeTile border fallback w =
   whenX (isClient w) $
   withDisplay $ \dpy -> do
-  (Rectangle sx sy sw sh) <- gets (screenRect .
-                                    W.screenDetail .
-                                    W.current .
-                                    windowset)
   wa <- io $ getWindowAttributes dpy w
   (_, _, _, ox', oy', _, _, _) <- io $ queryPointer dpy w
 
@@ -209,10 +214,8 @@ mouseResizeTile border fallback w =
       (hitY, warpy, dragY) = drag oy wy wh U D
 
       dragHandler x y = do
-        let xp = (fromIntegral x - fromIntegral sx) / fromIntegral sw
-            yp = (fromIntegral y - fromIntegral sy) / fromIntegral sh
-        dragX xp
-        dragY yp
+        dragX x
+        dragY y
       stopHandler = return ()
   if hitX || hitY
     -- warp pointer here

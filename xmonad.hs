@@ -19,12 +19,13 @@ import qualified XMonad.Actions.FlexibleResize as Flex
 import XMonad.Util.Paste (pasteSelection)
 import Local.MC (mouseResizeTile, MCMsg(ResizeCell))
 import qualified XMonad.Actions.FlexibleManipulate as Flex
+import qualified XMonad.Layout.Fullscreen as FS
 
 main = xmonad =<< xmobar conf
 
 conf =
+  FS.fullscreenSupport $
   Windows.addHistory $
---  sloppyFocus $
   addManageRules $
   addLayout $
   randrAuto $
