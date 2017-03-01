@@ -152,8 +152,10 @@ overflowHandle state sm = do o' <- handleMessage (overflow state) sm
 normalizeState state =
   let cells0 = cells state
       cells1 = lastCells state
-      ctotal = sum $ map fst cells1
-      rtotals = (map (sum . snd) cells1) ++ repeat 0
+      sum1 [] = 1
+      sum1 s = sum s
+      ctotal = sum1 $ map fst cells1
+      rtotals = (map (sum1 . snd) cells1) ++ repeat 0
   in state { cells =
              flip map (zip cells0 rtotals) $
              \((c, rs), rtotal) -> (c / ctotal, map (flip (/) rtotal) rs)
