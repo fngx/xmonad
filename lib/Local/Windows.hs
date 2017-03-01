@@ -75,7 +75,7 @@ windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
                                    warp
                                    repeatHintedKeys [ ("M-o", ("next", focusNext >> warp))
                                                     , ("M-i", ("prev", focusPrev >> warp))
-                                                    , ("M-s", ("swap2", (windows (W.swapDown . W.shiftMaster)) >> warp))
+                                                    , ("M-j", ("swap2", (windows (W.swapDown . W.shiftMaster)) >> warp))
                                                     , ("M-m", ("swapM", (windows W.shiftMaster) >> warp))]
                                    -- push start window down to next focus
                                    XS.get >>= insertHistory oldFocus >>= updateHistory >>= XS.put

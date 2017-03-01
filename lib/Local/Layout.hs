@@ -68,9 +68,11 @@ layoutKeys =
   [ ("M-n", ("down", windows W.focusDown >> warp))
   , ("M-p", ("up",   windows W.focusUp >> warp))
 
-  , ("M-m", ("focus master",  windows W.focusMaster >> warp))
-  , ("M-S-m", ("swap master", windows W.swapMaster >> warp))
-  , ("M-M1-m", ("swap 2nd", windows (W.swapDown . W.shiftMaster) >> warp))
+  , ("M-m",   ("focus master",  windows W.focusMaster >> warp))
+  , ("M-S-m", ("shift master", windows W.shiftMaster >> warp))
+  , ("M-z",   ("swap master", windows W.swapMaster >> warp))
+  , ("M-j",   ("focus 2nd", windows (W.focusDown . W.focusMaster) >> warp))
+  , ("M-S-j", ("shift 2nd", windows (W.swapDown . W.shiftMaster) >> warp))
 
   , ("M-l 1",   ("full",   sendMC $ SetCells [col 1] ))
   , ("M-l 2",   ("1|1", sendMC $ SetCells [col 1, col 1] ))
