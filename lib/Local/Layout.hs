@@ -19,14 +19,14 @@ import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStru
 import XMonad.Layout.LayoutCombinators
 import XMonad.Actions.RotSlaves
 import Local.MC
+import Local.PerScreen
 
 tabs = tabbed shrinkText Theme.decorations
 
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         twocol
-         -- TODO: fix ifWider to work here (it doesn't Hide, so dangling tabs)
+         ifWider 1400 twocol onecol
   where
     twocol = mc tabs [(1, [1]), (1, [1])]
     onecol = mc tabs [(1, [1])]
