@@ -58,14 +58,32 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
+sortWith rws ss@(W.StackSet { W.current = scr@(W.Screen { W.workspace = ws@(W.Workspace { W.stack = Just stack }) })}) =
+  let wins = W.integrate stack
+      isHere = flip Set.member $ Set.fromList wins
+      swins' = (Data.List.filter isHere rws)
+      wins' = swins' ++ (wins \\ swins') -- ensure we don't lose any windows
+      stack' :: Maybe (W.Stack Window)
+      stack' = W.differentiate wins'
+      oldFocus = W.peek ss
+      newStackSet = ss { W.current = scr { W.workspace = ws { W.stack = stack' }}}
+  in maybe newStackSet (flip W.focusWindow newStackSet) oldFocus
+sortWith ws ss = ss
+
 windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
                                    focusUrgentOr focusNext
                                    warp
-                                   repeatHintedKeys [("M-o", ("next", focusNext >> warp)) ,("M-i", ("prev", focusPrev >> warp))]
+                                   repeatHintedKeys [ ("M-o", ("next", focusNext >> warp))
+                                                    , ("M-i", ("prev", focusPrev >> warp))
+                                                    , ("M-s", ("swap2", (windows (W.swapDown . W.shiftMaster)) >> warp))
+                                                    , ("M-m", ("swapM", (windows W.shiftMaster) >> warp))]
                                    -- push start window down to next focus
                                    XS.get >>= insertHistory oldFocus >>= updateHistory >>= XS.put
                                    withTaggedGlobal "." $ delTag "."
                        ))
+
+             , ("M-S-o", ("sortify", do rw <- recentWindows
+                                        windows $ sortWith rw))
 
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
