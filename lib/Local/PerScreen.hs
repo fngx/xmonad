@@ -4,6 +4,7 @@ module Local.PerScreen (ifWider) where
 
 import XMonad
 import qualified XMonad.StackSet as W
+import Control.Applicative ((<$>))
 
 import Data.Maybe (fromMaybe)
 
@@ -12,30 +13,41 @@ import Control.Monad
 -- like perscreen except works with tabs
 -- can I do this with jumptolayout
 
-data PerScreen l1 l2 a = PerScreen Dimension Bool (l1 a) (l2 a)
+data PerScreen wlt nlt a = PerScreen { width :: Dimension
+                                     , isWide :: Bool
+                                     , wide :: (wlt a)
+                                     , narrow :: (nlt a)}
   deriving (Read, Show)
 
 ifWider w = PerScreen w False
 
-update _ Nothing Nothing = Nothing
-update (PerScreen d b wl nl) mwl mnl = Just $ PerScreen d b (fromMaybe wl mwl) (fromMaybe nl mnl)
+update _ Nothing Nothing Nothing = Nothing
+update st@(PerScreen { isWide = b, wide = wl, narrow = nl }) mb mwl mnl =
+  Just $ st { isWide = fromMaybe b mb
+            , wide = fromMaybe wl mwl
+            , narrow = fromMaybe nl mnl }
+
+toggle a b
+  | a == b = Nothing
+  | otherwise = Just a
 
 instance (LayoutClass l1 a, LayoutClass l2 a, Show a) =>
   LayoutClass (PerScreen l1 l2) a where
 
-  runLayout (W.Workspace i p@(PerScreen width wasWide wl nl) ms) r
-    | rect_width r > width =
-        do (wrs, mwl) <- runLayout (W.Workspace i wl ms) r
-           mnl <- if wasWide then return Nothing else handleMessage nl (SomeMessage Hide)
-           return (wrs, update p mwl mnl)
+  runLayout (W.Workspace i st ms) r
+    | rect_width r > width st =
+        do (wrs, mwl) <- runLayout (W.Workspace i (wide st) ms) r
+           mnl <- if (isWide st) then return Nothing else handleMessage (narrow st) (SomeMessage Hide)
+           return (wrs, update st (toggle True (isWide st)) mwl mnl)
     | otherwise =
-        do (wrs, mnl) <- runLayout (W.Workspace i nl ms) r
-           mwl <- if not wasWide then return Nothing else handleMessage wl (SomeMessage Hide)
-           return (wrs, update p mwl mnl)
+        do (wrs, mnl) <- runLayout (W.Workspace i (narrow st) ms) r
+           mwl <- if not (isWide st) then return Nothing else handleMessage (wide st) (SomeMessage Hide)
+           return (wrs, update st (toggle False (isWide st)) mwl mnl)
 
-  handleMessage (PerScreen w bool lt lf) m
-    | bool      = handleMessage lt m >>= maybe (return Nothing) (\nt -> return . Just $ PerScreen w bool nt lf)
-    | otherwise = handleMessage lf m >>= maybe (return Nothing) (\nf -> return . Just $ PerScreen w bool lt nf)
+  handleMessage st m
+    | isWide st = (handleMessage (wide st) m)   >>= (return . (fmap $ \nw -> st { wide = nw }))
+    | otherwise = (handleMessage (narrow st) m) >>= (return . (fmap $ \nw -> st { narrow = nw }))
 
-  description (PerScreen _ True  l1 _) = description l1
-  description (PerScreen _ _ _ l2) = description l2
+  description st
+    | isWide st = description (wide st)
+    | otherwise = description (narrow st)

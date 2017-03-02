@@ -91,7 +91,10 @@ windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
-             ]
+             ] ++ [ ("M-M1-" ++ (show n), ("focus " ++ (show n), focusNth n))
+                  | n <- [0..9] ]
+
+focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focusDown)
 
 focusUrgentOr a = do us <- readUrgents
                      if Data.List.null us then a else (focusUrgent >> warp)
