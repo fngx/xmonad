@@ -5,11 +5,15 @@ import Control.Monad (when)
 import XMonad
 import qualified XMonad.StackSet as W
 import XMonad.Actions.CycleWS
+import XMonad.Actions.WindowBringer (bringWindow)
 import XMonad.Actions.DynamicWorkspaces
 import XMonad.Actions.Warp
 import XMonad.Util.WorkspaceCompare ( getSortByIndex )
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isJust, isNothing, listToMaybe, fromMaybe)
 import Data.List ( (\\) )
+import Control.Applicative ( (<$>) )
+import Control.Monad ( join )
+import Local.Hints (repeatHintedKeys)
 
 fixedWorkspaces = []
 
@@ -22,12 +26,43 @@ workspaceKeys =
       onEmpty a = ("view empty", do en <- emptyNames
                                     an <- workspaceNames
                                     a $ head $ en ++ ([x:[] | x <- ['A' .. 'Z']] \\ an))
+      minT = "z"
+      masterOf :: String -> WindowSet -> Maybe Window
+      masterOf tag ss = join $
+                        ((listToMaybe . W.integrate' . W.stack) <$>
+                         (listToMaybe $ filter ((== tag) . W.tag) $ W.workspaces ss))
+
+      sendT = do addHiddenWorkspace minT
+                 windows (W.shift minT)
+      bringT = windows $ \ss -> fromMaybe ss $ (flip bringWindow ss) <$> (masterOf minT ss)
+
+      after x [] = x
+      after x (a:(y:xs))
+        | x == a = y
+        | otherwise = after x (y:xs)
   in [ ("M-s", swapS)
      , ("M-S-s", shiftS)
      , ("M-d", focusS)
---     , ("M-z", focusS)
-     , ("M-e", onEmpty addWorkspace)
+     , ("M-e",   onEmpty addWorkspace)
      , ("M-S-e", onEmpty (\w -> addHiddenWorkspace w >> windows (W.shift w) >> windows (W.view w)))
+     , ("M-h",   ("send to " ++ minT, sendT))
+     , ("M-S-h", ("bring from " ++ minT, do bringT
+                                            -- could do gets to find all minimized windows
+                                            -- and then cycle through them
+                                            minWs' <- gets
+                                              (concat .
+                                               (map (W.integrate' . W.stack)) .
+                                               (filter ((== minT) . W.tag)) .
+                                               W.workspaces .
+                                               windowset)
+                                            withFocused $ \fw ->
+                                              let minWs = fw:minWs' in
+                                                repeatHintedKeys [("M-S-H", ("another",
+                                                                             withFocused $ \fw -> do
+                                                                                sendT
+                                                                                windows $ bringWindow $ after fw (cycle minWs)
+                                                                                ))]
+                 ))
      ] ++
      [("M-" ++ show n, view n) | n <- [1 .. 9]] ++
      [("M-S-" ++ show n, shiftTo n) | n <- [1 .. 9]]

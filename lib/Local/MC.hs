@@ -49,6 +49,9 @@ instance Typeable a => Message (MCMsg a)
 flipR :: Rectangle -> Rectangle
 flipR (Rectangle sx sy sw sh) = Rectangle sy sx sh sw
 
+a /? 0 = a
+a /? b = a / b
+
 instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a where
   description (MC { cells = cs, mirror = m }) =
     concat [ if m then "M" else ""
@@ -70,7 +73,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
 
         explode cut rect rats =
           let t = sum rats
-              parts = map (flip (/) t) $ scanl (+) 0 rats
+              parts = map (flip (/?) t) $ scanl (+) 0 rats
               bounds = zip parts (drop 1 parts)
           in map (cut rect) bounds
 
@@ -127,9 +130,9 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
     | Just (SetEdge e pos w) <- fromMessage sm =
         let p :: Rational
             p = if e == L || e == R
-                then (fromIntegral $ pos - (fromIntegral $ rect_x $ lastRect state)) /
+                then (fromIntegral $ pos - (fromIntegral $ rect_x $ lastRect state)) /?
                      (fromIntegral $ rect_width $ lastRect state)
-                else (fromIntegral $ pos - (fromIntegral $ rect_y $ lastRect state)) /
+                else (fromIntegral $ pos - (fromIntegral $ rect_y $ lastRect state)) /?
                      (fromIntegral $ rect_height $ lastRect state)
         in return $ (setEdgeAbsolute (normalizeState state) (unmirror e) p) <$> (M.lookup w $ coords state)
 
@@ -152,13 +155,11 @@ overflowHandle state sm = do o' <- handleMessage (overflow state) sm
 normalizeState state =
   let cells0 = cells state
       cells1 = lastCells state
-      sum1 [] = 1
-      sum1 s = sum s
-      ctotal = sum1 $ map fst cells1
-      rtotals = (map (sum1 . snd) cells1) ++ repeat 0
+      ctotal = sum $ map fst cells1
+      rtotals = (map (sum . snd) cells1) ++ repeat 0
   in state { cells =
              flip map (zip cells0 rtotals) $
-             \((c, rs), rtotal) -> (c / ctotal, map (flip (/) rtotal) rs)
+             \((c, rs), rtotal) -> (c /? ctotal, map (flip (/?) rtotal) rs)
            }
 
 setAbsolute _ _ _ [] = []
