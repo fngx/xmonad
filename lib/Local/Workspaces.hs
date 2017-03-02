@@ -25,8 +25,8 @@ workspaceKeys =
       shiftTo n = ("shift to " ++ show n, withNthNEWorkspace W.shift (n-1))
       onEmpty a = ("view empty", do en <- emptyNames
                                     an <- workspaceNames
-                                    a $ head $ en ++ ([x:[] | x <- ['A' .. 'Z']] \\ an))
-      minT = "z"
+                                    a $ head $ (en \\ [minT]) ++ ([x:[] | x <- ['A' .. 'Z']] \\ an))
+      minT = "zap"
       masterOf :: String -> WindowSet -> Maybe Window
       masterOf tag ss = join $
                         ((listToMaybe . W.integrate' . W.stack) <$>
