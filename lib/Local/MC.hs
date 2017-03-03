@@ -27,7 +27,7 @@ data MC l a = MC
   , coords :: M.Map a (Int, Int)
   , mirror :: Bool
   , lastRect :: Rectangle
-  , lastOverflow :: Zipper a
+  , overflowFocus :: Int
   } deriving (Read, Show)
 
 mc :: l a -> [(Rational, [Rational])] -> MC l a
@@ -37,7 +37,7 @@ mc il c0 = MC { cells = c0
               , mirror = False
               , lastCells = []
               , lastRect = Rectangle 0 0 10 10
-              , lastOverflow = Nothing }
+              , overflowFocus = 0 }
 
 data MCMsg a =
   SetCells [(Rational, [Rational])] |
@@ -99,17 +99,15 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                                  , coords = M.fromList (zip ws $ map snd rs)
                                  , lastCells = cs
                                  , lastRect = rect
-                                 , lastOverflow = Nothing }
+                                 , overflowFocus = 0 }
               return $ (zip ws (map mirr rects), Just $ state')
       else do let rs = divide $ cells state
                   rects = map fst rs
                   (main, extra) = splitAt (capacity - 1) ws
-                  fIndex = maybe 0 (length . W.up) stack
+                  fIndex = ((maybe 0 (length . W.up) stack) - (capacity - 1))
                   odex
-                    | fIndex < (capacity-1) = if extra == W.integrate' (lastOverflow state)
-                                              then maybe 0 (length . W.up) (lastOverflow state)
-                                              else 0
-                    | otherwise = fIndex - (capacity - 1)
+                    | fIndex < 0 = min (overflowFocus state) ((length extra) - 1)
+                    | otherwise = fIndex
                   ostack = fromIndex extra odex
                   orect = last rects
                   ocoord = (length (cells state) - 1,
@@ -120,7 +118,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                                  , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord)
                                  , lastCells = (cells state)
                                  , lastRect = rect
-                                 , lastOverflow = ostack }
+                                 , overflowFocus = odex }
               return $ ((zip main (map mirr rects)) ++ owrs, Just $ state')
 
   handleMessage state sm
