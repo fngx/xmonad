@@ -18,6 +18,7 @@ import XMonad.Layout.MultiToggle.Instances
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.LayoutCombinators
 import XMonad.Actions.RotSlaves
+import XMonad.Actions.CycleWindows (rotUp, rotDown)
 import Local.MC
 import Local.PerScreen
 
@@ -90,8 +91,8 @@ layoutKeys =
   , ("M-S-,", ("- row", withFocused $ sendMC . (ChangeCells delCol)))
   , ("M-S-.", ("+ row", withFocused $ sendMC . (ChangeCells addCol)))
 
-  , ("M-M1-n", ("rfd", rotSlavesDown))
-  , ("M-M1-p", ("rfd", rotSlavesUp))
+  , ("M-M1-n", ("rfd", sendMC $ OnOverflow rotDown))
+  , ("M-M1-p", ("rfd", sendMC $ OnOverflow rotUp))
 
   , ("M-S-n", ("swap down", windows W.swapDown >> warp))
   , ("M-S-p", ("swap up", windows W.swapUp >> warp))

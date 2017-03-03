@@ -19,6 +19,7 @@ import Graphics.X11.Xlib.Extras (getWindowAttributes,
                                  WindowAttributes (..))
 
 import Graphics.X11.Xlib.Misc (warpPointer)
+import XMonad.Actions.RotSlaves (rotAll')
 
 data MC l a = MC
   { cells :: [(Rational, [Rational])]
@@ -44,7 +45,8 @@ data MCMsg a =
   ResizeCell Rational Rational a |
   SetEdge Direction2D Position a |
   ChangeCells (Maybe (Int, Int) -> [(Rational, [Rational])] -> [(Rational, [Rational])]) a |
-  Flip
+  Flip |
+  OnOverflow ([Window] -> [Window])
 
 instance Typeable a => Message (MCMsg a)
 
@@ -106,7 +108,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                   (main, extra) = splitAt (capacity - 1) ws
                   fIndex = ((maybe 0 (length . W.up) stack) - (capacity - 1))
                   odex
-                    | fIndex < 0 = min (overflowFocus state) ((length extra) - 1)
+                    | fIndex < 0 = (overflowFocus state) `mod` (length extra)
                     | otherwise = fIndex
                   ostack = fromIndex extra odex
                   orect = last rects
@@ -135,18 +137,26 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
           return $ (resizeCell (normalizeState state) (+ dx') (+ dy')) <$> (M.lookup a $ coords state)
 
     | Just (SetEdge e pos w) <- fromMessage sm =
-        let p :: Rational
+        let lr = (if mirror state then flipR else id) (lastRect state)
+            p :: Rational
             p = if e == L || e == R
-                then (fromIntegral $ pos - (fromIntegral $ rect_x $ lastRect state)) /?
-                     (fromIntegral $ rect_width $ lastRect state)
-                else (fromIntegral $ pos - (fromIntegral $ rect_y $ lastRect state)) /?
-                     (fromIntegral $ rect_height $ lastRect state)
+                then (fromIntegral $ pos - (fromIntegral $ rect_x $ lr)) /?
+                     (fromIntegral $ rect_width $ lr)
+                else (fromIntegral $ pos - (fromIntegral $ rect_y $ lr)) /?
+                     (fromIntegral $ rect_height $ lr)
         in return $ (setEdgeAbsolute (normalizeState state) (unmirror e) p) <$> (M.lookup w $ coords state)
 
     | Just (ChangeCells f w :: MCMsg a) <- fromMessage sm =
         return $ Just $ state { cells = f (M.lookup w $ coords state) (cells state) }
 
     | Just (Flip :: MCMsg a) <- fromMessage sm = return $ Just $ state { mirror = not (mirror state) }
+
+    | Just (OnOverflow f :: MCMsg a) <- fromMessage sm = do
+        let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
+        -- rearrange some of the windows
+        windows $ W.modify' (rotAll' $ \l -> let (u, d) = splitAt capacity l
+                                           in u ++ f d)
+        return Nothing
 
     | otherwise = return Nothing
     where unmirror e
