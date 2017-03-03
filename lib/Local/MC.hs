@@ -108,7 +108,7 @@ instance (Typeable a, Ord a, Show a, LayoutClass l a) => LayoutClass (MC l) a wh
                   (main, extra) = splitAt (capacity - 1) ws
                   fIndex = ((maybe 0 (length . W.up) stack) - (capacity - 1))
                   odex
-                    | fIndex < 0 = (overflowFocus state) `mod` (length extra)
+                    | fIndex < 0 = (min (overflowFocus state) ((length extra) - 1))
                     | otherwise = fIndex
                   ostack = fromIndex extra odex
                   orect = last rects
