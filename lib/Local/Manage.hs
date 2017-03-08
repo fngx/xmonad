@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Local.Manage (addManageRules) where
 
-import qualified Local.Theme
+import qualified Local.Colors as Colors
 
 import Control.Monad
 
@@ -18,6 +18,9 @@ import qualified XMonad.Util.ExtensibleState as XS
 
 import Local.Windows (recentWindows, nextInHistory)
 import Data.Maybe (listToMaybe, maybeToList)
+import Data.IORef
+
+import qualified XMonad.Actions.TagWindows as T
 
 setBorder c w = withDisplay $ \d -> io $ do
   g <- initColor d c
@@ -34,7 +37,7 @@ instance ExtensionClass BorderColors where
 changeBorderColors :: M.Map Window String -> X ()
 changeBorderColors new = do
   BorderColors old <- XS.get
-  mapM_ (setBorder Local.Theme.normalBorderColor) $
+  mapM_ (setBorder Colors.normalBorderColor) $
     M.keys $ M.difference old new
 
   let mSetBorder w c
@@ -46,19 +49,25 @@ changeBorderColors new = do
   XS.put $ BorderColors new
 
 setBorderHook =
-  do us <- readUrgents
+  do us    <- readUrgents
      nextM <- nextInHistory
      focus <- gets (W.peek . windowset)
+     fref  <- io $ newIORef ([] :: [Window])
 
-     let ucs = map (flip (,) Local.Theme.urgentBorderColor) us
-         ncs = (flip (,) Local.Theme.otherWindow) <$> nextM
+     T.withTaggedGlobal "overflow" $ \x -> io $ modifyIORef fref ((:) x)
+
+     over  <- io $ readIORef fref
+
+     let ucs = map (flip (,) Colors.urgentBorderColor) us
+         ncs = (flip (,) Colors.otherWindow) <$> nextM
          fbc = if null us
-               then Local.Theme.focusedBorderColor
-               else Local.Theme.hasUrgentBorderColor
+               then Colors.focusedBorderColor
+               else Colors.hasUrgentBorderColor
          fcs = (flip (,) fbc) <$> focus
+         ocs = map (flip (,) Colors.overflowWindow) over
 
      changeBorderColors $ M.fromList $
-       ucs ++ maybeToList ncs ++ maybeToList fcs
+       maybeToList ncs ++ ocs ++ maybeToList fcs ++ ucs
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
@@ -86,4 +95,4 @@ instance UrgencyHook LibNotifyUrgencyHook where
           when (not $ idx `elem` (map (W.tag . W.workspace) $ (W.current wset):(W.visible wset))) $
             safeSpawn "notify-send" [(show name) ++ " urgent on " ++ idx, "-a", "xmonad"]
 
-        setBorder Local.Theme.urgentBorderColor w
+        setBorder Colors.urgentBorderColor w

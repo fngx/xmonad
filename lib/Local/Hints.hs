@@ -1,6 +1,6 @@
 module Local.Hints (hintedKeysP, doHintedKeys, repeatHintedKeys) where
 
-import Local.Theme (bigFont)
+import Local.Colors (bigFont)
 
 import Data.Bits
 import Control.Monad

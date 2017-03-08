@@ -1,41 +1,34 @@
 module Local.Theme (decorations,
                     focusedBorderColor, focusedText,
-                    Local.Theme.urgentBorderColor, urgentText,
+                    urgentBorderColor, urgentText,
                     hasUrgentBorderColor,
                     normalBorderColor, normalText,
                     otherWindow, smallFont, bigFont
-                   ,prevWindow
+                   ,prevWindow, overflowWindow
                    ) where
 
+import XMonad (Window, broadcastMessage, io)
 import XMonad.Layout.Decoration
-
-focusedBorderColor   = "white"
-normalBorderColor    = "grey20"
-otherWindow          = "darkcyan"
-prevWindow           = "slateblue3"
-hasUrgentBorderColor = "darkred"
-urgentBorderColor    = "red"
-
-focusedText = "black"
-normalText = "white"
-urgentText = "white"
-
-smallFont = "xft:Sans-8" --"xft:Liberation Mono-8"
-bigFont = "xft:Sans-12"
+import Local.Windows (nextInHistory)
+import Local.Colors
+import qualified XMonad.Actions.TagWindows as T
 
 decorations = def
-  { fontName = smallFont
-  , decoHeight = 15
+  { fontName       = smallFont
+  , decoHeight     = 15
 
-  , activeBorderColor = focusedBorderColor
-  , activeTextColor = focusedText
-  , activeColor = focusedBorderColor
+  , activeColors   = cs focusedBorderColor focusedBorderColor focusedText
+  , inactiveColors = cs normalBorderColor "grey30" normalText
+  , urgentColors   = cs urgentBorderColor urgentBorderColor urgentText
+  , perWindowTheme = \w -> do nextM <- nextInHistory
+                              isOverflow <- T.hasTag "overflow" w
 
-  , inactiveBorderColor = "grey30"
-  , inactiveTextColor = normalText
-  , inactiveColor = normalBorderColor
-
-  , XMonad.Layout.Decoration.urgentBorderColor = Local.Theme.urgentBorderColor
-  , urgentTextColor = urgentText
-  , urgentColor = Local.Theme.urgentBorderColor
+                              let isNext = Just w == nextM
+                                  style w
+                                    | isOverflow && isNext = Just $ cs otherWindow otherWindow normalText
+                                    | isOverflow = Just $ cs overflowWindow overflowWindow normalText
+                                    | isNext = Just $ cs normalBorderColor otherWindow normalText
+                                    | otherwise = Nothing
+                              return $ style w
   }
+  where cs a b c = Colors { bgColor = a, borderColor = b, textColor = c }

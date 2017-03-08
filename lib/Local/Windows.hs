@@ -14,7 +14,6 @@ import Local.Workspaces (warp)
 import XMonad
 import XMonad.Hooks.UrgencyHook
 import XMonad.Util.NamedWindows (getName, unName, NamedWindow)
-import qualified Local.Theme as Theme
 import qualified XMonad.StackSet as W
 import qualified XMonad.Util.ExtensibleState as XS
 import Data.Sequence as Seq
