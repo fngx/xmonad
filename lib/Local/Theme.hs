@@ -4,7 +4,7 @@ module Local.Theme (decorations,
                     hasUrgentBorderColor,
                     normalBorderColor, normalText,
                     otherWindow, smallFont, bigFont
-                   ,prevWindow, overflowWindow
+                   , overflowWindow
                    ) where
 
 import XMonad (Window, broadcastMessage, io)
@@ -25,7 +25,7 @@ decorations = def
 
                               let isNext = Just w == nextM
                                   style w
-                                    | isOverflow && isNext = Just $ cs otherWindow otherWindow normalText
+                                    | isOverflow && isNext = Just $ cs overflowWindow otherWindow normalText
                                     | isOverflow = Just $ cs overflowWindow overflowWindow normalText
                                     | isNext = Just $ cs normalBorderColor otherWindow normalText
                                     | otherwise = Nothing
