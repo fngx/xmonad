@@ -29,7 +29,7 @@ data MC l a = MC
   , coords :: M.Map a (Int, Int)
   , mirror :: Bool
   , lastRect :: Rectangle
-  , lastOverflow :: Zipper a
+  , overflowFocus :: Int
   , workspaceId :: WorkspaceId
   } deriving (Read, Show)
 
@@ -40,7 +40,7 @@ mc il c0 = MC { cells = c0
               , mirror = False
               , lastCells = []
               , lastRect = Rectangle 0 0 10 10
-              , lastOverflow = Nothing
+              , overflowFocus = 0
               , workspaceId = "" }
 
 data MCMsg a =
@@ -107,18 +107,16 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
                                  , coords = M.fromList (zip ws $ map snd rs)
                                  , lastCells = cs
                                  , lastRect = rect
-                                 , lastOverflow = Nothing
+                                 , overflowFocus = 0
                                  , workspaceId = wid }
               return $ (zip ws (map mirr rects), Just $ state')
       else do let rs = divide $ cells state
                   rects = map fst rs
                   (main, extra) = splitAt (capacity - 1) ws
-                  fIndex = maybe 0 (length . W.up) stack
+                  fIndex = ((maybe 0 (length . W.up) stack) - (capacity - 1))
                   odex
-                    | fIndex < (capacity-1) = if extra == W.integrate' (lastOverflow state)
-                                              then maybe 0 (length . W.up) (lastOverflow state)
-                                              else 0
-                    | otherwise = fIndex - (capacity - 1)
+                    | fIndex < 0 = (min (overflowFocus state) ((length extra) - 1))
+                    | otherwise = fIndex
                   ostack = fromIndex extra odex
                   orect = last rects
                   ocoord = (length (cells state) - 1,
@@ -130,7 +128,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
                                  , coords = M.fromList (zip main $ map snd rs) `M.union` M.fromList (zip extra $ repeat ocoord)
                                  , lastCells = (cells state)
                                  , lastRect = rect
-                                 , lastOverflow = ostack
+                                 , overflowFocus = odex
                                  , workspaceId = wid }
               return $ ((zip main (map mirr rects)) ++ owrs, Just $ state')
 
@@ -176,10 +174,16 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
         return Nothing
 
     | Just (WithOverflowFocus f :: MCMsg Window) <- fromMessage sm = do
-        case lastOverflow state of
-          Just (W.Stack {W.focus = w}) -> f w
-          _ -> return ()
-
+        wsm <- gets (listToMaybe .
+                     (filter ((== (workspaceId state)) . W.tag)) .
+                      W.workspaces . windowset)
+        whenJust wsm $ \ws -> do
+          let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
+              offset = capacity + (overflowFocus state)
+              theWindow = take 1 $ drop offset $ W.integrate' $ W.stack ws
+          case theWindow of
+            [] -> return ()
+            (x:_) -> f x
         return Nothing
 
     | otherwise = return Nothing
