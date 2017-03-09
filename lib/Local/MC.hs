@@ -50,7 +50,9 @@ data MCMsg a =
   ChangeCells (Maybe (Int, Int) -> [(Rational, [Rational])] -> [(Rational, [Rational])]) a |
   Flip |
   OnOverflow ([Window] -> [Window]) |
-  WithOverflowFocus (Window -> X ())
+  WithOverflowFocus (Window -> X ()) |
+  OverflowFocusMaster |
+  FocusCell Int
 
 instance Typeable a => Message (MCMsg a)
 
@@ -185,6 +187,17 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
             [] -> return ()
             (x:_) -> f x
         return Nothing
+
+    | Just (OverflowFocusMaster :: MCMsg Window) <- fromMessage sm =
+        return $ Just $ state { overflowFocus = 0 }
+
+    | Just (FocusCell i :: MCMsg Window) <- fromMessage sm =
+        let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
+            focusNth n = windows $ foldr (.) W.focusMaster (take n $ repeat W.focusDown)
+            action
+              | i < capacity = focusNth i
+              | otherwise = focusNth (capacity + overflowFocus state)
+        in action >> return Nothing
 
     | otherwise = return Nothing
     where unmirror e

@@ -65,16 +65,22 @@ layoutKeys =
                                 else let (al, ar) = splitAt c as
                                      in al++(tail ar)
 
+      focusMaster = windows W.focusMaster
+      focusSecond = sendMC $ FocusCell 1
+      focusOverflow = sendMC $ WithOverflowFocus (windows . W.focusWindow)
+
+      ifMaster :: X () -> X () -> X ()
+      ifMaster a b = do stm <- gets (W.stack . W.workspace . W.current . windowset)
+                        whenJust stm $ \(W.Stack {W.up = up}) -> if (null up) then a else b
+
   in
   [ ("M-n", ("down", windows W.focusDown >> warp))
   , ("M-p", ("up",   windows W.focusUp >> warp))
 
-  , ("M-m",    ("focus master", windows W.focusMaster >> warp))
-  , ("M-S-m",  ("shift master", windows W.shiftMaster >> warp))
-  , ("M-M1-m", ("swap master",  windows W.swapMaster >> warp))
+  , ("M-m",    ("focus master", (ifMaster focusSecond focusMaster) >> warp))
+  , ("M-S-m",  ("shift master", (ifMaster (focusSecond >> (windows W.swapMaster)) (windows W.shiftMaster)) >> warp))
 
-  , ("M-j",   ("focus 2", windows (W.focusDown . W.focusMaster) >> warp))
-  , ("M-S-j", ("shift 2", windows (W.swapDown . W.shiftMaster) >> warp))
+  , ("M-j",   ("focus 2", focusOverflow >> warp))
 
   , ("M-l 1",   ("full",   sendMC $ SetCells [col 1] ))
   , ("M-l 2",   ("1|1", sendMC $ SetCells [col 1, col 1] ))

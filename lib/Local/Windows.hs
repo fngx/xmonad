@@ -22,6 +22,7 @@ import Data.Foldable
 import XMonad.Util.NamedWindows (getName, unName)
 import Data.Monoid
 import Local.Hints (repeatHintedKeys)
+import qualified Local.MC as MC
 
 import XMonad.Util.XUtils
 import XMonad.Util.Font
@@ -82,7 +83,9 @@ windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
                        ))
 
              , ("M-S-o", ("sortify", do rw <- recentWindows
-                                        windows $ sortWith rw))
+                                        windows $ sortWith rw
+                                        sendMessage $ (MC.OverflowFocusMaster :: MC.MCMsg Window)
+                         ))
 
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
