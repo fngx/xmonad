@@ -277,7 +277,7 @@ render = do
 
         printOption fg bg x choice = let nam = cName choice
                                          fg' = cColor choice
-                                         str' = str (if null fg' then fg else fg') bg in
+                                         str' = str fg (if null fg' then bg else fg') in
                                        printItem (fi $ top2) (fi x) spaceBetweenChoice (+) str' nam
 
 

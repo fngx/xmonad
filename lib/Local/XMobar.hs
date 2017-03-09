@@ -30,9 +30,9 @@ xmobar :: LayoutClass l Window
 xmobar = xmobar' "xmobar ~/.xmonad/xmobarrc"
 
 pp = xmobarPP
-  { ppCurrent = xmobarColor "white" "steelblue" . esc
+  { ppCurrent = xmobarColor "black" "orange" . esc
   , ppVisible = xmobarColor "white" "grey30" . esc
-  , ppHidden  = xmobarColor "grey50" "" . esc
+  , ppHidden  = xmobarColor "grey80" "" . esc
   , ppLayout = esc
   , ppTitle = xmobarColor "white" "" . esc
   , ppUrgent = xmobarColor "white" "red" . esc
@@ -54,12 +54,13 @@ clickNames names pp =
           let ix = elemIndex s names
               wrapped n =
                 let n' = (show $ 1+n)
-                    s' = if nameCount > 3 then n'++":"++s else s
+                    s' = if s == "" then "∅" else s
+                    s'' = if nameCount > 3 then n'++":"++s' else s'
                 in
                   concat ["<action=xdotool key super+",
                            n',
                            ">",
-                           f s',
+                           f s'',
                            "</action>"]
           in
           case ix of

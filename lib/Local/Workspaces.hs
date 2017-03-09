@@ -21,7 +21,8 @@ workspaceKeys =
   let swapS = ("screen swap", swapNextScreen >> warp)
       focusS = ("screen focus", nextScreen >> warp)
       shiftS = ("screen shift", shiftNextScreen >> nextScreen >> warp)
-      view n = ("view " ++ show n, withNthNEWorkspace W.greedyView (n-1))
+      doView n = withNthNEWorkspace W.greedyView (n-1)
+      view n = ("view " ++ show n, doView n)
       shiftTo n = ("shift to " ++ show n, withNthNEWorkspace W.shift (n-1))
       onEmpty a = ("view empty", do en <- emptyNames
                                     an <- workspaceNames
@@ -40,6 +41,8 @@ workspaceKeys =
       after x (a:(y:xs))
         | x == a = y
         | otherwise = after x (y:xs)
+
+      onOtherScreen a = nextScreen >> a >> prevScreen
   in [ ("M-s", swapS)
      , ("M-S-s", shiftS)
      , ("M-d", focusS)
@@ -64,8 +67,11 @@ workspaceKeys =
                                                                                 ))]
                  ))
      ] ++
-     [("M-" ++ show n, view n) | n <- [1 .. 9]] ++
-     [("M-S-" ++ show n, shiftTo n) | n <- [1 .. 9]]
+     (concat $
+      [[ ("M-" ++ show n, view n)
+       , ("M-S-" ++ show n, shiftTo n)
+       , ("M-M1-" ++ (show n), ("view other " ++ (show n), onOtherScreen $ doView n)) ]
+      | n <- [1 .. 9]])
 
 warp :: X ()
 warp = do mf <- gets (W.peek . windowset)

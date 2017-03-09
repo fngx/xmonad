@@ -26,10 +26,10 @@ import System.FilePath (takeExtension, dropExtension, combine)
 -- uses my prompt utility to provide a few prompts
 
 myConfig = Config
-           { normal = ("white", "#222")
-           , item = (Theme.normalText, "#333")
-           , highlight = ("white", "#666")
-           , border = (1, "#777")
+           { normal = ("black", "#ccc")
+           , item = ("black", "#ccc")
+           , highlight = ("white", "black")
+           , border = (1, "black")
            , font = Theme.bigFont
            , prompt = ":"
            , top = False
@@ -94,11 +94,11 @@ windowPrompt key =
            cur = W.tag $ W.workspace $ W.current ws
            tags = cur:(vis++hid)
 
-           colrs = cycle [ "#90ee90"
-                         , "#ffa500"
-                         , "#ff82ab"
-                         , "#bcd2ee"
-                         , "#ffff00" ]
+           colrs = cycle [ "#80de80"
+                         , "#ef9500"
+                         , "#dd72ab"
+                         , "#8ca1ee"
+                         , "#cccc00" ]
 
            colrMap = M.fromList $ zip (sort tags) colrs
 
@@ -118,12 +118,12 @@ shiftPrompt key w =
                           existing = map (actions (length tags)) $ filter (isInfixOf s) tags
 
                           colr t
-                            | t `elem` vis = "#00ff00"
-                            | otherwise = "#ffff00"
+                            | t `elem` vis = ""
+                            | otherwise = ""
 
                           existing' = map (\(l, a) -> (l, colr l, a)) existing
 
-                          new = (s, "#00ff00", [ ("shift", shiftWindowToNew s w)])
+                          new = (s, "forestgreen", [ ("shift", shiftWindowToNew s w)])
                       return $ if (null s) || (s `elem` tags) then existing'
                                else existing' ++ [new]
 
@@ -150,13 +150,13 @@ workspacePrompt key =
 
                           colr t
                             | t == cur = ""
-                            | t `elem` vis = "#00ff00"
-                            | t `elem` hide = "grey"
-                            | otherwise = "#ffff00"
+                            | t `elem` vis = ""
+                            | t `elem` hide = "darkcyan"
+                            | otherwise = ""
 
                           existing' = map (\(l, _, a) -> (l, colr l, a)) existing
 
-                          new = (s, "", [("create", addWorkspace s)
+                          new = (s, "forestgreen", [("create", addWorkspace s)
                                         ,("ren", renameWorkspaceByName s)
                                         ,("shift", withFocused $ \w -> shiftWindowToNew s w)])
                       return $ if (null s) || (s `elem` tags) then existing'
