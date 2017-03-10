@@ -33,7 +33,8 @@ layout = trackFloating $
     onecol = mc tabs [(1, [1])]
 
 addLayout c =
-  c { layoutHook = layout }
+  c { layoutHook = layout
+    , handleEventHook = mappingEventHook }
 
 layoutKeys =
   let col n = (1, take n $ repeat 1)

@@ -9,7 +9,7 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.Stack
 import XMonad.Layout (splitHorizontallyBy, splitVerticallyBy)
 import Data.Maybe
-import Data.List (intercalate, transpose)
+import Data.List (intercalate, transpose, findIndex)
 import Control.Arrow (first, second, (&&&))
 import Control.Applicative ((<$>))
 import qualified Data.Map.Strict as M
@@ -21,6 +21,8 @@ import Graphics.X11.Xlib.Extras (getWindowAttributes,
 import Graphics.X11.Xlib.Misc (warpPointer)
 import XMonad.Actions.RotSlaves (rotAll')
 import qualified XMonad.Actions.TagWindows as T
+
+import Data.Monoid
 
 data MC l a = MC
   { cells :: [(Rational, [Rational])]
@@ -52,7 +54,9 @@ data MCMsg a =
   OnOverflow ([Window] -> [Window]) |
   WithOverflowFocus (Window -> X ()) |
   OverflowFocusMaster |
-  FocusCell Int
+  FocusCell Int |
+  OverflowFocusWindow a
+
 
 instance Typeable a => Message (MCMsg a)
 
@@ -191,6 +195,17 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
     | Just (OverflowFocusMaster :: MCMsg Window) <- fromMessage sm =
         return $ Just $ state { overflowFocus = 0 }
 
+    | Just (OverflowFocusWindow w :: MCMsg Window) <- fromMessage sm = do
+        wsm <- gets (listToMaybe .
+                     (filter ((== (workspaceId state)) . W.tag)) .
+                      W.workspaces . windowset)
+        return $ case wsm of
+                   (Just ws) ->
+                     let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
+                         overflow = drop capacity $ W.integrate' $ W.stack ws
+                     in maybe Nothing (\i -> Just state { overflowFocus = i }) $ findIndex (== w) overflow
+                   _ -> Nothing
+
     | Just (FocusCell i :: MCMsg Window) <- fromMessage sm =
         let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
             focusNth n = windows $ foldr (.) W.focusMaster (take n $ repeat W.focusDown)
@@ -209,6 +224,16 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
             | otherwise = e
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
+
+mappingEventHook :: Event -> X All
+mappingEventHook (MapRequestEvent {ev_window = w}) = do
+  ws <- gets windowset
+  let tm = W.findTag w ws
+  whenJust tm $ \t ->
+    sendMessageWithNoRefresh (OverflowFocusWindow w) $ head $ filter ((== t) . W.tag) $ W.workspaces ws
+  refresh
+  return (All True)
+mappingEventHook _ = return (All True)
 
 normalizeState state =
   let cells0 = cells state
