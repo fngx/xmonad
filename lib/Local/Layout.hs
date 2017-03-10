@@ -34,7 +34,8 @@ layout = trackFloating $
 
 addLayout c =
   c { layoutHook = layout
-    , handleEventHook = mappingEventHook }
+    , handleEventHook = mappingEventHook <+> (handleEventHook c)
+    }
 
 layoutKeys =
   let col n = (1, take n $ repeat 1)

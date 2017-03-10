@@ -21,6 +21,7 @@ import Graphics.X11.Xlib.Extras (getWindowAttributes,
 import Graphics.X11.Xlib.Misc (warpPointer)
 import XMonad.Actions.RotSlaves (rotAll')
 import qualified XMonad.Actions.TagWindows as T
+import XMonad.Hooks.DebugEvents
 
 import Data.Monoid
 
