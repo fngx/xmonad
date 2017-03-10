@@ -226,13 +226,22 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
 
+-- sometimes emacs requests to map a window that xmonad thinks is already mapped
+-- but the layout did not give it a rectangle, or something. not quite sure.
 mappingEventHook :: Event -> X All
 mappingEventHook (MapRequestEvent {ev_window = w}) = do
   ws <- gets windowset
   let tm = W.findTag w ws
   whenJust tm $ \t ->
     sendMessageWithNoRefresh (OverflowFocusWindow w) $ head $ filter ((== t) . W.tag) $ W.workspaces ws
+  windows $ W.focusWindow w
   refresh
+  return (All True)
+mappingEventHook (ClientMessageEvent {ev_message_type = mt, ev_data = d, ev_window = w}) = do
+  a_aw <- getAtom "_NET_ACTIVE_WINDOW"
+  if mt == a_aw then do
+    return ()
+    else return ()
   return (All True)
 mappingEventHook _ = return (All True)
 
