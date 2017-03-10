@@ -200,12 +200,18 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
         wsm <- gets (listToMaybe .
                      (filter ((== (workspaceId state)) . W.tag)) .
                       W.workspaces . windowset)
-        return $ case wsm of
-                   (Just ws) ->
-                     let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
-                         overflow = drop capacity $ W.integrate' $ W.stack ws
-                     in maybe Nothing (\i -> Just state { overflowFocus = i }) $ findIndex (== w) overflow
-                   _ -> Nothing
+        focusm <- gets (W.peek . windowset)
+        case wsm of
+          (Just ws) ->
+            let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
+                overflow = drop capacity $ W.integrate' $ W.stack ws
+                windex = findIndex (== w) overflow
+                findex = fromMaybe False $ (flip elem overflow <$> focusm)
+            in case (findex, windex) of
+              (_, Nothing) -> return Nothing
+              (True, Just _) -> ((windows $ W.focusWindow w) >> return Nothing)
+              (False, Just i) -> return $ Just state { overflowFocus = i }
+          _ -> return Nothing
 
     | Just (FocusCell i :: MCMsg Window) <- fromMessage sm =
         let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
@@ -234,13 +240,12 @@ mappingEventHook (MapRequestEvent {ev_window = w}) = do
   let tm = W.findTag w ws
   whenJust tm $ \t ->
     sendMessageWithNoRefresh (OverflowFocusWindow w) $ head $ filter ((== t) . W.tag) $ W.workspaces ws
-  windows $ W.focusWindow w
   refresh
   return (All True)
 mappingEventHook (ClientMessageEvent {ev_message_type = mt, ev_data = d, ev_window = w}) = do
   a_aw <- getAtom "_NET_ACTIVE_WINDOW"
   if mt == a_aw then do
-    return ()
+    refresh
     else return ()
   return (All True)
 mappingEventHook _ = return (All True)
