@@ -26,10 +26,10 @@ import System.FilePath (takeExtension, dropExtension, combine)
 -- uses my prompt utility to provide a few prompts
 
 myConfig = Config
-           { normal = ("black", "#ccc")
-           , item = ("black", "#ccc")
+           { normal = ("white", "deepskyblue4")
+           , item = ("black", "deepskyblue")
            , highlight = ("white", "black")
-           , border = (1, "black")
+           , border = (1, "white")
            , font = Theme.bigFont
            , prompt = ":"
            , top = False

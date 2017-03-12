@@ -1,6 +1,6 @@
 module Local.Colors where
 
-focusedBorderColor   = "#FF80AB"
+focusedBorderColor   = "deepskyblue"
 normalBorderColor    = "grey20"
 otherWindow          = "grey60"
 hasUrgentBorderColor = "darkred"

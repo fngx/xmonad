@@ -3,6 +3,7 @@
 module Local.XMobar (Local.XMobar.xmobar) where
 
 import Local.Workspaces (nonEmptyNames)
+import Local.Colors (focusedBorderColor, focusedText)
 
 import XMonad
 import XMonad.Hooks.ManageDocks
@@ -18,7 +19,9 @@ xmobar' :: LayoutClass l Window
         => String -> XConfig l -> IO (XConfig (ModifiedLayout AvoidStruts l))
 xmobar' cmd conf = do
   h <- spawnPipe cmd
-  return $ docks $ conf
+  return $
+    --docks $
+    conf
     { layoutHook = avoidStruts (layoutHook conf)
     , logHook = do logHook conf
                    names <- nonEmptyNames
@@ -30,7 +33,7 @@ xmobar :: LayoutClass l Window
 xmobar = xmobar' "xmobar ~/.xmonad/xmobarrc"
 
 pp = xmobarPP
-  { ppCurrent = xmobarColor "black" "#FF80AB" . esc
+  { ppCurrent = xmobarColor focusedText Local.Colors.focusedBorderColor . esc
   , ppVisible = xmobarColor "white" "grey30" . esc
   , ppHidden  = xmobarColor "grey80" "" . esc
   , ppLayout = esc
