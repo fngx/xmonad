@@ -116,7 +116,7 @@ runKeyTree autostop pfx0 kt0 = do
   let y0 = 1 + fst extent
   let x0 = 2
 
-  let grey = "#222222"
+  let grey = "deepskyblue4"
 
   let render :: String -> (String, String) -> String -> X ()
       render prefix (message, colr) border = do
@@ -131,12 +131,12 @@ runKeyTree autostop pfx0 kt0 = do
       runKT prefix kt = do
         let prefixs = intercalate " " $ map showKey prefix
         case kt of
-          Leaf n a -> do render prefixs (n, "green") "#fff"
+          Leaf n a -> do render prefixs (n, "white") "green"
                          io $ threadDelay (if autostop then 80000 else 100000)
                          a
                          when autostop $ runKT (maybeToList pfx0) kt0
           Sub m -> do let nexts = show kt
-                      render prefixs (nexts, "#eee") "#999"
+                      render prefixs (nexts, "#eee") "white"
                       keym <- nextKeyEvent d
                       let handle (Press km k s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
                           handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
@@ -146,7 +146,7 @@ runKeyTree autostop pfx0 kt0 = do
                           noMatch km k s
                             | km == controlMask && k == xK_g = return ()
                             | km == 0 && k == xK_Escape = return ()
-                            | not $ null s = (render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "#f66") "#fff") >> (io $ threadDelay 800000)
+                            | not $ null s = (render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "white") "red") >> (io $ threadDelay 800000)
                             | otherwise = cont
                       handle keym
 

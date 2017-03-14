@@ -25,7 +25,7 @@ decorations = def
 
                               let isNext = Just w == nextM
                                   style w
-                                    | isOverflow && isNext = Just $ cs overflowWindow otherWindow normalText
+                                    | isOverflow && isNext = Just $ cs overflowWindow overflowWindow normalText
                                     | isOverflow = Just $ cs overflowWindow overflowWindow normalText
                                     | isNext = Just $ cs normalBorderColor otherWindow normalText
                                     | otherwise = Nothing
