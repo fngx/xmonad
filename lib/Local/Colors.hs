@@ -1,13 +1,13 @@
 module Local.Colors where
 
-focusedBorderColor   = "goldenrod"
+focusedBorderColor   = "#FDECBC"
 normalBorderColor    = "grey10"
 otherWindow          = "grey50"
 hasUrgentBorderColor = "darkred"
 urgentBorderColor    = "red"
 overflowWindow       = "grey50"
 
-focusedText = "white"
+focusedText = "#313131"
 normalText = "white"
 urgentText = "white"
 
