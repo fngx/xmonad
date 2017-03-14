@@ -10,7 +10,7 @@ reloadCommand = "if type xmonad; then xmonad --recompile && xmonad --restart; el
 
 spawnKeys :: [ (String, (String, X ())) ]
 spawnKeys =
-  let emacs = ("emacs", spawn "emacsclient -c -n -e '(switch-to-buffer nil)' 2>&1 > /dev/null") in
+  let emacs = ("emacs", spawn "emacsclient -c -n 2>&1 > /dev/null") in
   [ ("M-<Return>", ("term", spawn "urxvt"))
   , ("M-S-<Return>", emacs)
 
