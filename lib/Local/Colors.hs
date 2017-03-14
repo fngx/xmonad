@@ -7,7 +7,7 @@ hasUrgentBorderColor = "darkred"
 urgentBorderColor    = "red"
 overflowWindow       = "grey50"
 
-focusedText = "black"
+focusedText = "white"
 normalText = "white"
 urgentText = "white"
 
