@@ -83,6 +83,7 @@ layoutKeys =
   , ("M-S-m",  ("shift master", (ifMaster (focusSecond >> (windows W.swapMaster)) (windows W.shiftMaster)) >> warp))
 
   , ("M-j",   ("focus 2", focusOverflow >> warp))
+  , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
   , ("M-l 1",   ("full",sendMC $ SetCells [col 1] ))
   , ("M-l 2",   ("1|1", sendMC $ SetCells [col 1, col 1] ))
@@ -99,8 +100,8 @@ layoutKeys =
   , ("M-S-,", ("- row", withFocused $ sendMC . (ChangeCells delCol)))
   , ("M-S-.", ("+ row", withFocused $ sendMC . (ChangeCells addCol)))
 
-  , ("M-M1-n", ("rfd", sendMC $ OnOverflow rotDown))
-  , ("M-M1-p", ("rfd", sendMC $ OnOverflow rotUp))
+  , ("M-M1-n", ("overflow down", sendMC $ WithOverflowFocusIndex (+ 1)))
+  , ("M-M1-p", ("overflow up", sendMC $ WithOverflowFocusIndex (flip (-) 1)))
 
   , ("M-S-n", ("swap down", windows W.swapDown >> warp))
   , ("M-S-p", ("swap up", windows W.swapUp >> warp))

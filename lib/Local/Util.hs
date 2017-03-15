@@ -39,3 +39,6 @@ getWindowTopLeft w = do d <- asks display
 
 isFloating :: Window -> X Bool
 isFloating w = gets ((M.member w) . W.floating . windowset)
+
+onWorkspace :: (Eq i, Eq s) => i -> (W.Stack a -> W.Stack a) -> W.StackSet i l a s sd -> W.StackSet i l a s sd
+onWorkspace w f ss = W.view (W.tag $ W.workspace $ W.current ss) $ W.modify' f $ W.view w ss

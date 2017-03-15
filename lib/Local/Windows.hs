@@ -71,14 +71,16 @@ sortWith rws ss@(W.StackSet { W.current = scr@(W.Screen { W.workspace = ws@(W.Wo
 sortWith ws ss = ss
 
 windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
+                                   history <- XS.get
                                    focusUrgentOr focusNext
                                    warp
+
                                    repeatHintedKeys [ ("M-o", ("next", focusNext >> warp))
                                                     , ("M-i", ("prev", focusPrev >> warp))
                                                     , ("M-j", ("swap2", (windows (W.swapDown . W.shiftMaster)) >> warp))
                                                     , ("M-m", ("swapM", (windows W.shiftMaster) >> warp))]
                                    -- push start window down to next focus
-                                   XS.get >>= insertHistory oldFocus >>= updateHistory >>= XS.put
+                                   insertHistory oldFocus history >>= updateHistory >>= XS.put
                                    withTaggedGlobal "." $ delTag "."
                        ))
 

@@ -33,6 +33,7 @@ data MC l a = MC
   , mirror :: Bool
   , lastRect :: Rectangle
   , overflowFocus :: Int
+  , overflowSize :: Int
   , workspaceId :: WorkspaceId
   } deriving (Read, Show)
 
@@ -44,6 +45,7 @@ mc il c0 = MC { cells = c0
               , lastCells = []
               , lastRect = Rectangle 0 0 10 10
               , overflowFocus = 0
+              , overflowSize = 0
               , workspaceId = "" }
 
 data MCMsg a =
@@ -54,10 +56,10 @@ data MCMsg a =
   Flip |
   OnOverflow ([Window] -> [Window]) |
   WithOverflowFocus (Window -> X ()) |
+  WithOverflowFocusIndex (Int -> Int) |
   OverflowFocusMaster |
   FocusCell Int |
   OverflowFocusWindow a
-
 
 instance Typeable a => Message (MCMsg a)
 
@@ -66,6 +68,9 @@ flipR (Rectangle sx sy sw sh) = Rectangle sy sx sh sw
 
 a /? 0 = a
 a /? b = a / b
+
+cellCount :: MC l a -> Int
+cellCount state = foldl (+) 0 $ map (length . snd) $ cells state
 
 instance (LayoutClass l Window) => LayoutClass (MC l) Window where
   description (MC { cells = cs, mirror = m }) =
@@ -76,7 +81,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
     let mirr = if mirror state then flipR else id
         rect = mirr rect'
         ws = W.integrate' stack
-        capacity = foldl (+) 0 $ map (length . snd) $ cells state
+        capacity = cellCount state
         demand = length ws
 
         cutV (Rectangle sx sy sw sh) (l, r) =
@@ -115,14 +120,16 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
                                  , lastCells = cs
                                  , lastRect = rect
                                  , overflowFocus = 0
+                                 , overflowSize = 0
                                  , workspaceId = wid }
               return $ (zip ws (map mirr rects), Just $ state')
       else do let rs = divide $ cells state
                   rects = map fst rs
                   (main, extra) = splitAt (capacity - 1) ws
+                  nextra = length extra
                   fIndex = ((maybe 0 (length . W.up) stack) - (capacity - 1))
                   odex
-                    | fIndex < 0 = (min (overflowFocus state) ((length extra) - 1))
+                    | fIndex < 0 = (min (nextra - (overflowSize state) + overflowFocus state) (nextra - 1))
                     | otherwise = fIndex
                   ostack = fromIndex extra odex
                   orect = last rects
@@ -136,6 +143,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
                                  , lastCells = (cells state)
                                  , lastRect = rect
                                  , overflowFocus = odex
+                                 , overflowSize = nextra
                                  , workspaceId = wid }
               return $ ((zip main (map mirr rects)) ++ owrs, Just $ state')
 
@@ -170,8 +178,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
     | Just (OnOverflow f :: MCMsg Window) <- fromMessage sm = do
         -- only works if we send the message to the focused workspace
         -- how do we find out which workspace we are on
-        let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
-            applyF = (rotAll' $ \l -> let (u, d) = splitAt capacity l
+        let applyF = (rotAll' $ \l -> let (u, d) = splitAt maxIndex l
                                            in u ++ f d)
             modify w@(W.Workspace t _ mst)
               | t == (workspaceId state) = w { W.stack = applyF <$> mst }
@@ -185,13 +192,15 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
                      (filter ((== (workspaceId state)) . W.tag)) .
                       W.workspaces . windowset)
         whenJust wsm $ \ws -> do
-          let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
-              offset = capacity + (overflowFocus state)
+          let offset = maxIndex + (overflowFocus state)
               theWindow = take 1 $ drop offset $ W.integrate' $ W.stack ws
           case theWindow of
             [] -> return ()
             (x:_) -> f x
         return Nothing
+
+    | Just (WithOverflowFocusIndex f :: MCMsg Window) <- fromMessage sm =
+        return $ Just $ state { overflowFocus = (f (overflowFocus state)) `mod` capacity }
 
     | Just (OverflowFocusMaster :: MCMsg Window) <- fromMessage sm =
         return $ Just $ state { overflowFocus = 0 }
@@ -203,8 +212,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
         focusm <- gets (W.peek . windowset)
         case wsm of
           (Just ws) ->
-            let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
-                overflow = drop capacity $ W.integrate' $ W.stack ws
+            let overflow = drop maxIndex $ W.integrate' $ W.stack ws
                 windex = findIndex (== w) overflow
                 findex = fromMaybe False $ (flip elem overflow <$> focusm)
             in case (findex, windex) of
@@ -214,21 +222,23 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
           _ -> return Nothing
 
     | Just (FocusCell i :: MCMsg Window) <- fromMessage sm =
-        let capacity = (foldl (+) 0 $ map (length . snd) $ cells state) - 1
-            focusNth n = windows $ foldr (.) W.focusMaster (take n $ repeat W.focusDown)
+        let focusNth n = windows $ foldr (.) W.focusMaster (take n $ repeat W.focusDown)
             action
-              | i < capacity = focusNth i
-              | otherwise = focusNth (capacity + overflowFocus state)
+              | i < maxIndex = focusNth i
+              | otherwise = focusNth (maxIndex + overflowFocus state)
         in action >> return Nothing
 
     | otherwise = return Nothing
-    where unmirror e
-            | mirror state = case e of
-                               L -> U
-                               R -> D
-                               U -> L
-                               D -> R
-            | otherwise = e
+    where
+      capacity = cellCount state
+      maxIndex = capacity - 1
+      unmirror e
+        | mirror state = case e of
+            L -> U
+            R -> D
+            U -> L
+            D -> R
+        | otherwise = e
 overflowHandle state sm = do o' <- handleMessage (overflow state) sm
                              return $ fmap (\x -> state {overflow = x}) o'
 
