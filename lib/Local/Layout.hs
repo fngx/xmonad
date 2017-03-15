@@ -84,7 +84,7 @@ layoutKeys =
 
   , ("M-j",   ("focus 2", focusOverflow >> warp))
 
-  , ("M-l 1",   ("full",   sendMC $ SetCells [col 1] ))
+  , ("M-l 1",   ("full",sendMC $ SetCells [col 1] ))
   , ("M-l 2",   ("1|1", sendMC $ SetCells [col 1, col 1] ))
   , ("M-l 3",   ("1|2", sendMC $ SetCells [col 1, col 2] ))
   , ("M-l 4",   ("1|3", sendMC $ SetCells [col 1, col 3] ))
