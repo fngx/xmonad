@@ -70,19 +70,28 @@ sortWith rws ss@(W.StackSet { W.current = scr@(W.Screen { W.workspace = ws@(W.Wo
   in maybe newStackSet (flip W.focusWindow newStackSet) oldFocus
 sortWith ws ss = ss
 
-windowKeys = [ ("M-o", ("next", do oldFocus <- gets (W.peek . windowset)
-                                   history <- XS.get
-                                   focusUrgentOr focusNext
-                                   warp
+navKeys = [ ("M-o",   ("next", focusNext >> warp))
+          , ("M-i",   ("prev", focusPrev >> warp))
+          , ("M-n",   ("down", windows W.focusDown >> warp))
+          , ("M-p",   ("up",   windows W.focusUp >> warp))
+          , ("M-S-N",   ("down", windows W.swapDown >> warp))
+          , ("M-S-P",   ("up",   windows W.swapUp >> warp))
+          , ("M-m",   ("master", windows W.focusMaster >> warp))
+          , ("M-S-M", ("swap m", (windows W.swapMaster) >> warp))
+          ]
 
-                                   repeatHintedKeys [ ("M-o", ("next", focusNext >> warp))
-                                                    , ("M-i", ("prev", focusPrev >> warp))
-                                                    , ("M-j", ("swap2", (windows (W.swapDown . W.shiftMaster)) >> warp))
-                                                    , ("M-m", ("swapM", (windows W.shiftMaster) >> warp))]
-                                   -- push start window down to next focus
-                                   insertHistory oldFocus history >>= updateHistory >>= XS.put
-                                   withTaggedGlobal "." $ delTag "."
-                       ))
+navigate action = do history <- XS.get :: X WindowHistory
+                     action
+                     warp
+                     nav
+                     updateHistory history >>= XS.put
+                     withTaggedGlobal "." $ delTag "."
+                       where nav = repeatHintedKeys navKeys
+
+
+windowKeys = [ ("M-o", ("next", navigate focusNext))
+             , ("M-n", ("down", navigate $ windows W.focusDown))
+             , ("M-p", ("up", navigate $ windows W.focusUp))
 
              , ("M-S-o", ("sortify", do rw <- recentWindows
                                         windows $ sortWith rw

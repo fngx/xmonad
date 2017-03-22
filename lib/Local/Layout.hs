@@ -76,10 +76,7 @@ layoutKeys =
                         whenJust stm $ \(W.Stack {W.up = up}) -> if (null up) then a else b
 
   in
-  [ ("M-n", ("down", windows W.focusDown >> warp))
-  , ("M-p", ("up",   windows W.focusUp >> warp))
-
-  , ("M-m",    ("focus master", (ifMaster focusSecond focusMaster) >> warp))
+  [ ("M-m",    ("focus master", (ifMaster focusSecond focusMaster) >> warp))
   , ("M-S-m",  ("shift master", (ifMaster (focusSecond >> (windows W.swapMaster)) (windows W.shiftMaster)) >> warp))
 
   , ("M-j",   ("focus 2", focusOverflow >> warp))
