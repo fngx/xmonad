@@ -315,15 +315,16 @@ ellipsis = "..." --"…"
 
 data KEvent = Expose | Press KeyMask KeySym String | Release KeySym | Skip deriving (Show)
 
-nextKeyEvent :: Display -> X KEvent
+nextKeyEvent :: Display -> X (KEvent, Event)
 nextKeyEvent d = do
   io $ do allocaXEvent $ \e -> do
             maskEvent d (exposureMask .|. keyPressMask .|. keyReleaseMask) e
             ev <- getEvent e
-            if ev_event_type ev == keyPress then
-              do x <- lookupString $ asKeyEvent e
-                 return $ case x of (Just ks, str) -> Press (ev_state ev) ks str
-                                    _ -> Skip
+            fmap (flip (,) ev) $
+              if ev_event_type ev == keyPress then
+                do x <- lookupString $ asKeyEvent e
+                   return $ case x of (Just ks, str) -> Press (ev_state ev) ks str
+                                      _ -> Skip
               else if ev_event_type ev == keyRelease then
                      do s <- keycodeToKeysym d (ev_keycode ev) 0
                         return $ Release s
@@ -336,10 +337,10 @@ handleKeys = do
   (d, h) <- gets (_display &&& handler)
   XConf { XMonad.config = XConfig {modMask = mod} } <- lift ask
 
-  keym <- lift $ nextKeyEvent d
+  (keym, ev) <- lift $ nextKeyEvent d
 
   case keym of
-    Expose -> render
+    Expose -> (lift $ broadcastMessage ev) >> render
     Press mask sym string -> keyAction mod h (mask, sym, string) >> render
     _ -> return ()
 

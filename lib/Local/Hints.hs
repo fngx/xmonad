@@ -137,10 +137,10 @@ runKeyTree autostop pfx0 kt0 = do
                          when autostop $ runKT (maybeToList pfx0) kt0
           Sub m -> do let nexts = show kt
                       render prefixs (nexts, "#eee") "white"
-                      keym <- nextKeyEvent d
+                      (keym, e) <- nextKeyEvent d
                       let handle (Press km k s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
                           handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
-                          handle _ = cont
+                          handle _ = (broadcastMessage e) >> cont
 
                           cont = runKT prefix kt
                           noMatch km k s
