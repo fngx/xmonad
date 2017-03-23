@@ -14,8 +14,8 @@ spawnKeys =
   [ ("M-<Return>", ("term", spawn "urxvt"))
   , ("M-S-<Return>", emacs)
 
-  , ("<XF86MonBrightnessUp>", ("brighter", spawn "xbacklight -steps 1 +5"))
-  , ("<XF86MonBrightnessDown>", ("darker", spawn "xbacklight -steps 1 -5"))
+  , ("<XF86MonBrightnessUp>", ("brighter", spawn "xbacklight -inc 10"))
+  , ("<XF86MonBrightnessDown>", ("darker", spawn "xbacklight -dec 10"))
   , ("<XF86AudioRaiseVolume>", ("louder", spawn "pamixer -i 5"))
   , ("<XF86AudioLowerVolume>", ("quieter", spawn "pamixer -d 5"))
   , ("<XF86AudioMute>", ("mute", spawn "pamixer -t"))

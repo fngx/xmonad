@@ -118,6 +118,16 @@ runKeyTree autostop pfx0 kt0 = do
 
   let grey = "deepskyblue4"
 
+  let defaultHandle (KeyEvent {ev_event_type = t, ev_state = m, ev_keycode = code})
+        | t == keyPress = withDisplay $ \dpy -> do
+            s  <- io $ keycodeToKeysym dpy code 0
+            mClean <- cleanMask m
+            ks <- asks keyActions
+            userCodeDef () $ whenJust (M.lookup (mClean, s) ks) id
+        | otherwise = return ()
+      defaultHandle _ = return ()
+
+
   let render :: String -> (String, String) -> String -> X ()
       render prefix (message, colr) border = do
         paintWindow win sw wh 1 grey border
@@ -146,7 +156,10 @@ runKeyTree autostop pfx0 kt0 = do
                           noMatch km k s
                             | km == controlMask && k == xK_g = return ()
                             | km == 0 && k == xK_Escape = return ()
-                            | not $ null s = (render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "white") "red") >> (io $ threadDelay 800000)
+                            | (not $ null s) && autostop = defaultHandle e
+                            | (not $ null s) = do
+                                render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "white") "red"
+                                io $ threadDelay 800000
                             | otherwise = cont
                       handle keym
 
