@@ -139,16 +139,17 @@ runKeyTree autostop pfx0 kt0 = do
 
       runKT :: [Key] -> KeyTree -> X ()
       runKT prefix kt = do
-        let prefixs = intercalate " " $ map showKey prefix
+        let prefixs = intercalate " " $ map showKey $ reverse prefix
         case kt of
-          Leaf n a -> do render prefixs (n, "white") "green"
-                         io $ threadDelay (if autostop then 80000 else 100000)
+          Leaf n a -> do when (not autostop) $ do
+                           render prefixs (n, "white") "green"
+                           io $ threadDelay 100000
                          a
-                         when autostop $ runKT (maybeToList pfx0) kt0
+                         when autostop $ runKT (take 1 prefix) kt0
           Sub m -> do let nexts = show kt
                       render prefixs (nexts, "#eee") "white"
                       (keym, e) <- nextKeyEvent d
-                      let handle (Press km k s) = maybe (noMatch km k s) (runKT (prefix ++ [(km, k)])) $ M.lookup (km, k) m
+                      let handle (Press km k s) = maybe (noMatch km k s) (runKT ((km, k):prefix)) $ M.lookup (km, k) m
                           handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
                           handle _ = (broadcastMessage e) >> cont
 
