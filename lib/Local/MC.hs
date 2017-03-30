@@ -200,7 +200,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
         return Nothing
 
     | Just (WithOverflowFocusIndex f :: MCMsg Window) <- fromMessage sm =
-        return $ Just $ state { overflowFocus = (f (overflowFocus state)) `mod` capacity }
+        return $ Just $ state { overflowFocus = (f (overflowFocus state)) `mod` (overflowSize state) }
 
     | Just (OverflowFocusMaster :: MCMsg Window) <- fromMessage sm =
         return $ Just $ state { overflowFocus = 0 }
