@@ -82,6 +82,7 @@ windowRules = composeAll
   [ isDialog --> doFloat
   , transience'
   , className =? "Xmessage" --> doFloat
+  , className =? "Yad" --> doFloat
   , className =? "XClock" --> doFloat ]
 
 data LibNotifyUrgencyHook = LibNotifyUrgencyHook deriving (Read, Show)
