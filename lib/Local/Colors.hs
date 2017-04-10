@@ -3,8 +3,7 @@ module Local.Colors where
 focusedBorderColor   = "#FDECBC"
 normalBorderColor    = "grey10"
 otherWindow          = "grey50"
-hasUrgentBorderColor = "darkred"
-urgentBorderColor    = "#cd2626"
+urgentBorderColor    = "darkorange"
 overflowWindow       = "grey50"
 
 focusedText = "#313131"

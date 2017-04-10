@@ -60,9 +60,7 @@ setBorderHook =
 
      let ucs = map (flip (,) Colors.urgentBorderColor) us
          ncs = (flip (,) Colors.otherWindow) <$> nextM
-         fbc = if null us
-               then Colors.focusedBorderColor
-               else Colors.hasUrgentBorderColor
+         fbc = Colors.focusedBorderColor
          fcs = (flip (,) fbc) <$> focus
          ocs = map (flip (,) Colors.overflowWindow) over
 

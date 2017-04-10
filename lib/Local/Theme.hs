@@ -1,7 +1,6 @@
 module Local.Theme (decorations,
                     focusedBorderColor, focusedText,
                     urgentBorderColor, urgentText,
-                    hasUrgentBorderColor,
                     normalBorderColor, normalText,
                     otherWindow, smallFont, bigFont
                    , overflowWindow
