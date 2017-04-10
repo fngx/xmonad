@@ -89,7 +89,7 @@ navigate action = do history <- XS.get :: X WindowHistory
                        where nav = repeatHintedKeys navKeys
 
 
-windowKeys = [ ("M-o", ("next", navigate focusNext))
+windowKeys = [ ("M-o", ("next", navigate (focusUrgentOr focusNext)))
              , ("M-n", ("down", navigate $ windows W.focusDown))
              , ("M-p", ("up", navigate $ windows W.focusUp))
 
