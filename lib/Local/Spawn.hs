@@ -5,12 +5,19 @@ import XMonad.Util.Paste (pasteSelection)
 import XMonad.Util.XSelection (safePromptSelection)
 import XMonad.Actions.WindowGo
 import XMonad.Actions.DynamicWorkspaces
+import Data.List (isPrefixOf)
 
 reloadCommand = "if type xmonad; then xmonad --recompile && xmonad --restart; else xmessage xmonad not in \\$PATH: \"$PATH\"; fi"
 
 spawnKeys :: [ (String, (String, X ())) ]
 spawnKeys =
-  let emacs = ("emacs", spawn "emacsclient -c -n 2>&1 > /dev/null") in
+  let emacs = ("emacs", spawn "emacsclient -c -n 2>&1 > /dev/null")
+      isNotmuch s
+        | "*notmuch-search-" `isPrefixOf` s = True
+        | "*notmuch-saved-search-" `isPrefixOf` s = True
+        | otherwise = False
+
+  in
   [ ("M-<Return>", ("term", spawn "urxvt"))
   , ("M-S-<Return>", emacs)
 
@@ -41,9 +48,7 @@ spawnKeys =
   , ("M-a i", ("inbox",
                raiseMaybe (do addWorkspace "mail"
                               spawn "emacsclient -n -c -e '(my-inbox)'")
-                (className =? "Emacs" <&&> (fmap ((== "*notmuch-search-") .
-                                                   (take (length "*notmuch-search-")))
-                                             title))))
+                (className =? "Emacs" <&&> (fmap isNotmuch title))))
   , ("M-a a", ("agenda", raiseMaybe (spawn "emacsclient -e '(org-agenda nil \"a\")'")
                          (className =? "Emacs" <&&> title =? "*Org Agenda*")))
 
