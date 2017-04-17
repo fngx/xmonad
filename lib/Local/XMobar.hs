@@ -3,7 +3,7 @@
 module Local.XMobar (Local.XMobar.xmobar) where
 
 import Local.Workspaces (nonEmptyNames)
-import Local.Colors (focusedBorderColor, focusedText)
+import Local.Colors (focusedBorderColor, focusedText, urgentBorderColor, urgentText)
 
 import XMonad
 import XMonad.Hooks.ManageDocks
@@ -38,7 +38,7 @@ pp = xmobarPP
   , ppHidden  = xmobarColor "grey80" "" . esc
   , ppLayout = esc
   , ppTitle = xmobarColor "white" "" . esc
-  , ppUrgent = xmobarColor "white" "red" . esc
+  , ppUrgent = xmobarColor urgentText urgentBorderColor . esc
   }
 
 esc = concatMap doubleLts
