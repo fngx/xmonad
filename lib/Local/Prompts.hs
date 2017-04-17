@@ -26,10 +26,10 @@ import System.FilePath (takeExtension, dropExtension, combine)
 -- uses my prompt utility to provide a few prompts
 
 myConfig = Config
-           { normal = ("white", "deepskyblue4")
-           , item = ("black", "deepskyblue")
-           , highlight = ("white", "black")
-           , border = (1, "white")
+           { normal = (Theme.focusedText, Theme.focusedBorderColor)
+           , item = (Theme.focusedText, "#EDDCAC")
+           , highlight = (Theme.focusedBorderColor, Theme.focusedText)
+           , border = (1, Theme.focusedText)
            , font = Theme.bigFont
            , prompt = ":"
            , top = False
@@ -55,11 +55,11 @@ myConfig = Config
            }
 
 runPrompt key =
-  let actions c = (c, "", [("run", io $ spawn c),
-                           ("term", io $ safeSpawn "urxvt" ["-e", c]),
-                           ("man", io $ safeSpawn "xterm" ["-e", "man " ++ c]),
-                           ("pop", io $ spawn $ "notify-send \"" ++ c ++ "\" \"$(" ++ c ++ ")\"")
-                          ])
+  let actions c = (c,  [("run", io $ spawn c),
+                        ("term", io $ safeSpawn "urxvt" ["-e", c]),
+                        ("man", io $ safeSpawn "xterm" ["-e", "man " ++ c]),
+                        ("pop", io $ spawn $ "notify-send \"" ++ c ++ "\" \"$(" ++ c ++ ")\"")
+                       ])
       generate s = do commands <- io $ getCommands
                       let matches = if null s then commands
                                     else let commands' = (filter (isPrefixOf s) commands) in
@@ -76,17 +76,17 @@ shiftWindowToNew ws w = do addHiddenWorkspace ws
 -- TODO trim window names
 -- TODO maybe indicate ws for windows
 windowPrompt key =
-  let actions :: (M.Map String String) -> (NamedWindow, String) -> (String, String, [(String, X ())])
-      actions cm (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]", M.findWithDefault "" c cm,
-                                                  [ ("focus", windows $ W.focusWindow w)
-                                                  , ("view", windows $ Windows.greedyFocusWindow w)
-                                                  , ("bring", windows $ bringWindow w)
-                                                  , ("shift", shiftPrompt "M-s" w)] )
+  let actions :: (NamedWindow, String) -> (String, [(String, X ())])
+      actions (nw, c) = let w = unName nw in (show nw ++ " [" ++ c ++ "]",
+                                               [ ("focus", windows $ W.focusWindow w)
+                                               , ("view", windows $ Windows.greedyFocusWindow w)
+                                               , ("bring", windows $ bringWindow w)
+                                               , ("shift", shiftPrompt "M-s" w)] )
 
-      generate cm s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
-                                                                           t <- fmap (W.findTag x) $ gets windowset
-                                                                           return (n, fromMaybe "?" t))
-                         return $ map (\(n,c,a) -> (trim 45 n,c,a)) $ filter ((isInfixOf s) . (map toLower) . cName) $ map (actions cm) named
+      generate s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
+                                                                        t <- fmap (W.findTag x) $ gets windowset
+                                                                        return (n, fromMaybe "?" t))
+                      return $ map (\(n,a) -> (trim 45 n,a)) $ filter ((isInfixOf s) . (map toLower) . cName) $ map actions named
   in
     do ws <- gets windowset
        let hid = map W.tag $ W.hidden ws
@@ -94,38 +94,23 @@ windowPrompt key =
            cur = W.tag $ W.workspace $ W.current ws
            tags = cur:(vis++hid)
 
-           colrs = cycle [ "#80de80"
-                         , "#ef9500"
-                         , "#dd72ab"
-                         , "#8ca1ee"
-                         , "#cccc00" ]
-
-           colrMap = M.fromList $ zip (sort tags) colrs
-
        select myConfig { prompt = "win: "
                        , keymap = (key, promptNextOption):("M-w", promptCycleInput tags):(keymap myConfig)
-                       } (generate colrMap)
+                       } generate
 
 swap2 (a:(b:cs)) = b:(a:cs)
 swap2 x = x
 
 shiftPrompt key w =
-  let generate :: String -> X [(String, String, [(String, X ())])]
+  let generate :: String -> X [(String, [(String, X ())])]
       generate s = do ws <- gets windowset
                       let hid = map W.tag $ W.hidden ws
                           vis = map (W.tag . W.workspace) $ W.visible ws
                           tags = (vis++hid)
                           existing = map (actions (length tags)) $ filter (isInfixOf s) tags
-
-                          colr t
-                            | t `elem` vis = ""
-                            | otherwise = ""
-
-                          existing' = map (\(l, a) -> (l, colr l, a)) existing
-
-                          new = (s, "forestgreen", [ ("shift", shiftWindowToNew s w)])
-                      return $ if (null s) || (s `elem` tags) then existing'
-                               else existing' ++ [new]
+                          new = ("⊕ " ++ s, [ ("shift", shiftWindowToNew s w)])
+                      return $ if (null s) || (s `elem` tags) then existing
+                               else existing ++ [new]
 
       actions c t = (t, [ ("shift", windows $ W.shiftWin t w) ])
 
@@ -137,7 +122,7 @@ shiftPrompt key w =
 
 
 workspacePrompt key =
-  let generate :: String -> X [(String, String, [(String, X ())])]
+  let generate :: String -> X [(String, [(String, X ())])]
       generate s = do ws <- gets windowset
                       let (hf, he) = partition (isJust . W.stack) $ W.hidden ws
                           hide = map W.tag he
@@ -148,24 +133,16 @@ workspacePrompt key =
                           tags = cur:(vis ++ hidf ++ hide)
                           existing = map (actions (length tags)) $ filter (isInfixOf s) tags
 
-                          colr t
-                            | t == cur = ""
-                            | t `elem` vis = ""
-                            | t `elem` hide = "darkcyan"
-                            | otherwise = ""
+                          new = ("⊕ " ++ s, [("create", addWorkspace s)
+                                    ,("ren", renameWorkspaceByName s)
+                                    ,("shift", withFocused $ \w -> shiftWindowToNew s w)])
+                      return $ if (null s) || (s `elem` tags) then existing
+                               else existing ++ [new]
 
-                          existing' = map (\(l, _, a) -> (l, colr l, a)) existing
-
-                          new = (s, "forestgreen", [("create", addWorkspace s)
-                                        ,("ren", renameWorkspaceByName s)
-                                        ,("shift", withFocused $ \w -> shiftWindowToNew s w)])
-                      return $ if (null s) || (s `elem` tags) then existing'
-                               else existing' ++ [new]
-
-      actions c t = (t, "", [ ("greedy view", windows $ W.greedyView t)
-                            , ("view", windows $ W.view t)
-                            , ("shift", windows $ W.shift t)
-                            , ("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
+      actions c t = (t, [ ("greedy view", windows $ W.greedyView t)
+                        , ("view", windows $ W.view t)
+                        , ("shift", windows $ W.shift t)
+                        , ("del", (windows $ W.view t) >> killAll >> removeWorkspace)])
   in
     select myConfig {prompt = "ws: ", keymap = (key, promptNextOption):(keymap myConfig)} generate
 
@@ -189,8 +166,8 @@ passwordPrompt =
            , ("user + pass", spawn$ "passm -f user -p -c "++x)
            , ("browse", spawn$ "xdg-open $(passm -f url " ++ x++")") ]
 
-         generate :: String -> X [(String, String, [(String, X ())])]
-         generate s = return $ map (\x -> (x, "", actions x)) $ filter (isInfixOf s) passwords
+         generate :: String -> X [(String, [(String, X ())])]
+         generate s = return $ map (\x -> (x, actions x)) $ filter (isInfixOf s) passwords
 
      select myConfig {prompt = "pass: "} generate
 

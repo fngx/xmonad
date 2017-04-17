@@ -48,11 +48,10 @@ type Prompt = StateT PromptState X
 
 -- a choice has a name, and then a list of named actions
 -- that you can take on it
-type Choice = (String, String, [(String, X ())])
+type Choice = (String, [(String, X ())])
 
-cName (a, _, _) = a
-cColor (_, a, _) = a
-cActions (_, _, a) = a
+cName = fst
+cActions = snd
 
 data Pager = Pager
   { pages :: Zipper (Zipper Choice) -- slightly annoying; inner zipper can never be empty
@@ -276,8 +275,7 @@ render = do
           text
 
         printOption fg bg x choice = let nam = cName choice
-                                         fg' = cColor choice
-                                         str' = str fg (if null fg' then bg else fg') in
+                                         str' = str fg bg in
                                        printItem (fi $ top2) (fi x) spaceBetweenChoice (+) str' nam
 
 
@@ -431,7 +429,7 @@ promptNextAction = modifyPager na
     na :: Pager -> Pager
     na p@(Pager {pages = ps, action = ac}) =
           case ps of
-            Just (W.Stack (Just (W.Stack (_, _, acs) _ _)) _ _) ->
+            Just (W.Stack (Just (W.Stack (_, acs) _ _)) _ _) ->
               let acs' = map fst acs
                   idx = elemIndex ac acs'
                   idx' = fmap (+ 1) idx
@@ -450,7 +448,7 @@ promptPerformAction :: Prompt ()
 promptPerformAction = do
   Pager {pages = pg, action = ac} <- gets pager
   lift $ whenJust (getFocusZ pg) $ \p -> do
-    whenJust (getFocusZ p) $ \(c, t, acs) -> do
+    whenJust (getFocusZ p) $ \(c, acs) -> do
       whenJust (lookup ac acs) id
 
 promptClose :: Prompt ()
@@ -488,7 +486,7 @@ promptAppendSpace = do
   let inp' = iintegrate inp
   when (not $ ' ' `elem` inp') $ do
     whenJust (getFocusZ pg) $ \p -> do
-      whenJust (getFocusZ p) $ \(c, _, _) -> do
+      whenJust (getFocusZ p) $ \(c, _) -> do
         when (inp' `isPrefixOf` c) $
           promptInsertStr $ drop (length inp') c
   promptInsertStr " "
