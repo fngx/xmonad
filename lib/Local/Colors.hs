@@ -2,6 +2,7 @@ module Local.Colors where
 
 focusedBorderColor   = "#FDECBC"
 normalBorderColor    = "grey50"
+inactiveTabColor     = "grey20"
 otherWindow          = "darkcyan"
 urgentBorderColor    = "darkorange"
 overflowWindow       = "grey50"

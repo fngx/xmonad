@@ -17,16 +17,15 @@ decorations = def
   , decoHeight     = 15
 
   , activeColors   = cs focusedBorderColor focusedBorderColor focusedText
-  , inactiveColors = cs normalBorderColor "grey30" normalText
+  , inactiveColors = cs inactiveTabColor inactiveTabColor normalText
   , urgentColors   = cs urgentBorderColor urgentBorderColor urgentText
   , perWindowTheme = \w -> do nextM <- nextInHistory
                               isOverflow <- T.hasTag "overflow" w
 
                               let isNext = Just w == nextM
                                   style w
-                                    | isOverflow && isNext = Just $ cs overflowWindow overflowWindow normalText
-                                    | isOverflow = Just $ cs overflowWindow overflowWindow normalText
-                                    | isNext = Just $ cs normalBorderColor otherWindow normalText
+                                    | isOverflow= Just $ cs overflowWindow overflowWindow normalText
+                                    | isNext = Just $ cs inactiveTabColor otherWindow normalText
                                     | otherwise = Nothing
                               return $ style w
   }
