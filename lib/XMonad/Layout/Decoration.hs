@@ -86,13 +86,13 @@ data Theme =
                                                            --    Refer to for a use "XMonad.Layout.ImageButtonDecoration"
           , windowTitleIcons  :: [([[Bool]], Placement)] -- ^ Extra icons to appear in a window's title bar.
                                                            --    Inner @[Bool]@ is a row in a icon bitmap.
-          , perWindowTheme    :: Window -> X (Maybe Colors)
+          , perWindowTheme    :: Window -> X (Maybe Colors, [(String, Align)])
           } deriving (Show, Read)
 
-instance Read (Window -> X (Maybe Colors)) where
-    readsPrec _ value = [(\w -> return Nothing, value)]
+instance Read (Window -> X (Maybe Colors, [(String, Align)])) where
+    readsPrec _ value = [(\w -> return (Nothing, []), value)]
 
-instance Show (Window -> X (Maybe Colors)) where
+instance Show (Window -> X (Maybe Colors, [(String, Align)])) where
     show _ = ""
 
 instance Default Theme where
@@ -105,7 +105,7 @@ instance Default Theme where
           , decoHeight          = 20
           , windowTitleAddons   = []
           , windowTitleIcons    = []
-          , perWindowTheme      = const (return Nothing)
+          , perWindowTheme      = const (return (Nothing, []))
           }
 
 {-# DEPRECATED defaultTheme "Use def (from Data.Default, and re-exported by XMonad.Layout.Decoration) instead." #-}
@@ -395,21 +395,23 @@ updateDeco sh t fs ((w,_),(Just dw,Just (Rectangle _ _ wh ht))) = do
   ur  <- readUrgents
   dpy <- asks display
   mfocus <- gets (W.peek . windowset)
-  override <- (perWindowTheme t) w
+  (overridecs, pwadds) <- (perWindowTheme t) w
+
+  let addons = pwadds ++ windowTitleAddons t
 
   let (Colors {bgColor = bc, borderColor = borderc, textColor = tc}) =
         fromMaybe (inactiveColors t) $
         foldr (<|>) Nothing $
         [ if w `elem` ur then Just (urgentColors t) else Nothing
         , join $ (\x -> if (x == w) then Just (activeColors t) else Nothing) <$> mfocus
-        , override
+        , overridecs
         ]
 
   let s = shrinkIt sh
   name <- shrinkWhile s (\n -> do size <- io $ textWidthXMF dpy fs n
                                   return $ size > fromIntegral wh - fromIntegral (ht `div` 2)) (show nw)
-  let als = AlignCenter : map snd (windowTitleAddons t)
-      strs = name : map fst (windowTitleAddons t)
+  let als = AlignCenter : map snd addons
+      strs = name : map fst addons
       i_als = map snd (windowTitleIcons t)
       icons = map fst (windowTitleIcons t)
   paintTextAndIcons dw fs wh ht 1 bc borderc tc bc als strs i_als icons

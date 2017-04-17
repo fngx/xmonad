@@ -1,12 +1,12 @@
 module Local.Hints (hintedKeysP, doHintedKeys, repeatHintedKeys) where
 
-import Local.Colors (bigFont)
+import Local.Colors (bigFont, focusedBorderColor, focusedText)
 
 import Data.Bits
 import Control.Monad
 import Data.List
 import qualified Data.Map.Strict as M
-import XMonad hiding (config)
+import XMonad hiding (config, focusedBorderColor)
 import qualified XMonad (config)
 import qualified XMonad.StackSet as W
 import XMonad.Util.Font
@@ -116,7 +116,7 @@ runKeyTree autostop pfx0 kt0 = do
   let y0 = 1 + fst extent
   let x0 = 2
 
-  let grey = "deepskyblue4"
+  let grey = focusedText
 
   let defaultHandle (KeyEvent {ev_event_type = t, ev_state = m, ev_keycode = code})
         | t == keyPress = withDisplay $ \dpy -> do
@@ -131,7 +131,7 @@ runKeyTree autostop pfx0 kt0 = do
   let render :: String -> (String, String) -> String -> X ()
       render prefix (message, colr) border = do
         paintWindow win sw wh 1 grey border
-        printStringXMF d win font gc "white" grey x0 (1 + (fst extent)) prefix
+        printStringXMF d win font gc focusedBorderColor grey x0 (1 + (fst extent)) prefix
         plength <- textWidthXMF d font prefix
         let x1 = fi plength + fi x0
         printStringXMF d win font gc colr grey (8 + fi x1) y0 message
@@ -142,12 +142,12 @@ runKeyTree autostop pfx0 kt0 = do
         let prefixs = intercalate " " $ map showKey $ reverse prefix
         case kt of
           Leaf n a -> do when (not autostop) $ do
-                           render prefixs (n, "white") "green"
+                           render prefixs (n, focusedBorderColor) "green"
                            io $ threadDelay 100000
                          a
                          when autostop $ runKT (take 1 prefix) kt0
           Sub m -> do let nexts = show kt
-                      render prefixs (nexts, "#eee") "white"
+                      render prefixs (nexts, focusedBorderColor) "white"
                       (keym, e) <- nextKeyEvent d
                       let handle (Press km k s) = maybe (noMatch km k s) (runKT ((km, k):prefix)) $ M.lookup (km, k) m
                           handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
@@ -159,7 +159,7 @@ runKeyTree autostop pfx0 kt0 = do
                             | km == 0 && k == xK_Escape = return ()
                             | (not $ null s) && autostop = defaultHandle e
                             | (not $ null s) = do
-                                render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", "white") "red"
+                                render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", focusedBorderColor) "red"
                                 io $ threadDelay 800000
                             | otherwise = cont
                       handle keym

@@ -26,10 +26,10 @@ import System.FilePath (takeExtension, dropExtension, combine)
 -- uses my prompt utility to provide a few prompts
 
 myConfig = Config
-           { normal = (Theme.focusedText, Theme.focusedBorderColor)
-           , item = (Theme.focusedText, "#EDDCAC")
-           , highlight = (Theme.focusedBorderColor, Theme.focusedText)
-           , border = (1, Theme.focusedText)
+           { normal = (Theme.focusedBorderColor, Theme.focusedText)
+           , item = (Theme.focusedBorderColor, "black")
+           , highlight = (Theme.focusedText, Theme.focusedBorderColor)
+           , border = (1, "white")
            , font = Theme.bigFont
            , prompt = ":"
            , top = False
