@@ -27,7 +27,7 @@ import System.FilePath (takeExtension, dropExtension, combine)
 
 myConfig = Config
            { normal = (Theme.focusedBorderColor, Theme.focusedText)
-           , item = (Theme.focusedBorderColor, "black")
+           , item = (Theme.focusedBorderColor, "#555")
            , highlight = (Theme.focusedText, Theme.focusedBorderColor)
            , border = (1, "white")
            , font = Theme.bigFont
