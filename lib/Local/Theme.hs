@@ -32,7 +32,7 @@ decorations = def
                                     | isNext = [("• ", AlignRight)]
                                     | otherwise = []
                                   ustyle
-                                    | isUrgent = [("❗ ", AlignRight)]
+                                    | isUrgent = [("★ ", AlignRight)]
                                     | otherwise = []
                               return $ (cstyle, astyle ++ ustyle)
   }
