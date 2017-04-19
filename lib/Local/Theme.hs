@@ -29,10 +29,10 @@ decorations = def
                                     | isOverflow = Just $ cs overflowWindow overflowWindow normalText
                                     | otherwise = Nothing
                                   astyle
-                                    | isNext = [(" •", AlignLeft)]
+                                    | isNext = [("• ", AlignRight)]
                                     | otherwise = []
                                   ustyle
-                                    | isUrgent = [("!!", AlignLeft)]
+                                    | isUrgent = [("❗ ", AlignRight)]
                                     | otherwise = []
                               return $ (cstyle, astyle ++ ustyle)
   }

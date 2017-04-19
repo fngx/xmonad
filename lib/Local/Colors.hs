@@ -4,7 +4,7 @@ focusedBorderColor   = "#FDECBC"
 normalBorderColor    = "grey40"
 inactiveTabColor     = "#313131"
 otherWindow          = "grey60"
-urgentBorderColor    = "darkorange"
+urgentBorderColor    = "#008b8b"
 overflowWindow       = "grey40"
 
 focusedText = "#313131"

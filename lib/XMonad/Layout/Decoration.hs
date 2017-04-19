@@ -410,7 +410,7 @@ updateDeco sh t fs ((w,_),(Just dw,Just (Rectangle _ _ wh ht))) = do
   let s = shrinkIt sh
   name <- shrinkWhile s (\n -> do size <- io $ textWidthXMF dpy fs n
                                   return $ size > fromIntegral wh - fromIntegral (ht `div` 2)) (show nw)
-  let als = AlignCenter : map snd addons
+  let als = AlignLeft : map snd addons
       strs = name : map fst addons
       i_als = map snd (windowTitleIcons t)
       icons = map fst (windowTitleIcons t)
