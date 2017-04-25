@@ -7,7 +7,7 @@ module Local.Theme (decorations,
                    ) where
 
 import XMonad.Util.Font ( Align (..) )
-import XMonad (Window, broadcastMessage, io)
+import XMonad (Window, broadcastMessage, io, runQuery, className)
 import XMonad.Layout.Decoration
 import Local.Windows (nextInHistory)
 import Local.Colors
@@ -24,16 +24,16 @@ decorations = def
   , perWindowTheme = \w -> do nextM <- nextInHistory
                               isOverflow <- T.hasTag "overflow" w
                               isUrgent <- fmap (elem w) readUrgents
+                              className <- runQuery className w
                               let isNext = Just w == nextM
                                   cstyle
                                     | isOverflow = Just $ cs overflowWindow overflowWindow normalText
                                     | otherwise = Nothing
-                                  astyle
-                                    | isNext = [("• ", AlignRight)]
-                                    | otherwise = []
-                                  ustyle
-                                    | isUrgent = [("★ ", AlignRight)]
-                                    | otherwise = []
-                              return $ (cstyle, astyle ++ ustyle)
+                                  rightText = concat [
+                                    className, " ",
+                                    if isNext then "• " else "",
+                                    if isUrgent then "★ " else ""
+                                    ]
+                              return $ (cstyle, [(rightText, AlignRight)])
   }
   where cs a b c = Colors { bgColor = a, borderColor = b, textColor = c }
