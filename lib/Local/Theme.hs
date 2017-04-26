@@ -19,7 +19,7 @@ decorations = def
   , decoHeight     = 15
 
   , activeColors   = cs focusedBorderColor focusedBorderColor focusedText
-  , inactiveColors = cs inactiveTabColor   "grey30" normalText
+  , inactiveColors = cs inactiveTabColor   "grey40" normalText
   , urgentColors   = cs urgentBorderColor  urgentBorderColor urgentText
   , perWindowTheme = \w -> do nextM <- nextInHistory
                               isOverflow <- T.hasTag "overflow" w
@@ -30,9 +30,11 @@ decorations = def
                                     | isOverflow = Just $ cs overflowWindow overflowWindow normalText
                                     | otherwise = Nothing
                                   rightText = concat [
-                                    className, " ",
+                                    " (",
                                     if isNext then "• " else "",
-                                    if isUrgent then "★ " else ""
+                                    if isUrgent then "★ " else "",
+                                    className,
+                                    ") "
                                     ]
                               return $ (cstyle, [(rightText, AlignRight)])
   }
