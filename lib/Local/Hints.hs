@@ -151,7 +151,7 @@ runKeyTree autostop pfx0 kt0 = do
                       (keym, e) <- nextKeyEvent d
                       let handle (Press km k s) = maybe (noMatch km k s) (runKT ((km, k):prefix)) $ M.lookup (km, k) m
                           handle (Release ks) = if ks == xK_Super_L && autostop then (return ()) else cont
-                          handle _ = (broadcastMessage e) >> cont
+                          handle _ = (defaultHandle e) >> cont
 
                           cont = runKT prefix kt
                           noMatch km k s
@@ -161,7 +161,7 @@ runKeyTree autostop pfx0 kt0 = do
                             | (not $ null s) = do
                                 render "" (prefixs ++ " " ++ showKey (km, k) ++ " is undefined", focusedBorderColor) "red"
                                 io $ threadDelay 800000
-                            | otherwise = cont
+                            | otherwise = (defaultHandle e) >> cont
                       handle keym
 
   status <- io $ grabKeyboard d win True grabModeAsync grabModeAsync currentTime

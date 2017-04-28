@@ -1,6 +1,7 @@
 module Local.Spawn where
 
 import XMonad
+import XMonad.Util.Ungrab (unGrab)
 import XMonad.Util.Paste (pasteSelection)
 import XMonad.Util.XSelection (safePromptSelection)
 import XMonad.Actions.WindowGo
@@ -52,5 +53,5 @@ spawnKeys =
   , ("M-a a", ("agenda", raiseMaybe (spawn "emacsclient -e '(org-agenda nil \"a\")'")
                          (className =? "Emacs" <&&> title =? "*Org Agenda*")))
 
-  , ("M-y", ("paste", pasteSelection))
+  , ("M-y", ("paste", unGrab >> spawn "xdotool type -clearmodifiers -- \"$(xclip -o -selection primary)\""))
   , ("M-S-y", ("open", safePromptSelection "xdg-open"))]

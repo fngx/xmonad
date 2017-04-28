@@ -3,7 +3,7 @@ module Local.Prompts (promptKeys) where
 import qualified Local.Theme as Theme
 import qualified Local.Windows as Windows
 import Local.Prompt
---import Local.Workspaces
+import Local.Workspaces (warp)
 import XMonad.Prompt.Shell (getCommands)
 import Data.List
 import XMonad (spawn, io, windows, gets, windowset, X, Window, withFocused, whenJust, runQuery,
@@ -163,8 +163,17 @@ passwordPrompt =
 
          actions x =
            [ ("pass", spawn$ "passm -c -p " ++ x)
-           , ("user + pass", spawn$ "passm -f user -p -c "++x)
-           , ("browse", spawn$ "xdg-open $(passm -f url " ++ x++")") ]
+           , ("user + pass", spawn $ "passm -f user -p -c "++x)
+           , ("browse", do warp
+                           spawn $ "xdg-open \"$(passm -f url " ++ x ++ ")\""
+                           spawn $ concat [ "yad --text '", x, "' ",
+                                            "'--button=User:passm -t -f user ", x, "' ",
+                                            "'--button=Password:passm -t -p ", x, "' ",
+                                            "--button=Close:0 ",
+                                            "--mouse --no-focus"
+                                          ]
+                           )
+           , ("type", spawn $ "passm -t -p " ++ x) ]
 
          generate :: String -> X [(String, [(String, X ())])]
          generate s = return $ map (\x -> (x, actions x)) $ filter (isInfixOf s) passwords
