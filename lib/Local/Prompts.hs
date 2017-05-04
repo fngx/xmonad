@@ -164,15 +164,7 @@ passwordPrompt =
          actions x =
            [ ("pass", spawn$ "passm -c -p " ++ x)
            , ("user + pass", spawn $ "passm -f user -p -c "++x)
-           , ("browse", do warp
-                           spawn $ "xdg-open \"$(passm -f url " ++ x ++ ")\""
-                           spawn $ concat [ "yad --text '", x, "' ",
-                                            "'--button=User:passm -t -f user ", x, "' ",
-                                            "'--button=Password:passm -t -p ", x, "' ",
-                                            "--button=Close:0 ",
-                                            "--mouse --no-focus"
-                                          ]
-                           )
+           , ("browse", warp >> (spawn $ "passm -l " ++ x))
            , ("type", spawn $ "passm -t -p " ++ x) ]
 
          generate :: String -> X [(String, [(String, X ())])]
