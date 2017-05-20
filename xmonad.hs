@@ -32,7 +32,7 @@ conf =
   desktopConfig
   { modMask = mod4Mask
   , terminal = "urxvt"
-  , borderWidth = 1
+  , borderWidth = 2
   , focusedBorderColor = Theme.focusedBorderColor
   , normalBorderColor = Theme.normalBorderColor
   , workspaces = fixedWorkspaces

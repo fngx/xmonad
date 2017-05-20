@@ -3,10 +3,11 @@ Config
 , font="xft:Sans-8"
 , commands = [ Run UnsafeStdinReader
              , Run XPropertyLog "NEXT_APPOINTMENT"
+             , Run XPropertyLog "UNREAD_EMAILS"
              , Run Date "%a, %b %_d %Y %I:%M%P" "date" 30
              , Run Battery [] 60
              ]
-, template = "%UnsafeStdinReader% }{ <fc=#FFFFFF>%battery%</fc> | %NEXT_APPOINTMENT% | <fc=deepskyblue>%date%</fc>"
+, template = "%UnsafeStdinReader% }{ %UNREAD_EMAILS% | <fc=#FFFFFF>%battery%</fc> | %NEXT_APPOINTMENT% | <fc=deepskyblue>%date%</fc>"
 , pickBroadest = True
 , overrideRedirect = False
 , bgColor = "#222"

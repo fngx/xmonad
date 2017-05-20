@@ -1,10 +1,11 @@
 module Local.Colors where
 
-focusedBorderColor   = "#FDECBC"
+--focusedBorderColor   = "#FDECBC"
+focusedBorderColor   = "PaleTurquoise1"
 normalBorderColor    = "grey40"
 inactiveTabColor     = "#313131"
 otherWindow          = "grey60"
-urgentBorderColor    = "#008b8b"
+urgentBorderColor    = "orangered"
 overflowWindow       = "grey40"
 
 focusedText = "#313131"
