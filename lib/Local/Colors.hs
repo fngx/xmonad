@@ -1,7 +1,7 @@
 module Local.Colors where
 
---focusedBorderColor   = "#FDECBC"
-focusedBorderColor   = "PaleTurquoise1"
+focusedBorderColor   = "#FDECBC"
+--focusedBorderColor   = "PaleTurquoise1"
 normalBorderColor    = "grey40"
 inactiveTabColor     = "#313131"
 otherWindow          = "grey60"
