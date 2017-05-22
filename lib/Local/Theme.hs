@@ -19,7 +19,7 @@ decorations = def
   , decoHeight     = 15
 
   , activeColors   = cs focusedBorderColor focusedBorderColor focusedText
-  , inactiveColors = cs inactiveTabColor   "grey40" normalText
+  , inactiveColors = cs inactiveTabColor   "black" normalText
   , urgentColors   = cs urgentBorderColor  urgentBorderColor urgentText
   , perWindowTheme = \w -> do nextM <- nextInHistory
                               isOverflow <- T.hasTag "overflow" w
