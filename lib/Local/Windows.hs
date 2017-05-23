@@ -1,4 +1,4 @@
- {-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
+{-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
 
 module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow, nextInHistory) where
 
@@ -58,24 +58,12 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-sortWith rws ss@(W.StackSet { W.current = scr@(W.Screen { W.workspace = ws@(W.Workspace { W.stack = Just stack }) })}) =
-  let wins = W.integrate stack
-      isHere = flip Set.member $ Set.fromList wins
-      swins' = (Data.List.filter isHere rws)
-      wins' = swins' ++ (wins \\ swins') -- ensure we don't lose any windows
-      stack' :: Maybe (W.Stack Window)
-      stack' = W.differentiate wins'
-      oldFocus = W.peek ss
-      newStackSet = ss { W.current = scr { W.workspace = ws { W.stack = stack' }}}
-  in maybe newStackSet (flip W.focusWindow newStackSet) oldFocus
-sortWith ws ss = ss
-
 navKeys = [ ("M-o",   ("next", focusNext >> warp))
           , ("M-i",   ("prev", focusPrev >> warp))
           , ("M-n",   ("down", windows W.focusDown >> warp))
           , ("M-p",   ("up",   windows W.focusUp >> warp))
-          , ("M-S-N",   ("down", windows W.swapDown >> warp))
-          , ("M-S-P",   ("up",   windows W.swapUp >> warp))
+          , ("M-S-N", ("down", windows W.swapDown >> warp))
+          , ("M-S-P", ("up",   windows W.swapUp >> warp))
           , ("M-m",   ("master", windows W.focusMaster >> warp))
           , ("M-S-M", ("swap m", (windows W.swapMaster) >> warp))
           ]
@@ -92,11 +80,6 @@ navigate action = do history <- XS.get :: X WindowHistory
 windowKeys = [ ("M-o", ("next", navigate (focusUrgentOr focusNext)))
              , ("M-n", ("down", navigate $ windows W.focusDown))
              , ("M-p", ("up", navigate $ windows W.focusUp))
-
-             , ("M-S-o", ("sortify", do rw <- recentWindows
-                                        windows $ sortWith rw
-                                        sendMessage $ (MC.OverflowFocusMaster :: MC.MCMsg Window)
-                         ))
 
              , ("M-t", ("floaty",
                         withFocused $ \w -> do

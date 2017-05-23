@@ -5,7 +5,7 @@ normalBorderColor    = "grey40"
 inactiveTabColor     = "#313131"
 otherWindow          = "grey60"
 urgentBorderColor    = "orangered"
-overflowWindow       = "darkslategray"
+overflowWindow       = "steelblue4"
 
 focusedText = "#313131"
 normalText = "white"
