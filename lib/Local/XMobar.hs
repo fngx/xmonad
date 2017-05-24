@@ -3,7 +3,7 @@
 module Local.XMobar (Local.XMobar.xmobar) where
 
 import Local.Workspaces (nonEmptyNames)
-import Local.Colors (focusedBorderColor, focusedText, urgentBorderColor, urgentText)
+import Local.Colors (normalText, overflowWindow, focusedBorderColor, focusedText, urgentBorderColor, urgentText)
 
 import XMonad
 import XMonad.Hooks.ManageDocks
@@ -34,7 +34,7 @@ xmobar = xmobar' "xmobar ~/.xmonad/xmobarrc"
 
 pp = xmobarPP
   { ppCurrent = xmobarColor focusedText Local.Colors.focusedBorderColor . esc
-  , ppVisible = xmobarColor "white" "grey30" . esc
+  , ppVisible = xmobarColor normalText overflowWindow . esc
   , ppHidden  = xmobarColor "grey80" "" . esc
   , ppLayout = esc
   , ppTitle = xmobarColor "white" "" . esc

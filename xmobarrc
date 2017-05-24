@@ -1,6 +1,6 @@
 Config
 { position = Bottom
-, font="xft:Sans-8"
+, font="xft:Sans-9"
 , commands = [ Run UnsafeStdinReader
              , Run XPropertyLog "NEXT_APPOINTMENT"
              , Run XPropertyLog "UNREAD_EMAILS"
@@ -10,5 +10,6 @@ Config
 , template = "%UnsafeStdinReader% }{ %UNREAD_EMAILS% | <fc=#FFFFFF>%battery%</fc> | %NEXT_APPOINTMENT% | <fc=deepskyblue>%date%</fc>"
 , pickBroadest = True
 , overrideRedirect = False
-, bgColor = "#222"
+, bgColor = "darkslategray"
+, borderWidth = 0
 }
