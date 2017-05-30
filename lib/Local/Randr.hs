@@ -9,6 +9,9 @@ import XMonad (X, io, spawn, Event (..), startupHook, handleEventHook, withDispl
               , StateExtension (PersistentExtension)
              )
 
+import Local.Workspaces (workspaceNames, autoWorkspaceNames)
+import XMonad.Actions.DynamicWorkspaces (addHiddenWorkspace)
+
 import qualified XMonad.Util.ExtensibleState as XS
 import Graphics.X11.Xrandr (xrrSelectInput)
 import Control.Applicative ((<$>),(<|>))
@@ -170,7 +173,15 @@ applyLayout ds l =
                        , concatMap mode $ zip ons sizes
                        , concatMap position $ zip3 ons sizes xs
                        ]
-  in do -- io $ putStrLn $ show command
+
+      createEnoughWorkspaces ds = do
+        names <- autoWorkspaceNames
+        existing <- workspaceNames
+        let delta = length ons - length existing
+        when (delta > 0) $
+          mapM_ addHiddenWorkspace $ take delta names
+
+  in do createEnoughWorkspaces ds
         safeSpawn "xrandr" command
 
 data RRConnections = RRConnections [String] deriving (Typeable, Read, Show)

@@ -1,4 +1,4 @@
-module Local.Workspaces (fixedWorkspaces, workspaceKeys, warp, nonEmptyNames, workspaceNames) where
+module Local.Workspaces (fixedWorkspaces, workspaceKeys, warp, nonEmptyNames, workspaceNames, autoWorkspaceNames) where
 
 import Control.Monad (when)
 
@@ -16,7 +16,10 @@ import Control.Monad ( join )
 import Local.Hints (repeatHintedKeys)
 
 fixedWorkspaces = []
-
+minT = "zap"
+autoWorkspaceNames = do en <- emptyNames
+                        an <- workspaceNames
+                        return $ (en \\ [minT]) ++ ([x:[] | x <- ['A' .. 'Z']] \\ an)
 workspaceKeys =
   let swapS = ("screen swap", swapNextScreen >> warp)
       focusS = ("screen focus", nextScreen >> warp)
@@ -24,10 +27,9 @@ workspaceKeys =
       doView n = withNthNEWorkspace W.greedyView (n-1)
       view n = ("view " ++ show n, doView n)
       shiftTo n = ("shift to " ++ show n, withNthNEWorkspace W.shift (n-1))
-      onEmpty a = ("view empty", do en <- emptyNames
-                                    an <- workspaceNames
-                                    a $ head $ (en \\ [minT]) ++ ([x:[] | x <- ['A' .. 'Z']] \\ an))
-      minT = "zap"
+      onEmpty a = ("view empty", do auto <- autoWorkspaceNames
+                                    a $ head auto)
+
       masterOf :: String -> WindowSet -> Maybe Window
       masterOf tag ss = join $
                         ((listToMaybe . W.integrate' . W.stack) <$>

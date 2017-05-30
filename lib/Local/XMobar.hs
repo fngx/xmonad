@@ -36,10 +36,14 @@ pp = xmobarPP
   { ppCurrent = xmobarColor focusedText Local.Colors.focusedBorderColor . esc
   , ppVisible = xmobarColor normalText overflowWindow . esc
   , ppHidden  = xmobarColor "grey80" "" . esc
-  , ppLayout = esc
+  , ppLayout = ifFull
+  , ppWsSep = xmobarColor "white" "" $ "•"
+  , ppSep = "  "
   , ppTitle = xmobarColor "white" "" . esc
   , ppUrgent = xmobarColor urgentText urgentBorderColor . esc
-  }
+  } where
+  ifFull "Full" = xmobarColor "white" "orange" "F"
+  ifFull _ = ""
 
 esc = concatMap doubleLts
   where doubleLts '<' = "<<"
