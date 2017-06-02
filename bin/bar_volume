@@ -1,0 +1,11 @@
+#!/bin/sh
+V=$(pamixer --get-volume)
+if pamixer --get-mute > /dev/null ; then
+    echo "🔇"
+elif [ $V -lt 30 ]; then
+    echo "🔈"
+elif [ $V -lt 60 ]; then
+    echo "🔉"
+else
+    echo "🔊"
+fi
