@@ -97,11 +97,21 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
               bounds = zip parts (drop 1 parts)
           in map (cut rect) bounds
 
-        limit :: Int -> [(Rational, [Rational])] -> [(Rational, [Rational])]
-        limit 0 _ = []
+        limit0 :: Int -> [(Rational, [Rational])] -> [(Rational, [Rational])]
+        limit0 _ [] = []
+        limit0 n [x] = snd $ limit n [x]
+        limit0 n ((cw, rws):xs) =
+          let (n', res) = limit (n - 1) xs in
+            (cw, take (n - n') rws):res
+
+        limit :: Int -> [(Rational, [Rational])] -> (Int, [(Rational, [Rational])])
+        limit 0 _ = (0, [])
+        limit _ [] = (0, [])
         limit n ((cw, rws):rest)
-          | length rws >= n = [(cw, take n rws)]
-          | otherwise = (cw, rws):(limit (n - length rws) rest)
+          | n < 0 = (0, [])
+          | length rws >= n = (n, [(cw, take n rws)])
+          | otherwise = let (n', l') = (limit (n - length rws) rest) in
+              (n' + length rws, (cw, rws):l')
 
         divide :: [(Rational, [Rational])] -> [(Rectangle, (Int, Int))]
         divide cs = let cols = explode cutV rect $ map fst cs
@@ -111,7 +121,7 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
 
     mapM_ (T.delTag "overflow") ws
     if capacity >= demand
-      then do let cs = limit demand $ cells state
+      then do let cs = limit0 demand $ cells state
                   rs = divide cs
                   rects = map fst rs
               o' <- handleMessage (overflow state) $ SomeMessage Hide

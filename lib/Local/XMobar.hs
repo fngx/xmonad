@@ -42,7 +42,7 @@ pp = xmobarPP
   , ppTitle = xmobarColor "white" "" . esc
   , ppUrgent = xmobarColor urgentText urgentBorderColor . esc
   } where
-  ifFull "Full" = xmobarColor "white" "orange" "F"
+  ifFull "Full" = xmobarColor "white" "darkorange" "Full"
   ifFull x = x
 
 esc = concatMap doubleLts
