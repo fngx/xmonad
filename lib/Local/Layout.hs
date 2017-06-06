@@ -6,6 +6,8 @@ import Local.Windows (recentWindows)
 import Local.Workspaces (warp)
 import qualified Local.Theme as Theme
 
+import Data.Maybe (fromJust)
+
 import XMonad hiding ( (|||) )
 import qualified XMonad.StackSet as W
 import XMonad.Layout.Tabbed
@@ -22,15 +24,17 @@ import XMonad.Actions.CycleWindows (rotUp, rotDown)
 import Local.MC
 import Local.PerScreen
 
-tabs = tabbed shrinkText Theme.decorations
-
 layout = trackFloating $
          lessBorders OnlyFloat $
          mkToggle (single FULL) $
-         ifWider 1400 twocol onecol
+         ifWider 1400 choices' choices
   where
-    twocol = mc tabs [(1, [1]), (1, [1])]
-    onecol = mc tabs [(1, [1])]
+    choices = one ||| two ||| many
+    choices' = many ||| two ||| one
+    two =  mct [(1, [1]), (1, [1])]
+    many = mct [(1, [4, 1]), (1, [2,2,1])]
+    one =  mct [(1, [1])]
+    mct = mc (tabbed shrinkText Theme.decorations)
 
 addLayout c =
   c { layoutHook = layout
@@ -82,10 +86,7 @@ layoutKeys =
   , ("M-j",   ("focus 2", focusOverflow >> warp))
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l 1",   ("full",sendMC $ SetCells [col 1] ))
-  , ("M-l 2",   ("1|1", sendMC $ SetCells [col 1, col 1] ))
-  , ("M-l 3",   ("1|2", sendMC $ SetCells [col 1, col 2] ))
-  , ("M-l 4",   ("1|3", sendMC $ SetCells [col 1, col 3] ))
+  , ("M-l" ,  ("next", sendMessage NextLayout))
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
   , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
