@@ -4,7 +4,7 @@ Config
 , commands = [ Run UnsafeStdinReader
              , Run XPropertyLog "NEXT_APPOINTMENT"
              , Run XPropertyLog "UNREAD_EMAILS"
-             , Run Date "%a %b %_d, %I:%M%P" "date" 30
+             , Run Date "%a %b %d, %I:%M%P" "date" 30
              , Run Battery ["-t", "<watts>W <timeleft>"] 60
              , Run Com "/home/hinton/.xmonad/bin/bar_volume" [] "vol" 60
              ]
