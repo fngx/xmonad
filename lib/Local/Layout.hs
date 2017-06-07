@@ -112,4 +112,7 @@ layoutKeys =
   , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >>
                            spawn "pkill -CONT xmobar" >> refresh))
 
-  , ("M-k", ("kill", kill))]
+  , ("M-k", ("kill", kill)) ] ++
+  [ ("M-<F" ++ (show n) ++ ">", ("focus nth", (focusNth n) >> warp))
+  | n <- [1..6] ]
+  where focusNth n = windows (foldl (.) id $ reverse (W.focusMaster:(take (n - 1) $ repeat W.focusDown)))

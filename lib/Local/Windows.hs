@@ -24,6 +24,8 @@ import Data.Monoid
 import Local.Hints (repeatHintedKeys)
 import qualified Local.MC as MC
 
+import XMonad.Actions.WindowBringer (bringWindow)
+
 import XMonad.Util.XUtils
 import XMonad.Util.Font
 
@@ -66,6 +68,7 @@ navKeys = [ ("M-o",   ("next", focusNext >> warp))
           , ("M-S-P", ("up",   windows W.swapUp >> warp))
           , ("M-m",   ("master", windows W.focusMaster >> warp))
           , ("M-S-M", ("swap m", (windows W.swapMaster) >> warp))
+          , ("M-S-o", ("swap o", (bringFocusNext >> (windows W.swapMaster)) >> warp))
           ]
 
 navigate action = do history <- XS.get :: X WindowHistory
@@ -80,7 +83,7 @@ navigate action = do history <- XS.get :: X WindowHistory
 windowKeys = [ ("M-o", ("next", navigate (focusUrgentOr focusNext)))
              , ("M-n", ("down", navigate $ windows W.focusDown))
              , ("M-p", ("up", navigate $ windows W.focusUp))
-
+             , ("M-S-o", ("swap o", navigate $ (bringFocusNext >> (windows W.swapMaster)) >> warp))
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
                            isFloating <- gets (M.member w . W.floating . windowset)
@@ -93,6 +96,11 @@ focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focu
 
 focusUrgentOr a = do us <- readUrgents
                      if Data.List.null us then a else (focusUrgent >> warp)
+
+bringFocusNext = do withFocused $ addTag "."
+                    rw <- recentWindows >>= filterM ((fmap not) . hasTag ".")
+                    whenJust (listToMaybe rw) $ \w -> do
+                      windows $ \ss -> (W.focusWindow w (bringWindow w ss))
 
 focusNext = do withFocused $ addTag "."
                rw <- recentWindows >>= filterM ((fmap not) . hasTag ".")

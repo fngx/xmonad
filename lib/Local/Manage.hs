@@ -52,6 +52,7 @@ setBorderHook =
   do us    <- readUrgents
      focus <- gets (W.peek . windowset)
      fref  <- io $ newIORef ([] :: [Window])
+     nextM <- nextInHistory
 
      T.withTaggedGlobal "overflow" $ \x -> io $ modifyIORef fref ((:) x)
 
@@ -63,7 +64,7 @@ setBorderHook =
          ocs = map (flip (,) Colors.overflowWindow) over
 
      changeBorderColors $ M.fromList $
-       ocs ++ maybeToList fcs ++ ucs
+       maybeToList (fmap (flip (,) "darkslategray") nextM) ++ ocs ++ maybeToList fcs ++ ucs
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
