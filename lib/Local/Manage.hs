@@ -15,10 +15,10 @@ import XMonad.Actions.CopyWindow (copyToAll)
 import qualified Data.Map.Strict as M
 import qualified Debug.Trace as D
 import qualified XMonad.Util.ExtensibleState as XS
-
 import Local.Windows (recentWindows, nextInHistory)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.IORef
+import Local.Theme (resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle)
 
 import qualified XMonad.Actions.TagWindows as T
 
@@ -57,6 +57,11 @@ setBorderHook =
      T.withTaggedGlobal "overflow" $ \x -> io $ modifyIORef fref ((:) x)
 
      over  <- io $ readIORef fref
+
+     resetStyles
+     styleWindows us urgentStyle
+     styleWindows (maybeToList nextM) nextStyle
+     styleWindows over overflowStyle
 
      let ucs = map (flip (,) Colors.urgentBorderColor) us
          fbc = Colors.focusedBorderColor

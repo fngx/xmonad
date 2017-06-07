@@ -29,6 +29,9 @@ module XMonad.Layout.Decoration
     , findWindowByDecoration
     , module XMonad.Layout.LayoutModifier
     , DecorationState, OrigWin
+    , WindowStyle (..)
+    , styleWindow
+    , resetStyles
     ) where
 
 import Control.Monad (when, join)
@@ -47,6 +50,8 @@ import XMonad.Util.XUtils
 import XMonad.Util.Font
 import XMonad.Util.Image
 import Control.Applicative ((<|>))
+import qualified Data.Map.Strict as M
+import qualified XMonad.Util.ExtensibleState as XS
 
 -- $usage
 -- This module is intended for layout developers, who want to decorate
@@ -75,6 +80,30 @@ data Colors = Colors
   , textColor :: String
   } deriving (Show, Read)
 
+data WindowStyle = WindowStyle {
+  colors :: Maybe Colors,
+  labels :: [(String, Align)]
+  } deriving (Show, Read)
+
+data WindowExtras = WindowExtras (M.Map Window WindowStyle)
+  deriving (Typeable, Read, Show)
+
+instance ExtensionClass WindowExtras where
+  initialValue = WindowExtras M.empty
+
+resetStyles :: X ()
+resetStyles = XS.put $ WindowExtras M.empty
+
+styleWindow :: Window -> WindowStyle -> X ()
+styleWindow w st = XS.modify $ \(WindowExtras m) -> WindowExtras $ M.insertWith mergeTitle w st m
+  where mergeTitle (WindowStyle mc1 l1) (WindowStyle mc2 l2) =
+          WindowStyle (mc1 <|> mc2) (l1 ++ l2)
+
+getStyle :: Window -> X WindowStyle
+getStyle w = do
+  (WindowExtras m) <- XS.get
+  return $ fromMaybe (WindowStyle Nothing []) $ M.lookup w m
+
 data Theme =
     Theme { activeColors      :: Colors
           , inactiveColors    :: Colors
@@ -86,14 +115,7 @@ data Theme =
                                                            --    Refer to for a use "XMonad.Layout.ImageButtonDecoration"
           , windowTitleIcons  :: [([[Bool]], Placement)] -- ^ Extra icons to appear in a window's title bar.
                                                            --    Inner @[Bool]@ is a row in a icon bitmap.
-          , perWindowTheme    :: Window -> X (Maybe Colors, [(String, Align)])
           } deriving (Show, Read)
-
-instance Read (Window -> X (Maybe Colors, [(String, Align)])) where
-    readsPrec _ value = [(\w -> return (Nothing, []), value)]
-
-instance Show (Window -> X (Maybe Colors, [(String, Align)])) where
-    show _ = ""
 
 instance Default Theme where
   def =
@@ -105,7 +127,6 @@ instance Default Theme where
           , decoHeight          = 20
           , windowTitleAddons   = []
           , windowTitleIcons    = []
-          , perWindowTheme      = const (return (Nothing, []))
           }
 
 {-# DEPRECATED defaultTheme "Use def (from Data.Default, and re-exported by XMonad.Layout.Decoration) instead." #-}
@@ -395,9 +416,11 @@ updateDeco sh t fs ((w,_),(Just dw,Just (Rectangle _ _ wh ht))) = do
   ur  <- readUrgents
   dpy <- asks display
   mfocus <- gets (W.peek . windowset)
-  (overridecs, pwadds) <- (perWindowTheme t) w
+  style <- getStyle w
 
-  let addons = pwadds ++ windowTitleAddons t
+  let overridecs = colors style
+      pwadds = labels style
+      addons = pwadds ++ windowTitleAddons t
 
   let (Colors {bgColor = bc, borderColor = borderc, textColor = tc}) =
         fromMaybe (inactiveColors t) $

@@ -124,9 +124,9 @@ runKeyTree autostop pfx0 kt0 = do
             mClean <- cleanMask m
             ks <- asks keyActions
             userCodeDef () $ whenJust (M.lookup (mClean, s) ks) id
+            -- run the loghook manually?
         | otherwise = return ()
       defaultHandle _ = return ()
-
 
   let render :: String -> (String, String) -> String -> X ()
       render prefix (message, colr) border = do
@@ -137,13 +137,19 @@ runKeyTree autostop pfx0 kt0 = do
         printStringXMF d win font gc colr grey (8 + fi x1) y0 message
         io $ sync d False
 
+      upd = do XConf {XMonad.config = XConfig {logHook = log} } <- ask
+               log
+               refresh
+
       runKT :: [Key] -> KeyTree -> X ()
       runKT prefix kt = do
+        upd
         let prefixs = intercalate " " $ map showKey $ reverse prefix
         case kt of
           Leaf n a -> do when (not autostop) $ do
                            render prefixs (n, focusedBorderColor) "green"
                            io $ threadDelay 100000
+                         upd
                          a
                          when autostop $ runKT (take 1 prefix) kt0
           Sub m -> do let nexts = show kt
