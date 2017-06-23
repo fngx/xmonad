@@ -5,6 +5,7 @@ module Local.Theme (decorations,
                     otherWindow, smallFont, bigFont
                    , overflowWindow
                    , resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle
+                   , nextOverflowStyle
                    ) where
 
 import XMonad.Util.Font ( Align (..) )
@@ -20,6 +21,8 @@ styleWindows ws s = mapM_ (flip styleWindow s) ws
 
 urgentStyle   = WindowStyle Nothing [("! ", AlignRight)]
 nextStyle     = WindowStyle Nothing [("★ ", AlignRight)]
+nextOverflowStyle = WindowStyle (Just cs) [("★ ", AlignRight)]
+  where cs = Colors { bgColor = otherBorder, borderColor = otherBorder, textColor = normalText }
 overflowStyle = WindowStyle (Just cs)  []
   where cs = Colors { bgColor = overflowWindow, borderColor = overflowWindow, textColor = normalText }
 

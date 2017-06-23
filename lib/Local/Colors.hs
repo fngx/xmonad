@@ -6,6 +6,7 @@ inactiveTabColor     = "#313131"
 otherWindow          = "grey60"
 urgentBorderColor    = "orangered"
 overflowWindow       = "steelblue4"
+otherBorder          = "slategray"
 
 focusedText = "#313131"
 normalText = "white"

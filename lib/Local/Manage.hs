@@ -1,3 +1,4 @@
+
 {-# LANGUAGE FlexibleContexts #-}
 module Local.Manage (addManageRules) where
 
@@ -14,11 +15,12 @@ import qualified XMonad.StackSet as W
 import XMonad.Actions.CopyWindow (copyToAll)
 import qualified Data.Map.Strict as M
 import qualified Debug.Trace as D
+import Data.List ( (\\) )
 import qualified XMonad.Util.ExtensibleState as XS
 import Local.Windows (recentWindows, nextInHistory)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.IORef
-import Local.Theme (resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle)
+import Local.Theme (resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle, nextOverflowStyle)
 
 import qualified XMonad.Actions.TagWindows as T
 
@@ -60,8 +62,9 @@ setBorderHook =
 
      resetStyles
      styleWindows us urgentStyle
-     styleWindows (maybeToList nextM) nextStyle
-     styleWindows over overflowStyle
+     whenJust nextM $ \next -> do
+       styleWindows [next] (if next `elem` over then nextOverflowStyle else nextStyle)
+     styleWindows (over \\ maybeToList nextM) overflowStyle
 
      let ucs = map (flip (,) Colors.urgentBorderColor) us
          fbc = Colors.focusedBorderColor
@@ -69,7 +72,7 @@ setBorderHook =
          ocs = map (flip (,) Colors.overflowWindow) over
 
      changeBorderColors $ M.fromList $
-       maybeToList (fmap (flip (,) "darkslategray") nextM) ++ ocs ++ maybeToList fcs ++ ucs
+       ocs ++ maybeToList (fmap (flip (,) Colors.otherBorder) nextM)  ++ maybeToList fcs ++ ucs
 
 addManageRules c = withUrgencyHookC LibNotifyUrgencyHook
                    urgencyConfig { suppressWhen = Focused
