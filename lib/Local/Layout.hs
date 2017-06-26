@@ -25,7 +25,8 @@ import Local.MC
 import Local.PerScreen
 
 layout = trackFloating $
-         lessBorders OnlyFloat $
+--         lessBorders OnlyFloat $
+         smartBorders $
          mkToggle (single FULL) $
          ifWider 1400 choices' choices
   where
