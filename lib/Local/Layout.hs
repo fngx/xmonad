@@ -108,10 +108,9 @@ layoutKeys =
   , ("M-f", ("full", sendMessage $ Toggle FULL))
   , ("M-v", ("flip", sendMC Flip))
 
-  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >>
-                          spawn "pkill -STOP xmobar" >> refresh))
-  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >>
-                           spawn "pkill -CONT xmobar" >> refresh))
+  -- sending SIGSTOP to xmobar hangs the output pipe
+  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))
+  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
 
   , ("M-k", ("kill", kill)) ] ++
   [ ("M-<F" ++ (show n) ++ ">", ("focus nth", (focusNth n) >> warp))
