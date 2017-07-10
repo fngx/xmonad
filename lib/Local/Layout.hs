@@ -25,13 +25,12 @@ import Local.MC
 import Local.PerScreen
 
 layout = trackFloating $
---         lessBorders OnlyFloat $
          smartBorders $
          mkToggle (single FULL) $
          ifWider 1400 choices' choices
   where
-    choices = one ||| two ||| many
-    choices' = many ||| two ||| one
+    choices = one ||| two
+    choices' = many ||| two
     two =  mct [(1, [1]), (1, [1])]
     many = mct [(1, [4, 1]), (1, [2,2,1])]
     one =  mct [(1, [1])]
