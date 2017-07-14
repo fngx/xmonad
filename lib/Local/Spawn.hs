@@ -38,7 +38,7 @@ spawnKeys =
   , ("M-a c", ("chrome", spawn "chromium 2>&1 > /dev/null"))
   , ("M-a t", ("term", spawn "urxvt"))
   , ("M-a w", ("web", spawn "conkeror 2>&1 > /dev/null"))
-  , ("M-a x", ("clock", spawn "xclock"))
+  , ("M-a x", ("clock", spawn "xclock -strftime '%H:%m:%S'"))
   , ("M-a e", emacs)
 
   , ("M-a g", ("telegram",

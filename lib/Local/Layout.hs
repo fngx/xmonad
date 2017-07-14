@@ -32,7 +32,7 @@ layout = trackFloating $
     choices = one ||| two
     choices' = many ||| two
     two =  mct [(1, [1]), (1, [1])]
-    many = mct [(1, [4, 1]), (1, [2,2,1])]
+    many = mct [(1, [1, 1]), (1, [2,2,1])]
     one =  mct [(1, [1])]
     mct = mc (tabbed shrinkText Theme.decorations)
 
