@@ -30,7 +30,7 @@ layout = trackFloating $
          ifWider 1400 choices' choices
   where
     choices = one ||| two
-    choices' = many ||| two
+    choices' = many ||| two ||| one
     two =  mct [(1, [1]), (1, [1])]
     many = mct [(1, [1, 1]), (1, [2,2,1])]
     one =  mct [(1, [1])]
