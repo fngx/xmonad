@@ -19,22 +19,26 @@ import XMonad.Layout.MultiToggle
 import XMonad.Layout.MultiToggle.Instances
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.LayoutCombinators
+import XMonad.Actions.CycleSelectedLayouts
 import XMonad.Actions.RotSlaves
 import XMonad.Actions.CycleWindows (rotUp, rotDown)
 import Local.MC
 import Local.PerScreen
+import XMonad.Layout.Renamed
 
 layout = trackFloating $
          smartBorders $
          mkToggle (single FULL) $
          ifWider 1400 choices' choices
   where
-    choices = one ||| two
+    choices = one ||| two ||| many
     choices' = many ||| two ||| one
-    two =  mct [(1, [1]), (1, [1])]
-    many = mct [(1, [1, 1]), (1, [2,2,1])]
-    one =  mct [(1, [1])]
+    two =  aka "C" $ mct [(1, [1]), (1, [1])]
+    many = aka "A" $mct [(1, [1, 1]), (1, [2,2,1])]
+    one =  aka "T" $ mct [(1, [1])]
     mct = mc (tabbed shrinkText Theme.decorations)
+
+    aka n l = renamed [Replace n] l
 
 addLayout c =
   c { layoutHook = layout
@@ -86,7 +90,8 @@ layoutKeys =
   , ("M-j",   ("focus 2", focusOverflow >> warp))
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l" ,  ("next", sendMessage NextLayout))
+  , ("M-l" ,  ("next", cycleThroughLayouts ["A", "C"]))
+  , ("M-;",   ("1col", cycleThroughLayouts ["T", "C"])) -- TODO when we go to a funny layout it breaks
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
   , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
