@@ -210,7 +210,19 @@ instance (LayoutClass l Window) => LayoutClass (MC l) Window where
         return Nothing
 
     | Just (WithOverflowFocusIndex f :: MCMsg Window) <- fromMessage sm =
-        return $ Just $ state { overflowFocus = (f (overflowFocus state)) `mod` (overflowSize state) }
+        -- if we change the focus while we are looking at it, we need to focus down or up a bit
+        do let oldFocus = overflowFocus state
+               newFocus = (f oldFocus) `mod` (overflowSize state)
+           if newFocus == oldFocus then
+             (return Nothing)
+             else
+             do st <- gets (W.stack . W.workspace . W.current . windowset)
+                let up = maybe 0 (length . W.up) st
+                if up >= maxIndex then
+                  whenJust (listToMaybe $ drop (maxIndex + newFocus) $ W.integrate' st) $ \w -> windows (W.focusWindow w)
+                  else
+                  return ()
+                return $ Just $ state {overflowFocus = newFocus}
 
     | Just (OverflowFocusMaster :: MCMsg Window) <- fromMessage sm =
         return $ Just $ state { overflowFocus = 0 }
