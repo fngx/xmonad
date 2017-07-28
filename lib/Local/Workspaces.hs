@@ -5,6 +5,7 @@ import Control.Monad (when)
 import XMonad
 import qualified XMonad.StackSet as W
 import XMonad.Actions.CycleWS
+import qualified XMonad.Actions.CycleWS as CycleWS
 import XMonad.Actions.WindowBringer (bringWindow)
 import XMonad.Actions.DynamicWorkspaces
 import XMonad.Actions.Warp
@@ -48,6 +49,8 @@ workspaceKeys =
   in [ ("M-s", swapS)
      , ("M-S-s", shiftS)
      , ("M-d", focusS)
+     , ("M-/",   ("view next",  moveTo Next HiddenNonEmptyWS))
+     , ("M-S-/", ("shift next", CycleWS.shiftTo Next HiddenNonEmptyWS))
      , ("M-e",   onEmpty addWorkspace)
      , ("M-S-e", onEmpty (\w -> addHiddenWorkspace w >> windows (W.shift w) >> windows (W.view w)))
      , ("M-h",   ("send to " ++ minT, sendT))
