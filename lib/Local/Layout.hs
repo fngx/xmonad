@@ -24,6 +24,10 @@ import Local.MC
 import Local.PerScreen
 import XMonad.Layout.Renamed
 
+fat1 = "⓵"
+fat2 = "⓶"
+fat4 = "⓸"
+
 layout = trackFloating $
          smartBorders $
          mkToggle (single FULL) $
@@ -31,9 +35,9 @@ layout = trackFloating $
   where
     choices = one ||| two ||| many
     choices' = many ||| two ||| one
-    two =  aka "C" $ mct [(1, [1]), (1, [1])]
-    many = aka "A" $mct [(1, [1, 1]), (1, [2,2,1])]
-    one =  aka "T" $ mct [(1, [1])]
+    two =  aka fat2 $ mct [(1, [1]), (1, [1])]
+    many = aka fat4 $mct [(1, [2,1]), (1, [2,1])]
+    one =  aka fat1 $ mct [(1, [1])]
     mct = mc (tabbed shrinkText Theme.decorations)
 
     aka n l = renamed [Replace n] l
@@ -88,8 +92,8 @@ layoutKeys =
   , ("M-j",   ("focus 2", focusOverflow >> warp))
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l" ,  ("next", cycleThroughLayouts ["A", "C"]))
-  , ("M-;",   ("1col", cycleThroughLayouts ["T", "C"])) -- TODO when we go to a funny layout it breaks
+  , ("M-l" ,  ("next", cycleThroughLayouts [fat4, fat2]))
+  , ("M-;",   ("1col", cycleThroughLayouts [fat1, fat2])) -- TODO when we go to a funny layout it breaks
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
   , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
