@@ -93,7 +93,7 @@ layoutKeys =
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
   , ("M-l" ,  ("next", cycleThroughLayouts [fat4, fat2]))
-  , ("M-;",   ("1col", cycleThroughLayouts [fat1, fat2])) -- TODO when we go to a funny layout it breaks
+  , ("M-f",   ("1col", cycleThroughLayouts [fat1, fat2])) -- TODO when we go to a funny layout it breaks
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
   , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
@@ -110,7 +110,7 @@ layoutKeys =
   , ("M-S-n", ("swap down", windows W.swapDown >> warp))
   , ("M-S-p", ("swap up", windows W.swapUp >> warp))
 
-  , ("M-f", ("full", sendMessage $ Toggle FULL))
+  , ("M-S-f", ("full", sendMessage $ Toggle FULL))
   , ("M-S-l", ("flip", sendMC Flip))
 
   -- sending SIGSTOP to xmobar hangs the output pipe
