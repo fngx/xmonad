@@ -77,7 +77,9 @@ workspaceKeys =
       [[ ("M-" ++ show n, view n)
        , ("M-S-" ++ show n, shiftTo n)
        , ("M-M1-" ++ (show n), ("view other " ++ (show n), onOtherScreen $ doView n)) ]
-      | n <- [1 .. 9]])
+      | n <- [1 .. 9]]) ++
+     (concat $ [[ ("M-" ++ c, view n), ("M-S-" ++ c, shiftTo n) ] | (c, n) <- zip ["z", "x", "c", "v"] [1 .. 4]])
+
 
 warp :: X ()
 warp = do mf <- gets (W.peek . windowset)
@@ -88,14 +90,20 @@ warp = do mf <- gets (W.peek . windowset)
 
 withNthNEWorkspace :: (String -> WindowSet -> WindowSet) -> Int -> X ()
 withNthNEWorkspace job wnum = do ws <- nonEmptyNames
+                                 thisWs <- gets (W.tag . W.workspace . W.current . windowset)
+                                 alt <- nextNonEmptyVis
                                  case drop wnum ws of
-                                   (w:_) -> windows $ job w
+                                   (w:_) -> windows $ job $ if w == thisWs
+                                                            then alt
+                                                            else w
                                    [] -> return ()
-
 
 emptyNames :: X [WorkspaceId]
 emptyNames = do sort <- getSortByIndex
                 gets (map W.tag . sort . (filter (isNothing . W.stack)) . W.workspaces . windowset)
+
+nextNonEmptyVis :: X WorkspaceId
+nextNonEmptyVis = gets (W.tag . head . tail . (filter (isJust . W.stack)) . W.workspaces . windowset)
 
 nonEmptyNames :: X [WorkspaceId]
 nonEmptyNames = do sort <- getSortByIndex

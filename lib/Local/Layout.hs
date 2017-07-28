@@ -111,7 +111,7 @@ layoutKeys =
   , ("M-S-p", ("swap up", windows W.swapUp >> warp))
 
   , ("M-f", ("full", sendMessage $ Toggle FULL))
-  , ("M-v", ("flip", sendMC Flip))
+  , ("M-S-l", ("flip", sendMC Flip))
 
   -- sending SIGSTOP to xmobar hangs the output pipe
   , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))

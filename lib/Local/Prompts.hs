@@ -172,7 +172,7 @@ passwordPrompt =
 
      select myConfig {prompt = "pass: "} generate
 
-promptKeys = [ ("M-x", ("execute", runPrompt "M-x"))
+promptKeys = [ ("M-r", ("execute", runPrompt "M-r"))
              , ("M-<Space>", ("window", windowPrompt "M-<Space>"))
              , ("M-w", ("workspace", workspacePrompt "M-w"))
              , ("M-S-w", ("shift", withFocused (shiftPrompt "M-w")))
