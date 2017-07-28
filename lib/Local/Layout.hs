@@ -104,8 +104,8 @@ layoutKeys =
 
   -- , ("M-S-,", ("- row", withFocused $ sendMC . (ChangeCells delCol)))
   -- , ("M-S-.", ("+ row", withFocused $ sendMC . (ChangeCells addCol)))
-  , ("M-.", ("overflow down", sendMC $ WithOverflowFocusIndex (+ 1)))
-  , ("M-,", ("overflow up", sendMC $ WithOverflowFocusIndex (flip (-) 1)))
+  , ("M-M1-n", ("overflow down", sendMC $ WithOverflowFocusIndex (+ 1)))
+  , ("M-M1-p", ("overflow up", sendMC $ WithOverflowFocusIndex (flip (-) 1)))
 
   , ("M-S-n", ("swap down", windows W.swapDown >> warp))
   , ("M-S-p", ("swap up", windows W.swapUp >> warp))
