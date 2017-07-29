@@ -15,13 +15,12 @@ import XMonad.StackSet (Workspace (Workspace), Stack (..))
 import XMonad.Layout.TrackFloating
 import XMonad.Layout.NoBorders
 import XMonad.Layout hiding ( (|||) )
-import XMonad.Layout.MultiToggle
-import XMonad.Layout.MultiToggle.Instances
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.LayoutCombinators
 import XMonad.Actions.CycleSelectedLayouts
 import Local.MC
 import Local.PerScreen
+import Local.FullscreenToggleStruts
 import XMonad.Layout.Renamed
 
 fat1 = "⓵"
@@ -30,7 +29,7 @@ fat4 = "⓸"
 
 layout = trackFloating $
          smartBorders $
-         mkToggle (single FULL) $
+         fullscreenToggleStruts $
          ifWider 1400 choices' choices
   where
     choices = one ||| two ||| many
@@ -110,7 +109,7 @@ layoutKeys =
   , ("M-S-n", ("swap down", windows W.swapDown >> warp))
   , ("M-S-p", ("swap up", windows W.swapUp >> warp))
 
-  , ("M-S-f", ("full", sendMessage $ Toggle FULL))
+  , ("M-S-f", ("full", withFocused $ \w -> spawn $ "wmctrl -i -r " ++ (show w) ++ " -b toggle,fullscreen"))
   , ("M-S-l", ("flip", sendMC Flip))
 
   -- sending SIGSTOP to xmobar hangs the output pipe
