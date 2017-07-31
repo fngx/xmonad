@@ -32,10 +32,10 @@ layout = trackFloating $
          fullscreenToggleStruts $
          ifWider 1400 choices' choices
   where
-    choices = one ||| two ||| many
+    choices  = one  ||| two ||| many
     choices' = many ||| two ||| one
-    two =  aka fat2 $ mct [(1, [1]), (1, [1])]
-    many = aka fat4 $mct [(1, [2,1]), (1, [2,1])]
+    two =  aka fat2 $ mct [(1, [1]),   (1, [1])]
+    many = aka fat4 $ mct [(1, [2,1]), (1, [2,1])]
     one =  aka fat1 $ mct [(1, [1])]
     mct = mc (tabbed shrinkText Theme.decorations)
 
@@ -52,29 +52,6 @@ layoutKeys =
       sendMC = sendMessage
 
       equalize _ a = zip (repeat 1) $ map ((map (const 1)) . snd) a
-      delRow Nothing as = as
-      delRow (Just (c, r)) as = let (al, ar) = splitAt c as
-                                    (cw, rs) = head ar
-                                    (rsu, rsd) = splitAt r rs
-                                    rs' = rsu++(tail rsd)
-                                in if null rs'
-                                   then let dc = al++(tail ar) in
-                                          if null dc then as
-                                          else dc
-                                   else al++((cw,rs'):(tail ar))
-      addRow Nothing as = as
-      addRow (Just (c, r)) as = let (al, ar) = splitAt c as
-                                    (cw, rs) = head ar
-                                in al ++ ((cw, 1:rs):(tail ar))
-
-      addCol Nothing as = as
-      addCol (Just (c, r)) as = let (al, ar) = splitAt c as
-                                in al++((1, [1]):ar)
-
-      delCol Nothing as = as
-      delCol (Just (c, r)) as = if length as == 1 then as
-                                else let (al, ar) = splitAt c as
-                                     in al++(tail ar)
 
       focusMaster = windows W.focusMaster
       focusSecond = sendMC $ FocusCell 1
@@ -98,11 +75,6 @@ layoutKeys =
   , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
   , ("M--", ("shrink", withFocused $ (sendMC . (ResizeCell (-0.2) (-0.2)))))
 
-  -- , ("M-,", ("- row", withFocused $ sendMC . (ChangeCells delRow)))
-  -- , ("M-.", ("+ row", withFocused $ sendMC . (ChangeCells addRow)))
-
-  -- , ("M-S-,", ("- row", withFocused $ sendMC . (ChangeCells delCol)))
-  -- , ("M-S-.", ("+ row", withFocused $ sendMC . (ChangeCells addCol)))
   , ("M-M1-n", ("overflow down", sendMC $ WithOverflowFocusIndex (+ 1)))
   , ("M-M1-p", ("overflow up", sendMC $ WithOverflowFocusIndex (flip (-) 1)))
 

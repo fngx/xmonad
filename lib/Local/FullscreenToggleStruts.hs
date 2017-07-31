@@ -21,5 +21,5 @@ instance LayoutModifier FullscreenToggleStruts Window where
                 let m = if null f
                         then SetStruts [minBound .. maxBound] []
                         else SetStruts [] [minBound .. maxBound]
-                broadcastMessage m
+                sendMessage m
                 return $ Just $ FullscreenToggleStruts f
