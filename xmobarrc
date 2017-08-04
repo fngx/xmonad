@@ -11,6 +11,6 @@ Config
 , template = "%UnsafeStdinReader% }{ <fc=lemonchiffon>%UNREAD_EMAILS%</fc> | <fc=lemonchiffon>%battery%</fc> | <fc=lemonchiffon>%NEXT_APPOINTMENT%</fc> | <fc=lemonchiffon>%vol% %date%</fc>"
 , pickBroadest = True
 , overrideRedirect = False
-, bgColor = "darkslategray"
+, bgColor = "#313131"
 , borderWidth = 0
 }
