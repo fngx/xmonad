@@ -26,16 +26,18 @@ import XMonad.Layout.Renamed
 fat1 = "⓵"
 fat2 = "⓶"
 fat4 = "⓸"
+fat5 = "⓹"
 
 layout = trackFloating $
          smartBorders $
          fullscreenToggleStruts $
          ifWider 1400 choices' choices
   where
-    choices  = one  ||| two ||| many
-    choices' = many ||| two ||| one
+    choices  = one  ||| two ||| many ||| lots
+    choices' = many ||| two ||| lots ||| one
     two =  aka fat2 $ mct [(1, [1]),   (1, [1])]
     many = aka fat4 $ mct [(1, [2,1]), (1, [2,1])]
+    lots = aka fat5 $ mct [(1, [1]), (1, [1,1,1,3])]
     one =  aka fat1 $ mct [(1, [1])]
     mct = mc (tabbed shrinkText Theme.decorations)
 
@@ -68,7 +70,7 @@ layoutKeys =
   , ("M-j",   ("focus 2", focusOverflow >> warp))
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l" ,  ("next", cycleThroughLayouts [fat4, fat2]))
+  , ("M-l" ,  ("next", cycleThroughLayouts [fat4, fat2, fat5]))
   , ("M-f",   ("1col", cycleThroughLayouts [fat1, fat2])) -- TODO when we go to a funny layout it breaks
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
