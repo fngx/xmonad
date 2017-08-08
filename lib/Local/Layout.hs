@@ -18,6 +18,7 @@ import XMonad.Layout hiding ( (|||) )
 import XMonad.Hooks.ManageDocks (ToggleStruts (ToggleStruts), SetStruts (SetStruts))
 import XMonad.Layout.LayoutCombinators
 import XMonad.Actions.CycleSelectedLayouts
+import XMonad.Actions.DwmPromote
 import Local.MC
 import Local.PerScreen
 import Local.FullscreenToggleStruts
@@ -25,7 +26,7 @@ import XMonad.Layout.Renamed
 
 fat1 = "⓵"
 fat2 = "⓶"
-fat4 = "⓸"
+fat3 = "⓷"
 fat5 = "⓹"
 
 layout = trackFloating $
@@ -33,10 +34,11 @@ layout = trackFloating $
          fullscreenToggleStruts $
          ifWider 1400 choices' choices
   where
-    choices  = one  ||| two ||| lots
-    choices' = lots ||| two ||| one
+    choices  = one  ||| two ||| lots ||| three
+    choices' = lots ||| two ||| one ||| three
     two =  aka fat2 $ mct [(1, [1]),   (1, [1])]
     lots = aka fat5 $ mct [(1, [1,1]), (1, [2,2,2,1,1])]
+    three = aka fat3 $ mct [(1, [1]), (1, [1, 1])]
     one =  aka fat1 $ mct [(1, [1])]
     mct = mc (tabbed shrinkText Theme.decorations)
 
@@ -64,12 +66,13 @@ layoutKeys =
 
   in
   [ ("M-m",    ("focus master", (ifMaster focusSecond focusMaster) >> warp))
-  , ("M-S-m",  ("shift master", (ifMaster (focusSecond >> (windows W.swapMaster)) (windows W.shiftMaster)) >> warp))
+  -- , ("M-S-m",  ("shift master", (ifMaster (focusSecond >> (windows W.swapMaster)) (windows W.shiftMaster)) >> warp))
+  , ("M-S-m", ("shift master", dwmpromote >> warp))
 
   , ("M-j",   ("focus 2", focusOverflow >> warp))
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l" ,  ("next", cycleThroughLayouts [fat5, fat2]))
+  , ("M-l" ,  ("next", cycleThroughLayouts [fat5, fat3]))
   , ("M-f",   ("1col", cycleThroughLayouts [fat1, fat2])) -- TODO when we go to a funny layout it breaks
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 

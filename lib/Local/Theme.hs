@@ -3,7 +3,7 @@ module Local.Theme (decorations,
                     urgentBorderColor, urgentText,
                     normalBorderColor, normalText,
                     otherWindow, smallFont, bigFont
-                   , overflowWindow
+                   , overflowWindow, swapStyle
                    , resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle
                    , nextOverflowStyle
                    ) where
@@ -25,6 +25,10 @@ nextOverflowStyle = WindowStyle (Just cs) [("★ ", AlignRight)]
   where cs = Colors { bgColor = otherBorder, borderColor = otherBorder, textColor = normalText }
 overflowStyle = WindowStyle (Just cs)  []
   where cs = Colors { bgColor = overflowWindow, borderColor = overflowWindow, textColor = normalText }
+
+swapStyle = WindowStyle (Just cs)  []
+  where cs = Colors { bgColor = "magenta", borderColor = "magenta", textColor = "black" }
+
 
 decorations = def
   { fontName       = smallFont

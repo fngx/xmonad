@@ -22,10 +22,12 @@ import Data.Foldable
 import XMonad.Util.NamedWindows (getName, unName)
 import Data.Monoid
 import Local.Hints (repeatHintedKeys)
+import XMonad.Actions.CycleWindows (rotUp, rotDown)
 import qualified Local.MC as MC
 
 import XMonad.Actions.WindowBringer (bringWindow)
 
+import Data.IORef
 import XMonad.Util.XUtils
 import XMonad.Util.Font
 
@@ -71,6 +73,26 @@ navKeys = [ ("M-o",   ("next", focusNext >> warp))
           , ("M-S-o", ("swap o", (bringFocusNext >> (windows W.swapMaster)) >> warp))
           ]
 
+swapWith fn = do wset <- gets windowset
+                 let visWindows :: [Window]
+                     visWindows =
+                       concatMap (W.integrate' . W.stack . W.workspace) $
+                       (W.current wset):(W.visible wset)
+                 wref <- io $ newIORef visWindows
+                 let rot step = do ws <- io $ readIORef wref
+                                   io $ modifyIORef wref step
+                                   ws' <- io $ readIORef wref
+                                   delTag "S" (head ws)
+                                   addTag "S" (head ws')
+                 rot fn
+                 repeatHintedKeys [ ("M-.", ("next", rot rotUp)) ,
+                                    ("M-,", ("prev", rot rotDown)) ]
+
+                 withTaggedGlobal "S" $ delTag "S"
+                 ws <- io $ readIORef wref
+
+                 windows (W.swapMaster . (W.focusWindow (head ws)))
+
 navigate action = do history <- XS.get :: X WindowHistory
                      action
                      warp
@@ -90,6 +112,15 @@ windowKeys = [ ("M-o", ("next", navigate (focusUrgentOr focusNext)))
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
+             , ("M-.", ("swap to master",
+                        do windows W.focusMaster
+                           swapWith rotUp
+                       ))
+             , ("M-,", ("swap to master",
+                        do windows W.focusMaster
+                           swapWith rotDown
+                       ))
+
              ]
 
 focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focusDown)

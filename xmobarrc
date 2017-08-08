@@ -5,7 +5,7 @@ Config
              , Run XPropertyLog "NEXT_APPOINTMENT"
              , Run XPropertyLog "UNREAD_EMAILS"
              , Run Date "%a %b %d/%m/%Y, W%W, %I:%M%P" "date" 30
-             , Run Battery ["-t", "<watts>W <timeleft>"] 60
+             , Run Battery ["-t", "<acstatus><watts>W <timeleft>", "--", "-O", "+", "-o", "-", "-i", ""] 60
              , Run Com "/home/hinton/.xmonad/bin/bar_volume" [] "vol" 60
              ]
 , template = "%UnsafeStdinReader% }{ <fc=lemonchiffon>%UNREAD_EMAILS%</fc> | <fc=lemonchiffon>%battery%</fc> | <fc=lemonchiffon>%NEXT_APPOINTMENT%</fc> | <fc=lemonchiffon>%vol% %date%</fc>"
