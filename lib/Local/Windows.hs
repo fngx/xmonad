@@ -73,25 +73,31 @@ navKeys = [ ("M-o",   ("next", focusNext >> warp))
           , ("M-S-o", ("swap o", (bringFocusNext >> (windows W.swapMaster)) >> warp))
           ]
 
-swapWith fn = do wset <- gets windowset
-                 let visWindows :: [Window]
-                     visWindows =
-                       concatMap (W.integrate' . W.stack . W.workspace) $
-                       (W.current wset):(W.visible wset)
-                 wref <- io $ newIORef visWindows
-                 let rot step = do ws <- io $ readIORef wref
-                                   io $ modifyIORef wref step
-                                   ws' <- io $ readIORef wref
-                                   delTag "S" (head ws)
-                                   addTag "S" (head ws')
-                 rot fn
-                 repeatHintedKeys [ ("M-.", ("next", rot rotUp)) ,
-                                    ("M-,", ("prev", rot rotDown)) ]
+swapWith = do wset <- gets windowset
+              let visWindows :: [Window]
+                  visWindows =
+                    (maybe [] W.down $ W.stack $ W.workspace $ W.current $ wset) ++
+                    (concatMap (W.integrate' . W.stack . W.workspace) (W.visible wset)) ++
+                    (maybe [] (Data.List.reverse . W.up) $ W.stack $ W.workspace $ W.current $ wset)
+              wref <- io $ newIORef visWindows
+              let rot step = do ws <- io $ readIORef wref
+                                io $ modifyIORef wref step
+                                ws' <- io $ readIORef wref
+                                delTag "S" (head ws)
+                                addTag "S" (head ws')
+              rot id
+              repeatHintedKeys [ ("M-.", ("next", rot rotUp)) ,
+                                 ("M-,", ("prev", rot rotDown)) ]
 
-                 withTaggedGlobal "S" $ delTag "S"
-                 ws <- io $ readIORef wref
-
-                 windows (W.swapMaster . (W.focusWindow (head ws)))
+              withTaggedGlobal "S" $ delTag "S"
+              ws <- io $ readIORef wref
+              -- I want to swap the window for the focused instead
+              windows $ let choice = head ws
+                            replace old new l = flip map l $ \x -> if x == old then new else x
+                        in
+                          W.modify' $ \(W.Stack f u d) -> W.Stack choice
+                                                          (replace choice f u)
+                                                          (replace choice f d)
 
 navigate action = do history <- XS.get :: X WindowHistory
                      action
@@ -112,13 +118,11 @@ windowKeys = [ ("M-o", ("next", navigate (focusUrgentOr focusNext)))
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
-             , ("M-.", ("swap to master",
-                        do windows W.focusMaster
-                           swapWith rotUp
+             , ("M-.", ("swap selection",
+                        swapWith
                        ))
-             , ("M-,", ("swap to master",
-                        do windows W.focusMaster
-                           swapWith rotDown
+             , ("M-,", ("swap selection",
+                        swapWith
                        ))
 
              ]
