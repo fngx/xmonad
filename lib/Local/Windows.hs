@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
 
-module Local.Windows (addHistory, recentWindows, windowKeys, greedyFocusWindow, nextInHistory) where
+module Local.Windows (addHistory, windowKeys, greedyFocusWindow, nextInHistory) where
 
 import XMonad.Actions.TagWindows
 
@@ -31,49 +31,32 @@ import Data.IORef
 import XMonad.Util.XUtils
 import XMonad.Util.Font
 
-data WindowHistory = WH (Maybe Window) (Seq Window)
-  deriving (Typeable, Read, Show)
+data LastWindow = LastWindow {
+  currentWindow :: Maybe Window ,
+  lastWindow :: Maybe Window
+  } deriving (Typeable, Read, Show)
 
-instance ExtensionClass WindowHistory where
-  initialValue = WH Nothing empty
+instance ExtensionClass LastWindow where
+  initialValue = LastWindow Nothing Nothing
   extensionType = PersistentExtension
 
-updateHistory :: WindowHistory -> X WindowHistory
-updateHistory input = withWindowSet $ \ss -> do
-  insertHistory (W.peek ss) input
+updateLastWindow :: Maybe Window -> LastWindow -> LastWindow
+updateLastWindow Nothing lw = lw { currentWindow = Nothing }
+updateLastWindow nw lw@(LastWindow Nothing _) = lw { currentWindow = nw }
+updateLastWindow nw lw@(LastWindow cw _) = lw {currentWindow = nw, lastWindow = cw}
 
-insertHistory :: Maybe Window -> WindowHistory -> X WindowHistory
-insertHistory newcur (WH oldcur oldhist) = withWindowSet $ \ss -> do
-  let wins     = Set.fromList $ W.allWindows ss
-      newhist  = Seq.filter (flip Set.member wins) (ins oldcur oldhist)
-  return $ WH newcur (del newcur newhist)
-  where
-    ins x xs = maybe xs (<| xs) x
-    del x xs = maybe xs (\x' -> Seq.filter (/= x') xs) x
+nextInHistory :: X (Maybe Window)
+nextInHistory = lastWindow <$> XS.get
 
-recentWindows :: X [Window]
-recentWindows = do
-  hook
-  (WH cur hist) <- XS.get
-  return $ (maybeToList cur) ++ (toList hist)
+doUpdateLastWindow :: X ()
+doUpdateLastWindow = withWindowSet $ \ss -> XS.modify (updateLastWindow (W.peek ss))
 
 greedyFocusWindow w s | Just w == W.peek s = s
                       | otherwise = fromMaybe s $ do
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-navKeys = [ ("M-o",   ("next", focusNext >> warp))
-          , ("M-i",   ("prev", focusPrev >> warp))
-          , ("M-n",   ("down", windows W.focusDown >> warp))
-          , ("M-p",   ("up",   windows W.focusUp >> warp))
-          , ("M-S-N", ("down", windows W.swapDown >> warp))
-          , ("M-S-P", ("up",   windows W.swapUp >> warp))
-          , ("M-m",   ("master", windows W.focusMaster >> warp))
-          , ("M-S-M", ("swap m", (windows W.swapMaster) >> warp))
-          , ("M-S-o", ("swap o", (bringFocusNext >> (windows W.swapMaster)) >> warp))
-          ]
-
-swapWith initial =
+selectWindowAnd initial action up down =
   do wset <- gets windowset
      let visWindows :: [Window]
          visWindows =
@@ -87,77 +70,44 @@ swapWith initial =
                        delTag "S" (head ws)
                        addTag "S" (head ws')
      rot initial
-     repeatHintedKeys [ ("M-.", ("next", rot rotUp)) ,
-                        ("M-,", ("prev", rot rotDown)) ]
+     repeatHintedKeys [ (up,   ("next", rot rotUp)) ,
+                        (down, ("prev", rot rotDown)) ]
 
      withTaggedGlobal "S" $ delTag "S"
      ws <- io $ readIORef wref
          -- I want to swap the window for the focused instead
-     windows $ let choice = head ws
-                   replace old new l = flip map l $ \x -> if x == old then new else x
-               in W.modify' $ \(W.Stack f u d) -> W.Stack choice
-                                                  (replace choice f u)
-                                                  (replace choice f d)
+     action $ head ws
 
-navigate action = do history <- XS.get :: X WindowHistory
-                     action
-                     warp
-                     nav
-                     updateHistory history >>= XS.put
-                     withTaggedGlobal "." $ delTag "."
-                       where nav = repeatHintedKeys navKeys
+swapFocused choice =
+  windows $ let replace old new l = flip map l $ \x -> if x == old then new else x
+            in W.modify' $ \(W.Stack f u d) -> W.Stack choice
+                                               (replace choice f u)
+                                               (replace choice f d)
 
+windowKeys = [ ("M-o", ("next", (focusUrgentOr focusLast)))
 
-windowKeys = [ ("M-o", ("next", navigate (focusUrgentOr focusNext)))
-             , ("M-n", ("down", navigate $ windows W.focusDown))
-             , ("M-p", ("up", navigate $ windows W.focusUp))
-             , ("M-S-o", ("swap o", navigate $ (bringFocusNext >> (windows W.swapMaster)) >> warp))
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
                            isFloating <- gets (M.member w . W.floating . windowset)
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
-             , ("M-.", ("swap selection",
-                        swapWith id
-                       ))
-             , ("M-,", ("swap selection",
-                        swapWith rotUp
-                       ))
-
+             , ("M-.", ("swap selection", selectWindowAnd id swapFocused "M-." "M-,"))
+             , ("M-,", ("swap selection", selectWindowAnd rotUp swapFocused "M-." "M-,"))
+             , ("M-n", ("down", selectWindowAnd id (windows . W.focusWindow) "M-n" "M-p"))
+             , ("M-p", ("up", selectWindowAnd rotUp (windows . W.focusWindow) "M-n" "M-p"))
              ]
 
 focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focusDown)
 
+focusLast = do (LastWindow _ lw) <- XS.get
+               whenJust lw $ \lw' -> do
+                 windows $ W.focusWindow lw'
+
 focusUrgentOr a = do us <- readUrgents
                      if Data.List.null us then a else (focusUrgent >> warp)
 
-bringFocusNext = do withFocused $ addTag "."
-                    rw <- recentWindows >>= filterM ((fmap not) . hasTag ".")
-                    whenJust (listToMaybe rw) $ \w -> do
-                      windows $ \ss -> (W.focusWindow w (bringWindow w ss))
-
-focusNext = do withFocused $ addTag "."
-               rw <- recentWindows >>= filterM ((fmap not) . hasTag ".")
-               whenJust (listToMaybe rw) $ windows . W.focusWindow
-
-focusPrev = do withFocused $ delTag "."
-               rw <- recentWindows >>= filterM (hasTag ".")
-               whenJust (listToMaybe rw) $ windows . W.focusWindow
-
-nextInHistory = recentWindows >>=
-                  (return . (Data.List.drop 1)) >>=
-                  (filterM ((fmap not) . hasTag ".")) >>=
-                  (return . listToMaybe)
-
-addHistory c = c { logHook = hook >> (logHook c)
-                 }
-
-hook :: X ()
-hook = do focusM <- gets (W.peek . windowset)
-          (WH lf _) <- XS.get
-          when (lf /= focusM) $
-            do XS.get >>= updateHistory >>= XS.put
+addHistory c = c { logHook = doUpdateLastWindow >> (logHook c) }
 
 getWindowRect :: Window -> X Rectangle
 getWindowRect w = do d <- asks display

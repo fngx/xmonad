@@ -82,10 +82,9 @@ windowPrompt key =
                                                , ("view", windows $ Windows.greedyFocusWindow w)
                                                , ("bring", windows $ bringWindow w)
                                                , ("shift", shiftPrompt "M-s" w)] )
-
-      generate s = do named <- Windows.recentWindows >>= mapM (\x -> do n <- getName x
-                                                                        t <- fmap (W.findTag x) $ gets windowset
-                                                                        return (n, fromMaybe "?" t))
+      generate s = do named <- (gets (W.allWindows . windowset)) >>= mapM (\x -> do n <- getName x
+                                                                                    t <- fmap (W.findTag x) $ gets windowset
+                                                                                    return (n, fromMaybe "?" t))
                       return $ map (\(n,a) -> (trim 45 n,a)) $ filter ((isInfixOf s) . (map toLower) . cName) $ map actions named
   in
     do ws <- gets windowset

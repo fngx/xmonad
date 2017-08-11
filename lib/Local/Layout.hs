@@ -2,7 +2,6 @@
 
 module Local.Layout (addLayout, layoutKeys) where
 
-import Local.Windows (recentWindows)
 import Local.Workspaces (warp)
 import qualified Local.Theme as Theme
 

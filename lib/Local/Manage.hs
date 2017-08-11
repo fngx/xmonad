@@ -16,7 +16,7 @@ import qualified Data.Map.Strict as M
 import qualified Debug.Trace as D
 import Data.List ( (\\) )
 import qualified XMonad.Util.ExtensibleState as XS
-import Local.Windows (recentWindows, nextInHistory)
+import Local.Windows (nextInHistory)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.IORef
 import Local.Theme (resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle, swapStyle)
