@@ -4,7 +4,7 @@ module Local.Windows (addHistory, windowKeys, greedyFocusWindow, nextInHistory) 
 
 import XMonad.Actions.TagWindows
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<|>))
 import Control.Monad
 import Data.List
 import Data.Maybe
@@ -41,9 +41,10 @@ instance ExtensionClass LastWindow where
   extensionType = PersistentExtension
 
 updateLastWindow :: Maybe Window -> LastWindow -> LastWindow
-updateLastWindow Nothing lw = lw { currentWindow = Nothing }
-updateLastWindow nw lw@(LastWindow Nothing _) = lw { currentWindow = nw }
-updateLastWindow nw lw@(LastWindow cw _) = lw {currentWindow = nw, lastWindow = cw}
+updateLastWindow newWindow l@(LastWindow cw lw) =
+  l {currentWindow = newWindow,
+     lastWindow = if cw == newWindow then lw else cw <|> lw
+    }
 
 nextInHistory :: X (Maybe Window)
 nextInHistory = lastWindow <$> XS.get
@@ -56,7 +57,7 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-selectWindowAnd initial action up down =
+selectWindowAnd initial action next prev =
   do wset <- gets windowset
      let visWindows :: [Window]
          visWindows =
@@ -70,8 +71,8 @@ selectWindowAnd initial action up down =
                        delTag "S" (head ws)
                        addTag "S" (head ws')
      rot initial
-     repeatHintedKeys [ (up,   ("next", rot rotUp)) ,
-                        (down, ("prev", rot rotDown)) ]
+     repeatHintedKeys [ (next, ("next", rot rotUp)) ,
+                        (prev, ("prev", rot rotDown)) ]
 
      withTaggedGlobal "S" $ delTag "S"
      ws <- io $ readIORef wref
@@ -93,9 +94,9 @@ windowKeys = [ ("M-o", ("next", (focusUrgentOr focusLast)))
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
              , ("M-.", ("swap selection", selectWindowAnd id swapFocused "M-." "M-,"))
-             , ("M-,", ("swap selection", selectWindowAnd rotUp swapFocused "M-." "M-,"))
+             , ("M-,", ("swap selection", selectWindowAnd rotDown swapFocused "M-." "M-,"))
              , ("M-n", ("down", selectWindowAnd id (windows . W.focusWindow) "M-n" "M-p"))
-             , ("M-p", ("up", selectWindowAnd rotUp (windows . W.focusWindow) "M-n" "M-p"))
+             , ("M-p", ("up", selectWindowAnd rotDown (windows . W.focusWindow) "M-n" "M-p"))
              ]
 
 focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focusDown)
