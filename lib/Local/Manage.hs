@@ -19,7 +19,8 @@ import qualified XMonad.Util.ExtensibleState as XS
 import Local.Windows (nextInHistory)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.IORef
-import Local.Theme (resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle, swapStyle)
+import Local.Theme (resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle,
+                    singleSelectionStyle, multiSelectionStyle)
 
 import qualified XMonad.Actions.TagWindows as T
 
@@ -64,14 +65,19 @@ setBorderHook =
      T.withTaggedGlobal "S" $ \x -> io $ modifyIORef fref ((:) x)
      swaps  <- io $ readIORef fref
 
+     let (selectionStyle, selectionColor) =
+           case swaps of
+             [_] -> (singleSelectionStyle, Colors.singleSelectionColor)
+             _ -> (multiSelectionStyle, Colors.multiSelectionColor)
+
      resetStyles
      styleWindows us urgentStyle
      whenJust nextM $ \next -> do styleWindows [next] nextStyle
      styleWindows (over \\ maybeToList focus) overflowStyle
-     styleWindows swaps swapStyle
+     styleWindows swaps selectionStyle
 
      let ucs = map (flip (,) Colors.urgentBorderColor) us
-         scs = map (flip (,) Colors.selectionColor) swaps
+         scs = map (flip (,) selectionColor) swaps
          fbc = Colors.focusedBorderColor
          fcs = (flip (,) fbc) <$> focus
          ocs = map (flip (,) Colors.overflowWindow) over

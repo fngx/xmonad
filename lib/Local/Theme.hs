@@ -2,9 +2,9 @@ module Local.Theme (decorations,
                     focusedBorderColor, focusedText,
                     urgentBorderColor, urgentText,
                     normalBorderColor, normalText,
-                    selectionColor,
+                    singleSelectionColor, multiSelectionColor,
                     otherWindow, smallFont, bigFont
-                   , overflowWindow, swapStyle
+                   , overflowWindow, singleSelectionStyle, multiSelectionStyle
                    , resetStyles, styleWindows, urgentStyle, nextStyle, overflowStyle
                    ) where
 
@@ -24,8 +24,11 @@ nextStyle     = WindowStyle Nothing [("★ ", AlignRight)]
 overflowStyle = WindowStyle (Just cs)  []
   where cs = Colors { bgColor = overflowWindow, borderColor = overflowWindow, textColor = normalText }
 
-swapStyle = WindowStyle (Just cs)  []
-  where cs = Colors { bgColor = selectionColor, borderColor = selectionColor, textColor = "black" }
+singleSelectionStyle = WindowStyle (Just cs)  []
+  where cs = Colors { bgColor = singleSelectionColor, borderColor = singleSelectionColor, textColor = "black" }
+
+multiSelectionStyle = WindowStyle (Just cs)  []
+  where cs = Colors { bgColor = multiSelectionColor, borderColor = multiSelectionColor, textColor = "black" }
 
 
 decorations = def
