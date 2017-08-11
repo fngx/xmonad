@@ -16,6 +16,7 @@ import Local.Prompt (readKey, nextKeyEvent, mkUnmanagedWindow, KEvent (..) )
 import Data.Maybe (mapMaybe, fromMaybe, fromJust, isJust, maybeToList)
 import Graphics.X11.Xlib.Misc (keysymToString)
 import qualified Debug.Trace as D
+import Local.Util (doubleRefresh)
 
 import Control.Concurrent (threadDelay)
 
@@ -137,19 +138,15 @@ runKeyTree autostop pfx0 kt0 = do
         printStringXMF d win font gc colr grey (8 + fi x1) y0 message
         io $ sync d False
 
-      upd = do XConf {XMonad.config = XConfig {logHook = log} } <- ask
-               log
-               refresh
-
       runKT :: [Key] -> KeyTree -> X ()
       runKT prefix kt = do
-        upd
+        doubleRefresh
         let prefixs = intercalate " " $ map showKey $ reverse prefix
         case kt of
           Leaf n a -> do when (not autostop) $ do
                            render prefixs (n, focusedBorderColor) "green"
                            io $ threadDelay 100000
-                         upd
+                         doubleRefresh
                          a
                          when autostop $ runKT (take 1 prefix) kt0
           Sub m -> do let nexts = show kt

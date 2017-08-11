@@ -24,9 +24,9 @@ import qualified XMonad.Layout.Fullscreen as FS
 main = xmonad =<< xmobar conf
 
 conf =
+  addManageRules $
   FS.fullscreenSupport $
   Windows.addHistory $
-  addManageRules $
   addLayout $
   randrAuto $
   desktopConfig

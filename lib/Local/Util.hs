@@ -8,6 +8,9 @@ import qualified XMonad.StackSet as W
 import XMonad.Util.XUtils
 import qualified Data.Map.Strict as M
 
+doubleRefresh = do XConf {XMonad.config = XConfig {logHook = log} } <- ask
+                   log >> refresh
+
 trim :: Int->String->String
 trim n s
   | len > n = start ++ elip ++ end

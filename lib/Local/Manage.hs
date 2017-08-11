@@ -38,16 +38,18 @@ instance ExtensionClass BorderColors where
 changeBorderColors :: M.Map Window String -> X ()
 changeBorderColors new = do
   BorderColors old <- XS.get
+  XS.put $ BorderColors new
+  focus <- gets (W.peek . windowset)
+
   mapM_ (setBorder Colors.normalBorderColor) $
     M.keys $ M.difference old new
 
   let mSetBorder w c
+        | Just w == focus = setBorder c w
         | Just c == M.lookup w old = return ()
         | otherwise = setBorder c w
 
-  -- this would be better as a difference operation
   mapM_ (uncurry mSetBorder) $ M.toList new
-  XS.put $ BorderColors new
 
 setBorderHook =
   do us    <- readUrgents
@@ -65,7 +67,7 @@ setBorderHook =
      resetStyles
      styleWindows us urgentStyle
      whenJust nextM $ \next -> do styleWindows [next] nextStyle
-     styleWindows over overflowStyle
+     styleWindows (over \\ maybeToList focus) overflowStyle
      styleWindows swaps swapStyle
 
      let ucs = map (flip (,) Colors.urgentBorderColor) us

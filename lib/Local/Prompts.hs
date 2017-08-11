@@ -7,7 +7,7 @@ import Local.Workspaces (warp)
 import XMonad.Prompt.Shell (getCommands)
 import Data.List
 import XMonad (spawn, io, windows, gets, windowset, X, Window, withFocused, whenJust, runQuery,
-               className)
+               className, ask, config)
 import XMonad.Operations (killWindow)
 import XMonad.Util.Run
 import XMonad.Util.NamedWindows (getName, unName, NamedWindow)
@@ -22,6 +22,9 @@ import Local.Util
 import qualified Data.Map.Strict as M
 import System.Directory (getHomeDirectory)
 import System.FilePath (takeExtension, dropExtension, combine)
+import XMonad.Actions.TagWindows
+import Local.Util (doubleRefresh)
+
 
 -- uses my prompt utility to provide a few prompts
 
@@ -82,10 +85,14 @@ windowPrompt key =
                                                , ("view", windows $ Windows.greedyFocusWindow w)
                                                , ("bring", windows $ bringWindow w)
                                                , ("shift", shiftPrompt "M-s" w)] )
-      generate s = do named <- (gets (W.allWindows . windowset)) >>= mapM (\x -> do n <- getName x
+      generate s = do withTaggedGlobal "S" $ delTag "S"
+                      named <- (gets (W.allWindows . windowset)) >>= mapM (\x -> do n <- getName x
                                                                                     t <- fmap (W.findTag x) $ gets windowset
                                                                                     return (n, fromMaybe "?" t))
-                      return $ map (\(n,a) -> (trim 45 n,a)) $ filter ((isInfixOf s) . (map toLower) . cName) $ map actions named
+                      let result = filter ((isInfixOf s) . (map toLower) . cName . snd) $ zip named $ map actions named
+                      flip mapM_ result $ \((nw, _), _) -> addTag "S" (unName nw)
+                      doubleRefresh
+                      return $ map (\(n,a) -> (trim 45 n,a)) $ map snd result
   in
     do ws <- gets windowset
        let hid = map W.tag $ W.hidden ws
@@ -96,6 +103,7 @@ windowPrompt key =
        select myConfig { prompt = "win: "
                        , keymap = (key, promptNextOption):("M-w", promptCycleInput tags):(keymap myConfig)
                        } generate
+       withTaggedGlobal "S" $ delTag "S"
 
 swap2 (a:(b:cs)) = b:(a:cs)
 swap2 x = x

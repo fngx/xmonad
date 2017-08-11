@@ -71,8 +71,8 @@ layoutKeys =
   , ("M-j",   ("focus 2", focusOverflow >> warp))
   , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l" ,  ("next", cycleThroughLayouts [fat5, fat3]))
-  , ("M-f",   ("1col", cycleThroughLayouts [fat1, fat2])) -- TODO when we go to a funny layout it breaks
+  , ("M-l" ,  ("next", cycleThroughLayouts [fat3, fat5]))
+  , ("M-f",   ("1col", cycleThroughLayouts [fat2, fat1])) -- TODO when we go to a funny layout it breaks
   , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
   , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))

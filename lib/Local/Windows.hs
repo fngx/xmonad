@@ -24,6 +24,7 @@ import Data.Monoid
 import Local.Hints (repeatHintedKeys)
 import XMonad.Actions.CycleWindows (rotUp, rotDown)
 import qualified Local.MC as MC
+import XMonad.Util.Stack
 
 import XMonad.Actions.WindowBringer (bringWindow)
 
@@ -80,10 +81,16 @@ selectWindowAnd initial action next prev =
      action $ head ws
 
 swapFocused choice =
-  windows $ let replace old new l = flip map l $ \x -> if x == old then new else x
-            in W.modify' $ \(W.Stack f u d) -> W.Stack choice
-                                               (replace choice f u)
-                                               (replace choice f d)
+  windows $ \ss -> let focus = W.peek ss
+                   in case focus of
+                        Nothing -> ss
+                        (Just f) ->
+                          let doSwap w
+                                | w == f = choice
+                                | w == choice = f
+                                | otherwise = w
+                          in flip W.mapWorkspace ss $ \ws ->
+                            ws { W.stack = mapZ_ doSwap (W.stack ws) }
 
 windowKeys = [ ("M-o", ("next", (focusUrgentOr focusLast)))
 

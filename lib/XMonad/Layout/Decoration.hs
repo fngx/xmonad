@@ -425,9 +425,9 @@ updateDeco sh t fs ((w,_),(Just dw,Just (Rectangle _ _ wh ht))) = do
   let (Colors {bgColor = bc, borderColor = borderc, textColor = tc}) =
         fromMaybe (inactiveColors t) $
         foldr (<|>) Nothing $
-        [ if w `elem` ur then Just (urgentColors t) else Nothing
-        , join $ (\x -> if (x == w) then Just (activeColors t) else Nothing) <$> mfocus
-        , overridecs
+        [ overridecs
+          , if w `elem` ur then Just (urgentColors t) else Nothing
+          , join $ (\x -> if (x == w) then Just (activeColors t) else Nothing) <$> mfocus
         ]
 
   let s = shrinkIt sh
