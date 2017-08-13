@@ -21,6 +21,7 @@ import XMonad.Actions.DwmPromote
 import Local.MC
 import Local.PerScreen
 import Local.FullscreenToggleStruts
+import Local.Windows (focusNextInteresting)
 import XMonad.Layout.Renamed
 
 fat1 = "⓵"
@@ -64,34 +65,33 @@ layoutKeys =
                         whenJust stm $ \(W.Stack {W.up = up}) -> if (null up) then a else b
 
   in
-  [ ("M-m",    ("focus master", (ifMaster focusSecond focusMaster) >> warp))
-  -- , ("M-S-m",  ("shift master", (ifMaster (focusSecond >> (windows W.swapMaster)) (windows W.shiftMaster)) >> warp))
-  , ("M-S-m", ("shift master", dwmpromote >> warp))
+    [ ("M-m",    ("focus master", (ifMaster (windows W.focusDown) focusMaster) >> warp))
+    , ("M-S-m", ("shift master", dwmpromote >> warp))
 
-  , ("M-j",   ("focus 2", focusOverflow >> warp))
-  , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
+    , ("M-j",   ("focus 2", focusOverflow >> warp))
+    , ("M-S-j", ("focus2 master", sendMC $ WithOverflowFocusIndex $ const 0))
 
-  , ("M-l" ,  ("next", cycleThroughLayouts [fat3, fat5]))
-  , ("M-f",   ("1col", cycleThroughLayouts [fat2, fat1])) -- TODO when we go to a funny layout it breaks
-  , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
+    , ("M-l" ,  ("next", cycleThroughLayouts [fat3, fat5]))
+    , ("M-f",   ("1col", cycleThroughLayouts [fat2, fat1])) -- TODO when we go to a funny layout it breaks
+    , ("M-C-<Space>",   ("equalize", withFocused $ (sendMC . ChangeCells equalize)))
 
-  , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
-  , ("M--", ("shrink", withFocused $ (sendMC . (ResizeCell (-0.2) (-0.2)))))
+    , ("M-=", ("grow", withFocused $ (sendMC . (ResizeCell 0.2 0.2))))
+    , ("M--", ("shrink", withFocused $ (sendMC . (ResizeCell (-0.2) (-0.2)))))
 
-  , ("M-M1-n", ("overflow down", sendMC $ WithOverflowFocusIndex (+ 1)))
-  , ("M-M1-p", ("overflow up", sendMC $ WithOverflowFocusIndex (flip (-) 1)))
+    , ("M-M1-n", ("overflow down", sendMC $ WithOverflowFocusIndex (+ 1)))
+    , ("M-M1-p", ("overflow up", sendMC $ WithOverflowFocusIndex (flip (-) 1)))
 
-  , ("M-S-n", ("swap down", windows W.swapDown >> warp))
-  , ("M-S-p", ("swap up", windows W.swapUp >> warp))
+    , ("M-S-n", ("swap down", windows W.swapDown >> warp))
+    , ("M-S-p", ("swap up", windows W.swapUp >> warp))
 
-  , ("M-S-f", ("full", withFocused $ \w -> spawn $ "wmctrl -i -r " ++ (show w) ++ " -b toggle,fullscreen"))
-  , ("M-S-l", ("flip", sendMC Flip))
+    , ("M-S-f", ("full", withFocused $ \w -> spawn $ "wmctrl -i -r " ++ (show w) ++ " -b toggle,fullscreen"))
+    , ("M-S-l", ("flip", sendMC Flip))
 
-  -- sending SIGSTOP to xmobar hangs the output pipe
-  , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))
-  , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
+    -- sending SIGSTOP to xmobar hangs the output pipe
+    , ("M-S-b", ("no dock", (broadcastMessage $ SetStruts [] [minBound .. maxBound]) >> refresh))
+    , ("M-b",   ("all dock", (broadcastMessage $ SetStruts [minBound .. maxBound] []) >> refresh))
 
-  , ("M-k", ("kill", kill)) ] ++
-  [ ("M-<F" ++ (show n) ++ ">", ("focus nth", (focusNth n) >> warp))
-  | n <- [1..6] ]
+    , ("M-k", ("kill", kill)) ] ++
+    [ ("M-<F" ++ (show n) ++ ">", ("focus nth", (focusNth n) >> warp))
+    | n <- [1..6] ]
   where focusNth n = windows (foldl (.) id $ reverse (W.focusMaster:(take (n - 1) $ repeat W.focusDown)))

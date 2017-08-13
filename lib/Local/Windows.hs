@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, BangPatterns #-}
 
-module Local.Windows (addHistory, windowKeys, greedyFocusWindow, nextInHistory) where
+module Local.Windows (addHistory, windowKeys, greedyFocusWindow, nextInHistory, focusNextInteresting) where
 
 import XMonad.Actions.TagWindows
 
@@ -92,8 +92,10 @@ swapFocused choice =
                           in flip W.mapWorkspace ss $ \ws ->
                             ws { W.stack = mapZ_ doSwap (W.stack ws) }
 
-windowKeys = [ ("M-o", ("next", (focusUrgentOr focusLast)))
+focusNextInteresting = (focusUrgentOr focusLast)
 
+windowKeys = [ ("M-o", ("next", focusNextInteresting))
+             , ("M-`", ("next", focusNextInteresting))
              , ("M-t", ("floaty",
                         withFocused $ \w -> do
                            isFloating <- gets (M.member w . W.floating . windowset)
