@@ -62,6 +62,7 @@ selectWindowAnd initial action next prev =
   do wset <- gets windowset
      let visWindows :: [Window]
          visWindows =
+           (maybeToList $ W.peek wset)++
            (maybe [] W.down $ W.stack $ W.workspace $ W.current $ wset) ++
            (concatMap (W.integrate' . W.stack . W.workspace) (W.visible wset)) ++
            (maybe [] (Data.List.reverse . W.up) $ W.stack $ W.workspace $ W.current $ wset)
@@ -102,9 +103,9 @@ windowKeys = [ ("M-o", ("next", focusNextInteresting))
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
-             , ("M-.", ("swap selection", selectWindowAnd id swapFocused "M-." "M-,"))
+             , ("M-.", ("swap selection", selectWindowAnd rotUp swapFocused "M-." "M-,"))
              , ("M-,", ("swap selection", selectWindowAnd rotDown swapFocused "M-." "M-,"))
-             , ("M-n", ("down", selectWindowAnd id (windows . W.focusWindow) "M-n" "M-p"))
+             , ("M-n", ("down", selectWindowAnd rotUp (windows . W.focusWindow) "M-n" "M-p"))
              , ("M-p", ("up", selectWindowAnd rotDown (windows . W.focusWindow) "M-n" "M-p"))
              ]
 
