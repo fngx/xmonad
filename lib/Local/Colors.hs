@@ -6,7 +6,7 @@ inactiveTabColor     = "#313131"
 otherWindow          = "grey60"
 urgentBorderColor    = "orangered"
 overflowWindow       = "deepskyblue4"
-singleSelectionColor       = "cyan"
+singleSelectionColor       = "deeppink"
 multiSelectionColor       = "darkorange"
 
 focusedText = "#313131"
