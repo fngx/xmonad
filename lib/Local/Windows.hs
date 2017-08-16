@@ -112,16 +112,14 @@ windowKeys = [ ("M-o", ("next", focusNextInteresting))
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
-             -- , ("M-.", ("swap selection", selectWindowAnd rotUp swapFocused "M-." "M-," []))
-
-             -- , ("M-,", ("swap selection", selectWindowAnd rotDown swapFocused "M-." "M-," []))
-
              , ("M-n", (selWindow "down" rotUp))
              , ("M-p", (selWindow "up" rotDown))
              ]
-  where selWindow nam dir = ("nam", selectWindowAnd dir (windows . W.focusWindow) "M-n" "M-p"
-                              [("M-b", ("bring window", windows . bringWindow)),
-                               ("M-s", ("swap window", swapFocused))])
+  where selWindow nam dir = (nam, selectWindowAnd dir (windows . W.focusWindow) "M-n" "M-p"
+                              [ ("M-b", ("bring", windows . bringWindow))
+                              , ("M-s", ("swap", swapFocused))
+                              , ("M-k", ("kill", killWindow))
+                              ])
 
 focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focusDown)
 
