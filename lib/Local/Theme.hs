@@ -25,10 +25,10 @@ overflowStyle = WindowStyle (Just cs)  []
   where cs = Colors { bgColor = overflowWindow, borderColor = overflowWindow, textColor = normalText }
 
 singleSelectionStyle = WindowStyle (Just cs)  []
-  where cs = Colors { bgColor = singleSelectionColor, borderColor = singleSelectionColor, textColor = "black" }
+  where cs = Colors { bgColor = singleSelectionColor, borderColor = singleSelectionColor, textColor = "grey20" }
 
 multiSelectionStyle = WindowStyle (Just cs)  []
-  where cs = Colors { bgColor = multiSelectionColor, borderColor = multiSelectionColor, textColor = "black" }
+  where cs = Colors { bgColor = multiSelectionColor, borderColor = multiSelectionColor, textColor = "grey20" }
 
 
 decorations = def
