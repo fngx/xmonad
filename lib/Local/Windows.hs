@@ -58,23 +58,32 @@ greedyFocusWindow w s | Just w == W.peek s = s
                           n <- W.findTag w s
                           return $ until ((Just w ==) . W.peek) W.focusUp $ W.greedyView n s
 
-selectWindowAnd initial action next prev =
-  do wset <- gets windowset
-     let visWindows :: [Window]
-         visWindows =
-           (maybeToList $ W.peek wset)++
-           (maybe [] W.down $ W.stack $ W.workspace $ W.current $ wset) ++
-           (concatMap (W.integrate' . W.stack . W.workspace) (W.visible wset)) ++
-           (maybe [] (Data.List.reverse . W.up) $ W.stack $ W.workspace $ W.current $ wset)
-     wref <- io $ newIORef visWindows
+selectWindowAnd initial action next prev otherActions =
+  do let getWindows :: X [Window]
+         getWindows = do
+           wset <- gets windowset
+           return $
+             (maybeToList $ W.peek wset)++
+             (maybe [] W.down $ W.stack $ W.workspace $ W.current $ wset) ++
+             (concatMap (W.integrate' . W.stack . W.workspace) (W.visible wset)) ++
+             (maybe [] (Data.List.reverse . W.up) $ W.stack $ W.workspace $ W.current $ wset)
+
+     wref <- getWindows >>= (io . newIORef)
+
      let rot step = do ws <- io $ readIORef wref
                        io $ modifyIORef wref step
                        ws' <- io $ readIORef wref
                        delTag "S" (head ws)
                        addTag "S" (head ws')
+
+         doAction a = do ws <- io $ readIORef wref
+                         a $ head ws
+                         getWindows >>= (io . (writeIORef wref))
+
      rot initial
-     repeatHintedKeys [ (next, ("next", rot rotUp)) ,
-                        (prev, ("prev", rot rotDown)) ]
+     repeatHintedKeys $
+       [ (next, ("next", rot rotUp)) , (prev, ("prev", rot rotDown)) ] ++
+       [ (k, (l, doAction a)) | (k, (l, a)) <- otherActions ]
 
      withTaggedGlobal "S" $ delTag "S"
      ws <- io $ readIORef wref
@@ -103,11 +112,16 @@ windowKeys = [ ("M-o", ("next", focusNextInteresting))
                            if isFloating then windows $ W.sink w
                              else floatTo (0.6, 0.95) (0.05, 0.4) w
                          ))
-             , ("M-.", ("swap selection", selectWindowAnd rotUp swapFocused "M-." "M-,"))
-             , ("M-,", ("swap selection", selectWindowAnd rotDown swapFocused "M-." "M-,"))
-             , ("M-n", ("down", selectWindowAnd rotUp (windows . W.focusWindow) "M-n" "M-p"))
-             , ("M-p", ("up", selectWindowAnd rotDown (windows . W.focusWindow) "M-n" "M-p"))
+             -- , ("M-.", ("swap selection", selectWindowAnd rotUp swapFocused "M-." "M-," []))
+
+             -- , ("M-,", ("swap selection", selectWindowAnd rotDown swapFocused "M-." "M-," []))
+
+             , ("M-n", (selWindow "down" rotUp))
+             , ("M-p", (selWindow "up" rotDown))
              ]
+  where selWindow nam dir = ("nam", selectWindowAnd dir (windows . W.focusWindow) "M-n" "M-p"
+                              [("M-b", ("bring window", windows . bringWindow)),
+                               ("M-s", ("swap window", swapFocused))])
 
 focusNth n = windows $ foldr (.) W.focusMaster (Data.List.take n $ repeat W.focusDown)
 

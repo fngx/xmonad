@@ -1,9 +1,6 @@
 module Local.Spawn where
 
 import XMonad
-import XMonad.Util.Ungrab (unGrab)
-import XMonad.Util.Paste (pasteSelection)
-import XMonad.Util.XSelection (safePromptSelection)
 import XMonad.Actions.WindowGo
 import XMonad.Actions.DynamicWorkspaces
 import Data.List (isPrefixOf)
@@ -47,10 +44,8 @@ spawnKeys =
                 (className =? "telegram-desktop")))
   , ("M-a i", ("inbox",
                raiseMaybe (do addWorkspace "mail"
-                              spawn "emacsclient -n -c -e '(my-inbox)'")
+                              spawn "emacsclient -n -c -e '(my-inbox nil)'")
                 (className =? "Emacs" <&&> (fmap isNotmuch title))))
   , ("M-a a", ("agenda", raiseMaybe (spawn "emacsclient -e '(org-agenda nil \"a\")'")
                          (className =? "Emacs" <&&> title =? "*Org Agenda*")))
-
-  , ("M-y", ("paste", unGrab >> spawn "xdotool type -clearmodifiers -- \"$(xclip -o -selection primary)\""))
-  , ("M-S-y", ("open", safePromptSelection "xdg-open"))]
+  ]
