@@ -1,12 +1,12 @@
 module Local.Colors where
 
-focusedBorderColor   = "#a8a8a8"
-normalBorderColor    = "#313131"
+focusedBorderColor   = "#b8b8b8"
+normalBorderColor    = "#404040"
 inactiveTabColor     = "#313131"
 otherWindow          = "#a8a8a8"
 urgentBorderColor    = "red"
 overflowWindow       = "#727272"
-singleSelectionColor = "#4b6983"
+singleSelectionColor = "#ffffff"
 multiSelectionColor  = "darkorange"
 
 focusedText          = "black"
