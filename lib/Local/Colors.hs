@@ -1,17 +1,17 @@
 module Local.Colors where
 
-focusedBorderColor   = "#FDECBC"
-normalBorderColor    = "grey40"
+focusedBorderColor   = "#a8a8a8"
+normalBorderColor    = "#000000"
 inactiveTabColor     = "#313131"
-otherWindow          = "grey60"
-urgentBorderColor    = "orangered"
-overflowWindow       = "deepskyblue4"
-singleSelectionColor       = "deeppink"
-multiSelectionColor       = "darkorange"
+otherWindow          = "#a8a8a8"
+urgentBorderColor    = "red"
+overflowWindow       = "#787878"
+singleSelectionColor = "#4b6983"
+multiSelectionColor  = "darkorange"
 
-focusedText = "#313131"
-normalText = "white"
-urgentText = "white"
+focusedText          = "black"
+normalText           = "white"
+urgentText           = "white"
 
 smallFont = "xft:Sans-8"
 bigFont = "xft:Sans-12"

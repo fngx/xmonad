@@ -36,7 +36,7 @@ decorations = def
   , decoHeight     = 15
 
   , activeColors   = cs focusedBorderColor focusedBorderColor focusedText
-  , inactiveColors = cs inactiveTabColor  "lightsteelblue4" normalText
+  , inactiveColors = cs inactiveTabColor  "grey30" normalText
   , urgentColors   = cs urgentBorderColor  urgentBorderColor urgentText
   }
   where cs a b c = Colors { bgColor = a, borderColor = b, textColor = c }
