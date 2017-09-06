@@ -65,7 +65,7 @@ layoutKeys =
                         whenJust stm $ \(W.Stack {W.up = up}) -> if (null up) then a else b
 
   in
-    [ ("M-m",    ("focus master", (ifMaster (windows W.focusDown) focusMaster) >> warp))
+    [ ("M-m",    ("focus master", (ifMaster (sendMC $ FocusCell 1) focusMaster) >> warp))
     , ("M-S-m", ("shift master", dwmpromote >> warp))
 
     , ("M-j",   ("focus 2", focusOverflow >> warp))
