@@ -47,8 +47,10 @@ workspaceKeys =
 
       onOtherScreen a = nextScreen >> a >> prevScreen
   in [ ("M-s", swapS)
+     , ("M-/", swapS)
      , ("M-S-s", shiftS)
      , ("M-d", focusS)
+     , ("M-;", focusS)
      , ("M-C-n",   ("view next",  moveTo Next HiddenNonEmptyWS))
      , ("M-C-p", ("view prev", moveTo Prev HiddenNonEmptyWS))
      , ("M-e",   onEmpty addWorkspace)
